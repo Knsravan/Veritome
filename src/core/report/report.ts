@@ -154,12 +154,12 @@ export function buildOverview(r: Omit<PaperReport, "overview" | "generatedAt" | 
       const parts = [`${c.references.length} reference${c.references.length === 1 ? "" : "s"}`];
       if (v) parts.push(`${v.verified + v.likely} found online`, `${v.not_found} not found`, `${v.mismatch} mismatched`, `${v.flagged} flagged`);
       if (c.crossCheck.citedButMissing.length) parts.push(`${c.crossCheck.citedButMissing.length} in-text citations without an entry`);
-      parts.push(`${c.claims.length} claims that may need a citation`);
+      parts.push(`${c.claims.length} claim${c.claims.length === 1 ? "" : "s"} that may need a citation`);
       return { status: v && (v.mismatch > 0 || v.flagged > 0) ? "attention" : problems > 0 || c.claims.length > 0 ? "review" : "ok", headline: `${parts.join(", ")}.` };
     }),
     item("grammar", r.grammar, (g) => ({
       status: g.summary.score >= 85 ? "ok" : g.summary.score >= 65 ? "review" : "attention",
-      headline: `${g.summary.total} issue${g.summary.total === 1 ? "" : "s"} (${g.summary.bySeverity.error} errors), ${g.summary.issuesPer1000Words} per 1,000 words.`,
+      headline: `${g.summary.total} issue${g.summary.total === 1 ? "" : "s"} (${g.summary.bySeverity.error} likely error${g.summary.bySeverity.error === 1 ? "" : "s"}), ${g.summary.issuesPer1000Words} per 1,000 words.`,
     })),
     item("paraphrase", r.paraphrase, (p) => ({
       status: p.length ? "review" : "ok",

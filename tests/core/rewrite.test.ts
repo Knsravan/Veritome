@@ -48,6 +48,10 @@ test("ruleRewrite humanise removes stock phrases and openers, keeps placeholders
   assert.match(r.text, /\. Accuracy rose to 94\.2% when \{\{P2\}\} was used \{\{P3\}\}\./);
 });
 
+test("ruleRewrite humanise drops an opener followed by a deleted phrase", () => {
+  assert.equal(ruleRewrite("Moreover, it is important to note that riparian zones matter.", "humanise").text, "Riparian zones matter.");
+});
+
 test("ruleRewrite academic expands contractions; concise drops weak words", () => {
   assert.equal(ruleRewrite("We don't know a lot of things.", "academic").text, "We do not know many things.");
   assert.equal(ruleRewrite("This is very clear in order to help.", "concise").text, "This is clear to help.");

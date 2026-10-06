@@ -133,11 +133,12 @@ export function ruleRewrite(masked: string, mode: RewriteMode): { text: string; 
   const wordy = WORDY_PHRASES.filter(([p]) => p.split(" ").length > 1 && p !== "the fact that");
   switch (mode) {
     case "humanise": {
-      apply(STOCK_REPLACEMENTS);
+      // Openers go first so a deletion right after "Moreover," cannot hide it from the pattern.
       text = text.replace(DROPPABLE_OPENERS, (_m, lead: string, _w: string, next: string) => {
         edits++;
         return lead + upperFirst(next);
       });
+      apply(STOCK_REPLACEMENTS);
       apply(wordy);
       break;
     }
