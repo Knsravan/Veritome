@@ -154,10 +154,3 @@ export async function rewriteText(text: string, options: RewriteOptions): Promis
     ...(mode === "humanise" ? { disclosure: HUMANISER_DISCLOSURE } : {}),
   };
 }
-
-export const PARAPHRASE_MODES: ReadonlyArray<{ id: RewriteMode; label: string; description: string }> = [
-  { id: "academic", label: "Academic", description: "Formal rephrasing that keeps meaning and certainty." },
-  { id: "simple", label: "Simple", description: "Plainer words and shorter sentences." },
-  { id: "concise", label: "Concise", description: "About 30% shorter, no claims dropped." },
-  { id: "expand", label: "Expand", description: "Spells out implicit steps; needs a language model." },
-];
