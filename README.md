@@ -33,6 +33,18 @@ any result.
 - Rewriting sends text to the language model the operator configures, which can be a local Ollama model.
 - For confidential manuscripts, self-host with Docker and a local model.
 
+## Put it online with Vercel (free)
+
+1. Sign in at [vercel.com](https://vercel.com) with GitHub, choose **Add New → Project**, pick this repository and
+   click **Deploy**. No settings are needed for a first run.
+2. Optional, under **Settings → Environment Variables** (then **Redeploy**): `OPENALEX_API_KEY`, `CORE_API_KEY` and
+   `CONTACT_EMAIL` for better searches, and `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` for real rewriting.
+3. Optional: attach your own domain under **Settings → Domains**.
+
+On Vercel, uploads are limited to about 4 MB (Vercel's request limit) and each check can run for up to 5 minutes.
+The shared document library (`LIBRARY_DIR`) is not available there; users can still attach their own documents.
+Vercel's free Hobby plan is for non-commercial use.
+
 ## Quick start with Docker
 
 ```bash

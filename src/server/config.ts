@@ -20,8 +20,10 @@ export interface ServerConfig {
   contactEmail?: string;
   libraryDir?: string;
   rateLimitPerMinute: number;
-  /** Read the client address from X-Forwarded-For. Only enable behind a proxy you control. */
+  /** Read the client address from X-Forwarded-For. Only enable behind a proxy you control. On Vercel it is always on. */
   trustProxy: boolean;
+  /** Largest upload accepted. Vercel functions reject request bodies over about 4.5 MB. */
+  maxUploadBytes: number;
 }
 
 const bool = (v: string | undefined, fallback = false) => (v === undefined || v === "" ? fallback : /^(1|true|yes|on)$/i.test(v.trim()));
@@ -34,7 +36,9 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     allowClientLlm: bool(env.ALLOW_CLIENT_LLM),
     allowPrivateLlm: bool(env.ALLOW_PRIVATE_LLM),
     rateLimitPerMinute: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 30,
-    trustProxy: bool(env.TRUST_PROXY),
+    // Vercel's edge sets X-Forwarded-For to the real client address, so it can be trusted there.
+    trustProxy: bool(env.TRUST_PROXY, env.VERCEL === "1"),
+    maxUploadBytes: env.VERCEL === "1" ? 4_300_000 : 15 * 1024 * 1024,
     publicLanguageTool: bool(env.LANGUAGETOOL_PUBLIC, true),
   };
   const set = <K extends keyof ServerConfig>(k: K, v: ServerConfig[K] | undefined) => {
@@ -62,6 +66,8 @@ export interface PublicStatus {
   languageTool: boolean;
   /** The public LanguageTool service can be used, with consent. */
   publicLanguageTool: boolean;
+  /** Largest file the server accepts, in bytes. */
+  maxUploadBytes: number;
   webSearch: string[];
   semanticScholarKey: boolean;
   /** Names of the scholarly sources plagiarism checks query. */

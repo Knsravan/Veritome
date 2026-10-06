@@ -104,6 +104,7 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
     allowClientLlm: cfg.allowClientLlm,
     languageTool: Boolean(cfg.languageToolUrl),
     publicLanguageTool: !cfg.languageToolUrl && cfg.publicLanguageTool,
+    maxUploadBytes: cfg.maxUploadBytes,
     webSearch: web,
     semanticScholarKey: Boolean(cfg.semanticScholarKey),
     plagiarismSources: plagiarismProviders(cfg, scholarlyHttp(cfg), { web: false }).map((p) => p.name),

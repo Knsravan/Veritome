@@ -1,11 +1,11 @@
 import { BadRequest, route } from "@/server/api";
-import { extractDocument, MAX_UPLOAD_BYTES } from "@/server/extract";
+import { extractDocument, tooLargeMessage } from "@/server/extract";
 
 export const runtime = "nodejs";
 
-export const POST = route({ bucket: "extract" }, async ({ req }) => {
+export const POST = route({ bucket: "extract" }, async ({ cfg, req }) => {
   const len = Number(req.headers.get("content-length") ?? "0");
-  if (len > MAX_UPLOAD_BYTES + 64_000) throw new BadRequest("Files up to 15 MB are supported.", 413);
+  if (len > cfg.maxUploadBytes + 64_000) throw new BadRequest(tooLargeMessage(cfg.maxUploadBytes), 413);
   let form: FormData;
   try {
     form = await req.formData();
@@ -14,6 +14,6 @@ export const POST = route({ bucket: "extract" }, async ({ req }) => {
   }
   const file = form.get("file");
   if (!(file instanceof File)) throw new BadRequest("Choose a file to upload.");
-  const doc = await extractDocument(file.name, new Uint8Array(await file.arrayBuffer()));
+  const doc = await extractDocument(file.name, new Uint8Array(await file.arrayBuffer()), cfg.maxUploadBytes);
   return { name: file.name, ...doc };
 });

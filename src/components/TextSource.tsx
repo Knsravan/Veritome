@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { ApiError, postForm } from "@/lib/api";
 import { SAMPLE_PAPER } from "@/lib/sample";
+import { useSettings } from "@/lib/settings";
 import { Button, Notice } from "./ui";
 
 interface Extracted {
@@ -39,11 +40,18 @@ export function TextSource({
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
+  const { status } = useSettings();
 
   async function upload(file: File) {
-    setBusy(true);
     setError(null);
     setNotes([]);
+    const limit = status?.maxUploadBytes;
+    if (limit && file.size > limit) {
+      setError(`${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB; files up to ${Math.floor((limit / 1024 / 1024) * 10) / 10} MB are supported here. Try saving it without images, or paste the text instead.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+    setBusy(true);
     try {
       const form = new FormData();
       form.append("file", file);
