@@ -1,4 +1,5 @@
 import type { Http } from "../../infra/http.ts";
+import { isStopword } from "../../text/tokens.ts";
 import type { Work } from "../types.ts";
 import { decodeXmlEntities, normalizeDoi, splitName } from "./common.ts";
 
@@ -39,6 +40,20 @@ export function parseArxivFeed(xml: string): Work[] {
 export interface ArxivClient {
   getById(id: string): Promise<Work | null>;
   search(query: string, max?: number): Promise<Work[]>;
+  /** Exact-phrase title search, best for checking a cited title. */
+  searchByTitle?(title: string, max?: number): Promise<Work[]>;
+}
+
+/**
+ * arXiv joins terms with AND and does not index stop words, so a query that
+ * includes "is" or "all" returns nothing. Only distinctive words are kept.
+ */
+export function arxivTerms(query: string): string[] {
+  return query
+    .replace(/["():,;.?!]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !isStopword(w.toLowerCase()) && !/^(?:all|and|the|its)$/i.test(w))
+    .slice(0, 10);
 }
 
 export function createArxiv(http: Http, options: { baseUrl?: string } = {}): ArxivClient {
@@ -49,9 +64,15 @@ export function createArxiv(http: Http, options: { baseUrl?: string } = {}): Arx
       return parseArxivFeed(xml)[0] ?? null;
     },
     async search(query, max = 5) {
-      const terms = query.replace(/["():]/g, " ").split(/\s+/).filter(Boolean).slice(0, 12).join(" AND all:");
+      const terms = arxivTerms(query).join(" AND all:");
       if (!terms) return [];
       const xml = await http.text(`${base}?search_query=${encodeURIComponent(`all:${terms}`)}&max_results=${max}&sortBy=relevance`);
+      return parseArxivFeed(xml);
+    },
+    async searchByTitle(title, max = 3) {
+      const phrase = title.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
+      if (!phrase) return [];
+      const xml = await http.text(`${base}?search_query=${encodeURIComponent(`ti:"${phrase}"`)}&max_results=${max}&sortBy=relevance`);
       return parseArxivFeed(xml);
     },
   };

@@ -36,7 +36,7 @@ export function scholarlyClients(cfg: ServerConfig, http: Http) {
   const mailto = cfg.contactEmail ? { mailto: cfg.contactEmail } : {};
   return {
     crossref: createCrossref(http, mailto),
-    openalex: createOpenAlex(http, mailto),
+    openalex: createOpenAlex(http, { ...mailto, ...(cfg.openAlexKey ? { apiKey: cfg.openAlexKey } : {}) }),
     semanticscholar: createSemanticScholar(http, cfg.semanticScholarKey ? { apiKey: cfg.semanticScholarKey } : {}),
     arxiv: createArxiv(http),
     datacite: createDataCite(http),

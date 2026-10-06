@@ -234,3 +234,58 @@ test("end to end: split a manuscript, cross-check against its own reference list
   assert.equal(r.citedButMissing.length, 0);
   assert.equal(r.uncitedReferences.length, 0);
 });
+
+// Regressions found by testing against live Crossref and arXiv.
+
+test("a short record title contained in an unrelated entry is not a match", () => {
+  const deepLearning: Work = { title: "Deep learning", authors: [{ family: "LeCun" }], year: 2015, sources: ["crossref"] };
+  const ref = parseReference("Devlin, J., & Lee, K. (2019). BERT: Pre-training of deep bidirectional transformers for language understanding. In Proceedings of NAACL-HLT.", 1);
+  assert.ok(scoreMatch(ref, deepLearning).parts.title < 0.45);
+});
+
+test("a wrong DOI is reported as a mismatch, not a duplicate of the paper it points to", async () => {
+  const deepLearning: Work = { title: "Deep learning", authors: [{ family: "LeCun" }], year: 2015, container: "Nature", doi: "10.1038/nature14539", sources: ["crossref"] };
+  const refs = parseReferenceList(
+    "1. LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521, 436-444. https://doi.org/10.1038/nature14539\n" +
+      "2. Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training of deep bidirectional transformers for language understanding. Proceedings of NAACL-HLT. https://doi.org/10.1038/nature14539",
+  );
+  const { checks } = await verifyReferences(refs, fakeDeps({ byDoi: [deepLearning], search: [bert] }));
+  assert.equal(checks[1]?.status, "mismatch");
+  assert.ok(checks[1]?.flags.includes("doi_points_elsewhere"));
+  assert.ok(!checks[1]?.flags.includes("duplicate"));
+});
+
+test("conference acronyms match the full proceedings name", () => {
+  const ref = parseReference("Devlin, J. (2019). BERT: Pre-training of deep bidirectional transformers for language understanding. In Proceedings of NAACL-HLT (pp. 4171-4186).", 1);
+  const full: Work = {
+    ...bert,
+    container: "Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+  };
+  assert.deepEqual(findDiscrepancies(ref, full).filter((d) => d.field === "container"), []);
+});
+
+test("a correct record with a wrong year in the entry is 'likely', not 'verified'", async () => {
+  const ref = parseReference("Vaswani, A., & Shazeer, N. (2015). Attention is all you need. Advances in Neural Information Processing Systems, 30, 5998-6008.", 1);
+  const check = await verifyReference(ref, fakeDeps({ search: [attention] }));
+  assert.equal(check.status, "likely");
+  assert.deepEqual(check.discrepancies.map((d) => d.field), ["year"]);
+});
+
+test("arXiv title search is used when databases only hold a later reprint", async () => {
+  const reprint: Work = { ...attention, year: 2025, doi: "10.9999/reprint", container: "Collected Papers" };
+  const preprint: Work = { ...attention, container: undefined, doi: undefined, arxivId: "1706.03762", sources: ["arxiv"] };
+  const ref = parseReference("Vaswani, A., & Shazeer, N. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 30.", 1);
+  const deps = fakeDeps({ search: [reprint] });
+  let asked = "";
+  deps.arxiv = {
+    getById: async () => null,
+    searchByTitle: async (t) => {
+      asked = t;
+      return [preprint];
+    },
+  };
+  const check = await verifyReference(ref, deps);
+  assert.equal(asked, "Attention is all you need");
+  assert.equal(check.status, "verified");
+  assert.equal(check.match?.year, 2017);
+});

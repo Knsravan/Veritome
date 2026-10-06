@@ -49,7 +49,7 @@ const checks: Check[] = [
     name: "OpenAlex",
     configured: true,
     run: async () => {
-      const c = createOpenAlex(http, mailto);
+      const c = createOpenAlex(http, { ...mailto, ...(env.OPENALEX_API_KEY ? { apiKey: env.OPENALEX_API_KEY } : {}) });
       const w = await c.getByDoi(KNOWN_DOI);
       const s = await c.search(QUERY, 3);
       if (!w) throw new Error("test DOI not found");

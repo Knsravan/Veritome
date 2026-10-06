@@ -10,6 +10,8 @@ export interface ServerConfig {
   braveApiKey?: string;
   serperApiKey?: string;
   semanticScholarKey?: string;
+  /** Free key from openalex.org. Without one, OpenAlex shares a small daily budget across everyone on the server's IP address. */
+  openAlexKey?: string;
   /** Contact address sent to Crossref and OpenAlex, as their polite-pool policies ask. */
   contactEmail?: string;
   libraryDir?: string;
@@ -40,6 +42,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
   set("braveApiKey", str(env.BRAVE_API_KEY));
   set("serperApiKey", str(env.SERPER_API_KEY));
   set("semanticScholarKey", str(env.SEMANTIC_SCHOLAR_API_KEY));
+  set("openAlexKey", str(env.OPENALEX_API_KEY));
   set("contactEmail", str(env.CONTACT_EMAIL));
   set("libraryDir", str(env.LIBRARY_DIR));
   return cfg;
