@@ -4,7 +4,7 @@ import { finderDeps, languageToolOptions, llmClient, plagiarismProviders, schola
 import { loadLibrary } from "@/server/library";
 
 export const runtime = "nodejs";
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }) => {
   const body = await readJson(req);
