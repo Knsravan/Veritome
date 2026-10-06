@@ -67,6 +67,17 @@ describe("routes", () => {
     expect((await bad.json()).error).toMatch(/JSON object/);
   });
 
+  test("the public LanguageTool service needs consent and can be switched off", async () => {
+    expect((await grammar(post({ text: "Their is a problem.", publicLanguageTool: true }))).status).toBe(428);
+    vi.stubEnv("LANGUAGETOOL_PUBLIC", "false");
+    const st = await (await status()).json();
+    expect(st.publicLanguageTool).toBe(false);
+    // Switched off: the flag is ignored and the built-in rules still run.
+    const res = await grammar(post({ text: "Their is a problem.", publicLanguageTool: true, consent: true }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).issues.every((i: { source: string }) => i.source !== "languagetool")).toBe(true);
+  });
+
   test("detect works without a language model and says so", async () => {
     const res = await detect(post({ text: SAMPLE_PAPER, useLlm: true }));
     const data = await res.json();

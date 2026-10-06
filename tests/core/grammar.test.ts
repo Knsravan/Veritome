@@ -282,3 +282,39 @@ test("mergeIssues prefers LanguageTool on overlapping grammar spans only", () =>
 test("rulesFor helper sanity", () => {
   assert.ok(rulesFor("Fine text.").length === 0);
 });
+
+test("academic confusions: agreement, countables, its/it's, affect/effect, et al.", () => {
+  const cases: Array<[string, string]> = [
+    ["The results shows a clear trend.", "results show"],
+    ["This study show a clear trend.", "This study shows"],
+    ["We recruited less participants than planned.", "fewer participants"],
+    ["The amount of participants was small.", "The number of participants"],
+    ["Its been shown before.", "It's been"],
+    ["The affect of temperature was strong.", "The effect of"],
+    ["As Smith et al reported, the effect holds.", "et al."],
+    ["The principle investigator approved it.", "principal investigator"],
+    ["We used complimentary methods.", "complementary methods"],
+    ["This phenomena is rare.", "This phenomenon"],
+  ];
+  for (const [text, fix] of cases) {
+    const issue = checkGrammarLocal(text).issues.find((i) => i.rule === "confused-words");
+    assert.ok(issue, `no issue for: ${text}`);
+    assert.equal(issue.suggestions[0], fix, text);
+  }
+});
+
+test("then/than after a comparative is a warning that points at 'then'", () => {
+  const text = "The comparison rests on fewer samples then we planned.";
+  const issue = checkGrammarLocal(text).issues.find((i) => i.rule === "likely-confusion");
+  assert.equal(issue?.severity, "warning");
+  assert.equal(issue?.text, "then");
+  assert.deepEqual(issue?.suggestions, ["than"]);
+  assert.equal(checkGrammarLocal("We collected more samples, then we analysed them.").issues.filter((i) => i.rule === "likely-confusion").length, 0);
+});
+
+test("correct academic sentences raise no confusion issues", () => {
+  const text =
+    "These results show a clear trend. The study shows that its own method works. Fewer participants than expected took part. " +
+    "The effect of temperature was strong, and it affects growth. The principal component explained most variance.";
+  assert.deepEqual(checkGrammarLocal(text).issues.filter((i) => i.rule === "confused-words" || i.rule === "likely-confusion"), []);
+});

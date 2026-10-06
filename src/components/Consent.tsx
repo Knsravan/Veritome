@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { useSettings } from "@/lib/settings";
 
 type Ask = (purpose: ConsentPurpose) => Promise<boolean>;
-export type ConsentPurpose = "plagiarism" | "citations" | "report";
+export type ConsentPurpose = "plagiarism" | "citations" | "report" | "grammar";
 
 const ConsentContext = createContext<Ask | null>(null);
 
@@ -12,6 +12,7 @@ const WHAT_IS_SENT: Record<ConsentPurpose, string> = {
   plagiarism: "Up to 24 short passages from your text (about 10 to 30 words each) are sent as search queries.",
   citations: "Your reference entries, or the claim you selected, are sent as search queries.",
   report: "Short passages from your text, your reference entries and a few uncited claims are sent as search queries.",
+  grammar: "Your whole text is sent to the public LanguageTool service (LanguageTool GmbH, Germany) for grammar and spelling checks.",
 };
 
 export function ConsentProvider({ children }: { children: ReactNode }) {
@@ -64,9 +65,16 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
             </h2>
             <p className="mt-3 text-ink-soft">{WHAT_IS_SENT[pending.purpose]}</p>
             <p className="mt-3 text-ink-soft">
-              They go to {services.join(", ")}
-              {web.length ? `, and ${web.join(" and ")} for web search` : ""}. Each service has its own privacy policy and may keep
-              query logs. Veritome itself does not store or log your text.
+              {pending.purpose === "grammar" ? (
+                "LanguageTool says it does not store submitted text, but it is an outside service."
+              ) : (
+                <>
+                  They go to {services.join(", ")}
+                  {web.length ? `, and ${web.join(" and ")} for web search` : ""}. Each service has its own privacy policy and may keep
+                  query logs.
+                </>
+              )}{" "}
+              Veritome itself does not store or log your text.
             </p>
             <p className="mt-3 text-ink-soft">If your manuscript is confidential, cancel and use the offline checks instead.</p>
             <label className="mt-4 flex items-center gap-2">

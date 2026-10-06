@@ -73,9 +73,16 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
   return providers;
 }
 
-export function languageToolOptions(cfg: ServerConfig): LanguageToolOptions | undefined {
-  if (!cfg.languageToolUrl) return undefined;
-  return { url: cfg.languageToolUrl, http: createHttp({ timeoutMs: 30_000, retries: 1 }) };
+export const PUBLIC_LANGUAGETOOL_URL = "https://api.languagetool.org";
+
+/** The operator's LanguageTool server, or the public one when the user agreed and the operator allows it. */
+export function languageToolOptions(cfg: ServerConfig, options: { allowPublic?: boolean } = {}): LanguageToolOptions | undefined {
+  if (cfg.languageToolUrl) return { url: cfg.languageToolUrl, http: createHttp({ timeoutMs: 30_000, retries: 1 }) };
+  if (options.allowPublic && cfg.publicLanguageTool) {
+    // The public service accepts 20 KB per request and about 20 requests a minute.
+    return { url: PUBLIC_LANGUAGETOOL_URL, http: createHttp({ timeoutMs: 30_000, retries: 2, backoffMs: 3000 }), maxChunkChars: 18_000 };
+  }
+  return undefined;
 }
 
 /** Server LLM, or a browser-supplied one when the operator allows it (checked by the SSRF guard). */
@@ -96,6 +103,7 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
     ...(cfg.llm.model ? { llmModel: cfg.llm.model } : {}),
     allowClientLlm: cfg.allowClientLlm,
     languageTool: Boolean(cfg.languageToolUrl),
+    publicLanguageTool: !cfg.languageToolUrl && cfg.publicLanguageTool,
     webSearch: web,
     semanticScholarKey: Boolean(cfg.semanticScholarKey),
     plagiarismSources: plagiarismProviders(cfg, scholarlyHttp(cfg), { web: false }).map((p) => p.name),

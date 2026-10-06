@@ -7,6 +7,8 @@ export interface ServerConfig {
   /** Allow browser-supplied LLM URLs on localhost or private networks (e.g. Ollama). */
   allowPrivateLlm: boolean;
   languageToolUrl?: string;
+  /** Offer the free public LanguageTool service (with user consent) when no server is configured. Default true. */
+  publicLanguageTool: boolean;
   braveApiKey?: string;
   serperApiKey?: string;
   semanticScholarKey?: string;
@@ -33,6 +35,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     allowPrivateLlm: bool(env.ALLOW_PRIVATE_LLM),
     rateLimitPerMinute: Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 30,
     trustProxy: bool(env.TRUST_PROXY),
+    publicLanguageTool: bool(env.LANGUAGETOOL_PUBLIC, true),
   };
   const set = <K extends keyof ServerConfig>(k: K, v: ServerConfig[K] | undefined) => {
     if (v !== undefined) cfg[k] = v;
@@ -57,6 +60,8 @@ export interface PublicStatus {
   llmModel?: string;
   allowClientLlm: boolean;
   languageTool: boolean;
+  /** The public LanguageTool service can be used, with consent. */
+  publicLanguageTool: boolean;
   webSearch: string[];
   semanticScholarKey: boolean;
   /** Names of the scholarly sources plagiarism checks query. */

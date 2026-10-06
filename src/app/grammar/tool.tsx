@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "@/components/AnnotatedText";
+import { useConsent } from "@/components/Consent";
 import { TextSource } from "@/components/TextSource";
-import { Button, Limits, Notice, ProofLayout, Sheet, ToolHeader, Warnings, cx } from "@/components/ui";
+import { Button, Checkbox, Limits, Notice, ProofLayout, Sheet, ToolHeader, Warnings, cx } from "@/components/ui";
 import type { GrammarCheckResult } from "@/core/grammar/check";
 import type { Issue, IssueCategory } from "@/core/grammar/types";
 import { postJson } from "@/lib/api";
@@ -29,14 +30,19 @@ export function GrammarTool() {
   const [active, setActive] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "error" | "warning" | "info">("all");
   const { status } = useSettings();
+  const consent = useConsent();
+  const [usePublic, setUsePublic] = useState(true);
   const { result, error, busy, run } = useRun<GrammarCheckResult>();
+  const publicOn = Boolean(status?.publicLanguageTool && usePublic);
 
-  const go = () =>
-    run(async (signal) => {
-      const r = await postJson<GrammarCheckResult>("/api/grammar", { text }, signal);
+  const go = async () => {
+    if (publicOn && !(await consent("grammar"))) return;
+    await run(async (signal) => {
+      const r = await postJson<GrammarCheckResult>("/api/grammar", { text, publicLanguageTool: publicOn, consent: publicOn }, signal);
       setDoc({ text, issues: r.issues });
       return r;
     });
+  };
 
   const visible = useMemo(() => (doc ? doc.issues.filter((i) => filter === "all" || i.severity === filter) : []), [doc, filter]);
   const marks: TextMark[] = visible.map((i) => ({
@@ -62,13 +68,21 @@ export function GrammarTool() {
         intro={
           <>
             Built-in checks for common academic-writing problems, frequent misspellings and readability
-            {status?.languageTool ? ", plus the LanguageTool server connected here." : ". Connect a LanguageTool server for broader grammar and spelling coverage."}
+            {status?.languageTool ? ", plus the LanguageTool server connected here." : ", optionally with the public LanguageTool service for full grammar and spelling coverage."}
           </>
         }
       />
       <div className="max-w-4xl space-y-4">
         <TextSource value={text} onChange={setText} />
-        <Button onClick={go} busy={busy} disabled={!text.trim()}>
+        {status?.publicLanguageTool && (
+          <Checkbox
+            checked={usePublic}
+            onChange={setUsePublic}
+            label="Also check with LanguageTool (recommended)"
+            hint="Full grammar and spelling checking from the public LanguageTool service. Sends your text to LanguageTool; asks first."
+          />
+        )}
+        <Button onClick={() => void go()} busy={busy} disabled={!text.trim()}>
           {busy ? "Checking" : doc ? "Check again" : "Check grammar"}
         </Button>
         {error && <Notice kind="error">{error}</Notice>}
