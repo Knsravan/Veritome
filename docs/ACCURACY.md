@@ -10,85 +10,82 @@ says what each tool measures, how we tested it, and where it fails.
 
 ### What it measures
 
-The detector reports a **0 to 100 score for how strongly the text shows patterns that are common in
-language-model output**. It is not a probability that a model wrote the text. Four statistical signals are
-combined, each shown to the user with its raw value:
+The score (0 to 100) is a trained classifier's estimate of how strongly the text resembles machine-written text it
+has seen. It is **not** proof of authorship. The model is a logistic regression over hashed word and phrase
+features, function-word patterns and 20 style measurements, trained on about 90,000 labelled texts:
 
-| Signal | What it is | Why it is weak on its own |
-| --- | --- | --- |
-| Sentence-length variation ("burstiness") | Coefficient of variation of sentence lengths | Formal, edited and non-native writing is often even too |
-| Vocabulary variety (MATTR) | Moving-average type-token ratio, 50-word window | Technical writing repeats its key terms by design |
-| Stock phrases | Weighted hits from a lexicon of phrases models over-use ("delve into", "plays a pivotal role") | Humans use these too, and newer models avoid them |
-| Sentence-opening connectives | Share of sentences opening with "Moreover", "Furthermore", ... | Common in some academic traditions |
+| Training data | What it adds |
+| --- | --- |
+| MAGE (Li et al., 2024; Apache-2.0) | 27 models from GPT-2 to GPT-3.5 across 10 kinds of writing, including scientific text |
+| HAP-E (Reinhart et al., 2024; MIT) | Human text and Llama-3 / GPT-4o-mini continuations of the same openings, incl. academic writing |
+| RAID sample (Dugan et al., 2024; MIT) | 11 newer models and evasion attacks, sources disjoint from the RAID test sample |
+| Brown 1961 and ABC Science (half) | Human prose written before language models existed |
 
-Citations, maths, URLs and the reference list are removed before measuring. An optional language-model "judge"
-can add its own opinion (35% of the final score by default); when it disagrees with the statistics the
-uncertainty band gets wider rather than the disagreement being averaged away. Language models are poorly
-calibrated judges of authorship, so this opinion is shown separately.
+Before scoring, lookalike letters from other alphabets and invisible characters (two common tricks for fooling
+checkers) are undone, and their presence is reported. Citations, maths and the reference list are left out. Long
+texts are scored in overlapping windows of about 300 words, so mixed authorship shows up section by section.
 
-### Uncertainty bands and verdicts
+The four hand-built style measurements from the first version (sentence-length variation, vocabulary variety,
+stock phrases, opening connectives) are still shown to explain the text, but they no longer decide the result.
+An optional language-model opinion is shown separately and can only widen the uncertainty range.
 
-Every score comes with a band whose width depends on text length and on how much the signals agree.
-A verdict is only given when the **whole band** is on one side:
+### Verdicts
 
 - below 80 words: "Not enough text to judge"
-- band entirely at or above 60: "Many patterns typical of model output"
-- band entirely at or below 40: "Few signs of model-generated text"
+- score at or above **86**: "Many patterns typical of model output". This threshold was set so that about 1 in 100
+  human texts in a calibration set reaches it. Texts under 150 words need 93.
+- score at or below **15**: "Few patterns typical of model output"
 - anything else: "Inconclusive"
 
-This is deliberately conservative. We would rather say "inconclusive" than wrongly flag a person.
+### How well it works
 
-Per-sentence highlights use local cues only (stock phrases, opening connectives, runs of equal-length
-sentences). They are much noisier than the document score and are labelled as such in the interface.
+Measured on 6 October 2026 on texts **never used in training or for choosing the threshold**, through the full
+app pipeline (`docs/detector-eval-2026-10-06.md` has every row):
 
-### How we tested it
+| Human-written text | n | wrongly labelled AI |
+| --- | ---: | ---: |
+| Brown 1961 and ABC Science (held-out half) | 375 | 0% |
+| HAP-E academic writing | 98 | 0% |
+| MAGE scientific writing | 228 | 0% |
+| HAP-E news, fiction, speech, TV, blogs | 502 | 0.4% |
+| RAID (various domains) | 200 | 0.5% |
+| **All human text** | **1,387** | **0.2%** |
 
-`scripts/evaluate-detector.ts` runs the detector over labelled JSONL files and prints false-positive rate,
-detection rate and AUROC. The numbers below were produced on 6 October 2026 with the statistical signals only
-(no LLM judge):
+| Machine-written text | n | labelled AI | labelled human |
+| --- | ---: | ---: | ---: |
+| Llama-3-70B-Instruct | 300 | 86% | 0.3% |
+| GPT-4o (model never seen in training) | 300 | 50% | 1.0% |
+| GPT-4 (MAGE out-of-distribution set) | 400 | 36% | 0.8% |
+| RAID, no attack | 150 | 63% | 1.3% |
+| RAID, lookalike-letter attack | 150 | 57% | 0.7% |
+| RAID, synonym attack | 150 | 49% | 2.0% |
+| RAID, zero-width-space attack | 150 | 52% | 1.3% |
+| RAID, misspelling attack | 150 | 41% | 2.0% |
+| RAID, paraphrase attack | 150 | 22% | 0.7% |
+| GPT-4, then paraphrased | 300 | 12% | 6.7% |
+| MAGE scientific writing (older models) | 172 | 20% | 6.4% |
+| 16 paragraphs written by a Claude model for this project | 16 | 0% | 6% |
+| **All machine text** | **2,261** | **46%** | |
 
-- **Human text:** 750 passages of about 300 words, all written long before language models existed: 600 from
-  the Brown corpus (1961; categories *learned*, *belles-lettres*, *government* and *popular lore*) and 150 from
-  the ABC Science corpus, built with `scripts/prepare-human-corpus.py`. The corpora are not redistributed here.
-- **Model text:** 16 academic-style paragraphs (about 175 words each) in
-  `tests/fixtures/detector-ai-claude.jsonl`, written by a Claude model asked for plain, typical academic prose.
-  **Caveat:** the same model also wrote the detector, so this set is small and possibly biased; do not read the
-  detection numbers as a benchmark.
+AUROC of the raw score over all of these: **0.954** (the first rule-based version scored about 0.5 on unseen
+data, that is, no better than chance). Raw-model AUROC on the full held-out sets: HAP-E 0.995, RAID 0.924, MAGE
+0.899, MAGE GPT-4 0.898, MAGE paraphrased 0.770.
 
-| Label / source | n | mean score | likely AI | inconclusive | likely human |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| model / Claude, plain academic | 16 | 61.1 | 0.0% | 100.0% | 0.0% |
-| human / ABC Science | 150 | 32.7 | 0.0% | 82.7% | 17.3% |
-| human / Brown *popular lore* | 150 | 27.9 | 0.0% | 58.0% | 42.0% |
-| human / Brown *belles-lettres* | 150 | 26.7 | 0.0% | 52.7% | 47.3% |
-| human / Brown *government* | 150 | 28.0 | 0.0% | 55.3% | 44.7% |
-| human / Brown *learned* | 150 | 33.5 | 0.0% | 78.7% | 21.3% |
+### What this means in practice
 
-- False-positive rate (human text labelled "likely AI"): **0.0% of 750**.
-- Detection rate (model text labelled "likely AI"): **0.0% of 16**. Every model passage was "inconclusive".
-- AUROC of the raw score, model versus human: **0.973**. The score ranks texts sensibly, but the bands are
-  too wide at this length to make a call.
-- Human-text score quantiles: median 28, 90th percentile 45, 99th percentile 62, maximum 79.
+1. **False accusations are rare.** In these tests, about 1 human text in 500 was labelled AI, and none of the
+   academic or scientific ones. Still, never treat a verdict as proof.
+2. **It misses a lot of machine text.** About half of machine-written text is labelled AI; most of the rest is
+   "inconclusive", rarely "human". Paraphrasing defeats it more often than not. This is the price of keeping
+   false positives low, and it is true of every detector: commercial ones that report higher detection rates
+   usually also flag more human text.
+3. **Unseen models are harder.** Models not represented in the training data (here Claude, Cohere and GPT-3)
+   are detected less often. The model will need retraining as new language models appear.
+4. **Not yet measured:** non-native English academic writing, where published studies show detectors of this
+   kind flag more human text. Be especially careful there.
 
-What this means in practice:
-
-1. On these texts the detector did not falsely accuse anyone. That is the property we optimise for.
-2. It also did not confidently catch plain, short model-written paragraphs. Longer texts and texts full of stock
-   phrases get confident verdicts; careful model output that has been lightly edited will usually come out
-   "inconclusive". That matches published findings for every detector, commercial ones included.
-3. 1961 prose is not modern academic writing, and we have not measured non-native English writers, for whom
-   published studies show higher false-positive rates with detectors of this kind. Be especially careful there.
-
-### Reproduce or extend
-
-```bash
-python3 scripts/prepare-human-corpus.py /path/to/nltk-zips      # writes human.jsonl
-node scripts/evaluate-detector.ts tests/fixtures/detector-ai-claude.jsonl /path/to/human.jsonl
-node scripts/evaluate-detector.ts my-labelled.jsonl --llm          # also ask the configured LLM
-```
-
-Contributions of larger, properly licensed, labelled datasets (especially modern human academic writing and
-recent model output) are the most useful thing anyone can add.
+Reproduce or retrain with the steps in `scripts/train/README.md`, or measure on your own labelled data with
+`node scripts/evaluate-detector.ts your.jsonl`.
 
 ## Plagiarism checker
 

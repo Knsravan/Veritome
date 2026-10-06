@@ -27,8 +27,9 @@ export default function Page() {
           ))}
         </dl>
         <p>
-          The AI-pattern check was tested on 750 passages written long before language models existed. None was labelled as showing many model
-          patterns, but plain model-written paragraphs were usually rated inconclusive as well. The method, numbers and caveats are in{" "}
+          The AI-pattern check uses a model trained on about 90,000 labelled texts. On 3,775 texts it had never seen, it wrongly flagged 0.2% of
+          human passages (none of the academic ones) and caught about half of the machine-written ones; paraphrased machine text is often rated
+          inconclusive. The method, numbers and caveats are in{" "}
           <a className="text-action underline" href={`${GH}/docs/ACCURACY.md`}>
             docs/ACCURACY.md
           </a>

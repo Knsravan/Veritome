@@ -7,7 +7,7 @@ evidence and an honest note on how sure it is.
 | Tool | What it does | What it cannot do |
 | --- | --- | --- |
 | **Plagiarism** | Finds copied and reworded passages using exact-phrase search of arXiv, Europe PMC full text, Wikipedia, CORE full text (free key), OpenAlex, Crossref and Semantic Scholar, optional Brave or Serper web search, and your own documents. Each match links to its source. | Cannot see paywalled full texts, theses or student-paper databases. Heavy rewriting and translation can slip through. A low score is not proof of originality. |
-| **AI writing patterns** | Sentence-length variation, vocabulary variety (MATTR), stock phrases and opening connectives, plus an optional language-model opinion. Gives a score with an uncertainty range and per-sentence highlights. | Cannot prove who wrote a text. Careful, edited and non-native human writing can score high. |
+| **AI writing patterns** | A classifier trained on about 90,000 labelled human and machine texts, calibrated so roughly 1 in 100 human texts or fewer is flagged. Undoes evasion tricks (lookalike letters, invisible characters), scores long documents section by section, and shows the wording behind the score. | Cannot prove who wrote a text. Catches about half of machine text in testing; paraphrased text and new models are often "inconclusive". |
 | **Humaniser** | Revises stiff, formulaic prose while citations, maths, URLs and numbers stay locked. Shows the pattern score before and after. | Does not make text human-written. Disclose AI assistance where your publisher asks. |
 | **Paraphraser** | Academic, simple, concise or expanded rewrites with the same protections and checks. | Meaning can drift in ways a number check cannot catch. Read every rewrite. |
 | **Citations** | Verifies each reference against Crossref, OpenAlex, DataCite and arXiv; flags retractions, wrong DOIs and mismatched details; cross-checks in-text citations; finds papers for uncited claims; formats in six styles and BibTeX. | "Not found" is not "fabricated": books and reports are often missing from these databases. Suggested papers may not support your claim. |
@@ -19,10 +19,11 @@ Markdown or JSON.
 ## Honest limits
 
 No plagiarism checker or AI detector is 100% accurate, commercial ones included. Veritome is built to show its
-evidence, give every score a range, and say what each check cannot see. On 750 human-written passages from before
-language models existed, the AI-pattern check labelled none as "many patterns", but it also rated plain
-model-written paragraphs as inconclusive. Read [docs/ACCURACY.md](docs/ACCURACY.md) for the method, numbers and
-caveats before relying on any result.
+evidence, give every score a range, and say what each check cannot see. Measured on text it never saw in
+training, the AI-pattern check wrongly flagged 0.2% of 1,387 human passages and caught 46% of 2,261 machine-written
+ones (86% for Llama-3, about half for GPT-4o). In a small live plagiarism test, every copied sentence taken from two
+well-known papers. Read [docs/ACCURACY.md](docs/ACCURACY.md) for the method, numbers and caveats before relying on
+any result.
 
 ## Privacy
 

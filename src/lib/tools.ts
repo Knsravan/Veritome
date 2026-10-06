@@ -17,8 +17,8 @@ export const TOOLS: readonly ToolInfo[] = [
   {
     href: "/detector",
     name: "AI patterns",
-    does: "Measures writing patterns common in language-model output, sentence by sentence, with an uncertainty range.",
-    cannot: "Cannot prove who wrote a text. Careful and non-native human writing can score high.",
+    does: "A trained model scores how closely the text resembles machine writing, section by section, with a range.",
+    cannot: "Cannot prove who wrote a text. Misses about half of machine text; paraphrased text often passes.",
   },
   {
     href: "/humaniser",

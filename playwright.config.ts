@@ -23,6 +23,6 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { RATE_LIMIT_PER_MINUTE: "1000", LLM_BASE_URL: "", LLM_MODEL: "" },
+    env: { RATE_LIMIT_PER_MINUTE: "1000", LLM_BASE_URL: "", LLM_MODEL: "", LANGUAGETOOL_PUBLIC: "false" },
   },
 });

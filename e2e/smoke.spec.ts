@@ -28,7 +28,7 @@ test("AI-pattern check on the sample shows a range, signals and flagged sentence
   await page.getByRole("button", { name: "Try a sample" }).click();
   await page.getByRole("button", { name: "Check writing patterns" }).click();
   await expect(page.getByRole("img", { name: /plausible range/ })).toBeVisible();
-  await expect(page.getByText("Signals behind the score")).toBeVisible();
+  await expect(page.getByText("Style measurements")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Flagged sentences/ })).toBeVisible();
   await expect(page.getByText("What this can’t tell you")).toBeVisible();
   await axe(page);
@@ -77,7 +77,7 @@ test("offline plagiarism check against the user's own text runs without consent"
   await page.getByRole("button", { name: "Try a sample" }).click();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check for overlap" }).click();
-  await expect(page.getByText(/words appear in at least one source/)).toBeVisible();
+  await expect(page.getByText(/words appear word for word in at least one source/)).toBeVisible();
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
@@ -104,6 +104,6 @@ test("dark theme keeps contrast on results", async ({ page }) => {
   await page.goto("/detector");
   await page.getByRole("button", { name: "Try a sample" }).click();
   await page.getByRole("button", { name: "Check writing patterns" }).click();
-  await expect(page.getByText("Signals behind the score")).toBeVisible();
+  await expect(page.getByText("Style measurements")).toBeVisible();
   await axe(page);
 });
