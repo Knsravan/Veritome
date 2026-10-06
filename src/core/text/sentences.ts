@@ -56,6 +56,12 @@ const NON_TERMINAL_ABBREVIATIONS = new Set([
 /** Abbreviations that may legitimately end a sentence when an upper-case word follows. */
 const MAYBE_TERMINAL_ABBREVIATIONS = new Set(["etc", "al"]);
 
+/** True for common abbreviations such as "e.g", "fig" or "et al" (case-insensitive, no trailing dot). */
+export function isAbbreviation(word: string): boolean {
+  const w = word.toLowerCase().replace(/\.$/, "");
+  return NON_TERMINAL_ABBREVIATIONS.has(w) || MAYBE_TERMINAL_ABBREVIATIONS.has(w);
+}
+
 const BOUNDARY = /([.!?]+)(["'”’)\]]*)(\s+)/g;
 
 function previousToken(text: string, periodIndex: number): string {

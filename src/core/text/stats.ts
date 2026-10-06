@@ -56,3 +56,33 @@ export function median(xs: readonly number[]): number {
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? (s[mid] as number) : ((s[mid - 1] as number) + (s[mid] as number)) / 2;
 }
+
+/**
+ * Moving-average type-token ratio: lexical diversity that does not collapse as
+ * texts get longer. Falls back to plain TTR for short inputs.
+ */
+export function mattr(words: readonly string[], window = 50): number {
+  if (words.length === 0) return 0;
+  if (words.length <= window) return new Set(words).size / words.length;
+  const counts = new Map<string, number>();
+  let distinct = 0;
+  let sum = 0;
+  let windows = 0;
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i] as string;
+    const c = counts.get(w) ?? 0;
+    if (c === 0) distinct++;
+    counts.set(w, c + 1);
+    if (i >= window) {
+      const old = words[i - window] as string;
+      const oc = (counts.get(old) ?? 1) - 1;
+      counts.set(old, oc);
+      if (oc === 0) distinct--;
+    }
+    if (i >= window - 1) {
+      sum += distinct / window;
+      windows++;
+    }
+  }
+  return windows === 0 ? 0 : sum / windows;
+}
