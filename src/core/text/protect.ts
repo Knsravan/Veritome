@@ -172,3 +172,19 @@ export function checkNumbersPreserved(original: string, rewritten: string): Numb
   for (const [k, n] of b) for (let i = 0; i < n - (a.get(k) ?? 0); i++) added.push(k);
   return { ok: missing.length === 0 && added.length === 0, missing, added };
 }
+
+/** Stand-in for protected text so offsets stay aligned but nothing inside is analysed. */
+export const MASK_CHAR = "\u0001";
+
+/**
+ * Replaces citations, maths, URLs and cross-references with MASK_CHAR, one per
+ * character, so the result has exactly the same length and offsets as the input.
+ */
+export function maskProtected(text: string, options: ProtectOptions = {}): { masked: string; spans: ProtectedSpan[] } {
+  const { spans } = protect(text, options);
+  let masked = text;
+  for (const span of [...spans].sort((a, b) => b.start - a.start)) {
+    masked = masked.slice(0, span.start) + MASK_CHAR.repeat(span.end - span.start) + masked.slice(span.end);
+  }
+  return { masked, spans };
+}

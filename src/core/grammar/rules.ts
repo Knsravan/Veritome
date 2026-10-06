@@ -1,5 +1,5 @@
 import { isAbbreviation, splitParagraphs, splitSentences, type Paragraph, type Sentence } from "../text/sentences.ts";
-import { protect } from "../text/protect.ts";
+import { MASK_CHAR, maskProtected } from "../text/protect.ts";
 import { countWords, tokenize, type Token } from "../text/tokens.ts";
 import {
   COMMON_ACRONYMS,
@@ -13,9 +13,6 @@ import {
 } from "./lexicons.ts";
 import type { GrammarOptions, Issue, IssueCategory, IssueSource, Severity } from "./types.ts";
 
-/** Stand-in for protected text so offsets stay aligned but nothing inside is analysed. */
-export const MASK_CHAR = "\u0001";
-
 export interface RuleContext {
   /** The text exactly as the author wrote it. */
   text: string;
@@ -28,11 +25,7 @@ export interface RuleContext {
 }
 
 export function buildContext(text: string, options: GrammarOptions = {}): RuleContext {
-  const { spans } = protect(text);
-  let checkText = text;
-  for (const span of [...spans].sort((a, b) => b.start - a.start)) {
-    checkText = checkText.slice(0, span.start) + MASK_CHAR.repeat(span.end - span.start) + checkText.slice(span.end);
-  }
+  const { masked: checkText } = maskProtected(text);
   return {
     text,
     checkText,
