@@ -110,13 +110,14 @@ const fakeLlm = (reply: string | Error): LlmClient => ({
   },
 });
 
-test("LLM opinion is blended in and disagreement widens the band", async () => {
+test("LLM opinion is shown and widens the band but never moves the score", async () => {
   const base = await detectAiText(PLAIN);
   const r = await detectAiText(PLAIN, { llm: fakeLlm('{"ai_probability": 0.9, "reasons": ["even tone"]}') });
   assert.equal(r.llm?.probability, 0.9);
   assert.deepEqual(r.llm?.reasons, ["even tone"]);
   assert.equal(r.statisticalScore, base.statisticalScore);
-  assert.ok(r.score > base.score);
+  assert.equal(r.score, base.score);
+  assert.equal(r.verdict, base.verdict);
   assert.ok(r.band.high - r.band.low > base.band.high - base.band.low);
 });
 
