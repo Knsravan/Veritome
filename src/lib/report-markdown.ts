@@ -31,7 +31,9 @@ export function reportToMarkdown(r: PaperReport): string {
   out.push("## Plagiarism", "");
   const p = r.plagiarism;
   if (p.status === "done") {
-    out.push(`Similarity ${p.result.similarity}% (${p.result.verdict}).`, "");
+    out.push(`Similarity ${p.result.similarity}% word for word (${p.result.verdict}), plus ${p.result.paraphrasePercent}% reworded.`, "");
+    for (const pm of p.result.paraphrases.slice(0, 20)) out.push(`- Reworded: “${pm.text}” resembles “${pm.sourceText}”`);
+    if (p.result.paraphrases.length) out.push("");
     for (const s of p.result.sources.slice(0, 20)) out.push(`- ${s.percent}%: ${s.title}${s.url ? ` <${s.url}>` : ""} (${s.provider})`);
     out.push("", `_${p.result.disclaimer}_`, "");
   } else out.push(sectionNote(p) ?? "", "");

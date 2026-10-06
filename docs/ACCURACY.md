@@ -92,12 +92,45 @@ recent model output) are the most useful thing anyone can add.
 
 ## Plagiarism checker
 
-The checker compares your text with titles and abstracts from OpenAlex, Crossref, Semantic Scholar and arXiv,
-snippets from optional Brave or Serper web search, and full text of documents you add to your library. It
-**cannot read paywalled full texts, theses, student-paper databases or private repositories**, which is where
-commercial services such as iThenticate have their advantage. A low score is therefore not proof of
-originality. Matches are word-for-word runs (by default at least 6 words, with gaps of up to 2 edited words bridged); close
-paraphrase is not detected. Quotations and the reference list are excluded by default.
+### What it searches
+
+| Source | What it can see | Key needed |
+| --- | --- | --- |
+| arXiv | Abstracts of about 2.5 million preprints, searched by exact phrase | No |
+| Europe PMC | Abstracts of 45 million life-science papers and the **full text** of about 10 million open-access ones | No |
+| Wikipedia | Full text of matching articles | No |
+| Crossref | Titles, and abstracts where publishers deposit them | No (contact email recommended) |
+| OpenAlex | Titles and abstracts of about 250 million works | Free key, effectively required |
+| Semantic Scholar | Titles and abstracts; with a key also full-text snippets | Optional |
+| CORE | **Full text** of 30+ million open-access papers | Free key |
+| Brave or Serper | Web search snippets | Paid beyond free tiers |
+| Your library | Full text of documents you add | No |
+
+Each passage is probed with one exact phrase per sentence, so a copied sentence next to an original one is still
+searched for. Matches are word-for-word runs (by default at least 6 words, with gaps of up to 2 edited words
+bridged). **Reworded sentences** are reported separately: a sentence is flagged when a source sentence shares
+most of its ideas after folding word forms and common academic synonyms together ("demonstrate" and "show",
+"approach" and "framework"). They are not counted in the main percentage.
+
+### Live test (6 October 2026)
+
+A 96-word paragraph containing one sentence pair copied from the ResNet abstract (with one word dropped) and one
+sentence copied from the body of the Transformer paper, mixed with original sentences, was checked against the
+live services without any API keys:
+
+- Before this round of work: **0%** (the arXiv search was broken and Crossref holds few abstracts).
+- After: **52%**, which is exactly the copied share. The ResNet sentences were traced to the ResNet paper on arXiv;
+  the Transformer sentence was found through Europe PMC full text in papers that quote it.
+
+False alarms for reworded sentences: 127 sentences written independently on six research topics were compared
+with 120 arXiv abstracts on the same topics. **None** was flagged.
+
+### What it still cannot see
+
+Paywalled full texts that are not open access, theses, student-paper databases and private repositories, which is
+where commercial services such as iThenticate have their advantage. A low score is therefore not proof of
+originality. Heavier rewriting than synonym swaps and reordering, and text translated from another language,
+can still slip through. Quotations and the reference list are excluded by default.
 
 ## Citation checker and finder
 

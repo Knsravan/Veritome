@@ -42,7 +42,7 @@ export default function Page() {
           <li>Text and uploaded files are processed in memory and dropped when the request ends. Veritome does not store or log them.</li>
           <li>
             Plagiarism search, reference checks and source suggestions send short passages or reference entries to OpenAlex, Crossref, Semantic
-            Scholar, arXiv and DataCite, and to Brave or Serper if web search is enabled. You are asked before this happens.
+            Scholar, arXiv, Europe PMC, Wikipedia, DataCite and (when the operator adds a key) CORE, and to Brave or Serper if web search is enabled. You are asked before this happens.
           </li>
           <li>Rewriting and the optional second opinion on writing patterns send text to the language model the operator configured.</li>
           <li>Grammar checks send text to a LanguageTool server only when the operator has connected one.</li>

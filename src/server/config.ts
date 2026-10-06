@@ -12,6 +12,8 @@ export interface ServerConfig {
   semanticScholarKey?: string;
   /** Free key from openalex.org. Without one, OpenAlex shares a small daily budget across everyone on the server's IP address. */
   openAlexKey?: string;
+  /** Free key from core.ac.uk: full text of 30+ million open-access papers for plagiarism checks. */
+  coreApiKey?: string;
   /** Contact address sent to Crossref and OpenAlex, as their polite-pool policies ask. */
   contactEmail?: string;
   libraryDir?: string;
@@ -43,6 +45,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
   set("serperApiKey", str(env.SERPER_API_KEY));
   set("semanticScholarKey", str(env.SEMANTIC_SCHOLAR_API_KEY));
   set("openAlexKey", str(env.OPENALEX_API_KEY));
+  set("coreApiKey", str(env.CORE_API_KEY));
   set("contactEmail", str(env.CONTACT_EMAIL));
   set("libraryDir", str(env.LIBRARY_DIR));
   return cfg;
@@ -56,5 +59,7 @@ export interface PublicStatus {
   languageTool: boolean;
   webSearch: string[];
   semanticScholarKey: boolean;
+  /** Names of the scholarly sources plagiarism checks query. */
+  plagiarismSources: string[];
   libraryDocuments: number;
 }

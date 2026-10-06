@@ -42,7 +42,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
     setPending(null);
   };
 
-  const services = ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "DataCite"];
+  const services = [...new Set([...(status?.plagiarismSources ?? ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "Europe PMC", "Wikipedia"]), "DataCite"])];
   const web = settings.webSearch ? (status?.webSearch ?? []) : [];
 
   return (

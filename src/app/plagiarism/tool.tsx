@@ -51,7 +51,7 @@ export function PlagiarismTool() {
               checked={external}
               onChange={setExternal}
               label="Scholarly databases"
-              hint="OpenAlex, Crossref, Semantic Scholar and arXiv. Asks before sending anything."
+              hint={`${(status?.plagiarismSources ?? ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "Europe PMC", "Wikipedia"]).join(", ")}. Asks before sending anything.`}
             />
             <Checkbox
               checked={external && settings.webSearch && web.length > 0}

@@ -42,6 +42,8 @@ export interface ArxivClient {
   search(query: string, max?: number): Promise<Work[]>;
   /** Exact-phrase title search, best for checking a cited title. */
   searchByTitle?(title: string, max?: number): Promise<Work[]>;
+  /** Abstracts containing this exact phrase. */
+  searchAbstractPhrase?(phrase: string, max?: number): Promise<Work[]>;
 }
 
 /**
@@ -67,6 +69,12 @@ export function createArxiv(http: Http, options: { baseUrl?: string } = {}): Arx
       const terms = arxivTerms(query).join(" AND all:");
       if (!terms) return [];
       const xml = await http.text(`${base}?search_query=${encodeURIComponent(`all:${terms}`)}&max_results=${max}&sortBy=relevance`);
+      return parseArxivFeed(xml);
+    },
+    async searchAbstractPhrase(phrase, max = 3) {
+      const clean = phrase.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
+      if (!clean) return [];
+      const xml = await http.text(`${base}?search_query=${encodeURIComponent(`abs:"${clean}"`)}&max_results=${max}`);
       return parseArxivFeed(xml);
     },
     async searchByTitle(title, max = 3) {

@@ -13,11 +13,14 @@ import { resolveLlmConfig, type ClientLlmOverride } from "../core/llm/config.ts"
 import {
   arxivProvider,
   braveProvider,
+  coreProvider,
   crossrefProvider,
+  europePmcProvider,
   openAlexProvider,
   semanticScholarProvider,
   semanticScholarSnippetProvider,
   serperProvider,
+  wikipediaProvider,
   type SourceProvider,
 } from "../core/plagiarism/providers.ts";
 import type { PublicStatus, ServerConfig } from "./config.ts";
@@ -60,7 +63,10 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
     crossrefProvider(c.crossref),
     semanticScholarProvider(c.semanticscholar),
     arxivProvider(c.arxiv),
+    europePmcProvider(http),
+    wikipediaProvider(http),
   ];
+  if (cfg.coreApiKey) providers.push(coreProvider(http, cfg.coreApiKey));
   if (cfg.semanticScholarKey) providers.push(semanticScholarSnippetProvider(http, { apiKey: cfg.semanticScholarKey }));
   if (options.web && cfg.braveApiKey) providers.push(braveProvider(http, cfg.braveApiKey));
   if (options.web && cfg.serperApiKey) providers.push(serperProvider(http, cfg.serperApiKey));
@@ -92,6 +98,7 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
     languageTool: Boolean(cfg.languageToolUrl),
     webSearch: web,
     semanticScholarKey: Boolean(cfg.semanticScholarKey),
+    plagiarismSources: plagiarismProviders(cfg, scholarlyHttp(cfg), { web: false }).map((p) => p.name),
     libraryDocuments: (await loadLibrary(cfg.libraryDir)).length,
   };
 }

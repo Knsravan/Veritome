@@ -13,10 +13,16 @@ export function PlagiarismSummary({ report }: { report: PlagiarismReport }) {
       <p className="font-serif text-5xl font-semibold tabular-nums">{report.similarity}%</p>
       <p className="mt-1 font-semibold">{VERDICT[report.verdict]}</p>
       <p className="text-sm text-ink-soft">
-        {report.matchedWords.toLocaleString("en")} of {report.words.toLocaleString("en")} words appear in at least one source.
+        {report.matchedWords.toLocaleString("en")} of {report.words.toLocaleString("en")} words appear word for word in at least one source.
         {report.excluded.references ? " Reference list excluded." : ""}
         {report.excluded.quotes ? " Quotations excluded." : ""}
       </p>
+      {report.paraphrasePercent > 0 && (
+        <p className="mt-2 text-sm">
+          <span className="font-semibold">Plus {report.paraphrasePercent}% reworded:</span> {report.paraphrases.length} sentence
+          {report.paraphrases.length === 1 ? "" : "s"} say the same thing as a source in different words. Not counted in the percentage above.
+        </p>
+      )}
     </div>
   );
 }
@@ -31,16 +37,45 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
     className: "mark-match",
     label: `Matches ${byId.get(s.sourceIds[0] ?? "")?.title ?? "a source"}`,
   }));
+  marks.push(
+    ...report.paraphrases.map((pm, i) => ({
+      id: `p${i}`,
+      start: pm.start,
+      end: pm.end,
+      className: "mark-para",
+      label: `Reworded from ${byId.get(pm.sourceId)?.title ?? "a source"}`,
+    })),
+  );
+  const [activePara, setActivePara] = useState<number | null>(null);
   const activeSpan = active !== null ? report.spans[active] : undefined;
+  const para = activePara !== null ? report.paraphrases[activePara] : undefined;
 
   return (
     <ProofLayout
       sheet={
         <Sheet label="Your text with matched passages">
-          {report.spans.length === 0 ? (
+          {report.spans.length === 0 && report.paraphrases.length === 0 ? (
             <p className="text-ink-soft">No matched passages. Read the limits beside this before relying on it.</p>
           ) : (
-            <AnnotatedText text={text} marks={marks} activeId={active !== null ? `m${active}` : null} onSelect={(id) => setActive(Number(id.slice(1)))} />
+            <>
+              <p className="mb-4 text-sm text-ink-faint">
+                <span className="mark mark-match px-1">Highlighted</span>: word for word. <span className="mark mark-para px-1">Dotted</span>: reworded.
+              </p>
+              <AnnotatedText
+                text={text}
+                marks={marks}
+                activeId={active !== null ? `m${active}` : activePara !== null ? `p${activePara}` : null}
+                onSelect={(id) => {
+                  if (id.startsWith("p")) {
+                    setActive(null);
+                    setActivePara(Number(id.slice(1)));
+                  } else {
+                    setActivePara(null);
+                    setActive(Number(id.slice(1)));
+                  }
+                }}
+              />
+            </>
           )}
         </Sheet>
       }
@@ -59,6 +94,15 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
                   return <li key={id}>{s?.url ? <a className="text-action underline" href={s.url} target="_blank" rel="noreferrer">{s.title}</a> : (s?.title ?? id)}</li>;
                 })}
               </ul>
+            </section>
+          )}
+          {para && (
+            <section aria-live="polite" className="rounded border-l-4 border-dotted border-match-line bg-page px-3 py-2 text-sm">
+              <p className="font-semibold">Reworded sentence, {Math.round(para.similarity * 100)}% of ideas shared</p>
+              <p className="mt-1 font-serif">“{para.text}”</p>
+              <p className="mt-2 text-ink-soft">Closest sentence in {byId.get(para.sourceId)?.title ?? "the source"}:</p>
+              <p className="mt-1 font-serif">“{para.sourceText}”</p>
+              <p className="mt-2 text-ink-faint">Rewording a source without citing it is still plagiarism. Cite it, or make sure the idea is your own.</p>
             </section>
           )}
           <section aria-labelledby="src-h">
@@ -131,7 +175,10 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
           </details>
           <Limits>
             <p>{report.disclaimer}</p>
-            <p>Only word-for-word runs of six or more words are found. Close paraphrase and translated text are not.</p>
+            <p>
+              Word-for-word runs of six or more words are counted. Reworded sentences are found when a source sentence shares most of their
+              ideas, allowing for synonyms and reordering; heavier rewriting and translated text can still slip through.
+            </p>
           </Limits>
         </>
       }

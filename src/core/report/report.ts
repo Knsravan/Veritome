@@ -137,8 +137,8 @@ export function buildOverview(r: Omit<PaperReport, "overview" | "generatedAt" | 
     item("plagiarism", r.plagiarism, (p) => {
       const external = p.sources.filter((s) => s.kind !== "self").length;
       return {
-        status: p.verdict === "high" ? "attention" : p.verdict === "moderate" ? "review" : "ok",
-        headline: `${p.similarity}% of words match ${external} external source${external === 1 ? "" : "s"}${p.providers.some((x) => x.kind !== "self") ? "" : " (no external search configured)"}.`,
+        status: p.verdict === "high" ? "attention" : p.verdict === "moderate" || p.paraphrasePercent >= 5 ? "review" : "ok",
+        headline: `${p.similarity}% of words match ${external} external source${external === 1 ? "" : "s"}${p.paraphrasePercent > 0 ? `, plus ${p.paraphrasePercent}% reworded` : ""}${p.providers.some((x) => x.kind !== "self") ? "" : " (no external search configured)"}.`,
       };
     }),
     item("detector", r.detector, (d) => ({
@@ -225,6 +225,7 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
       .sort((a, b) => b.words - a.words)
       .slice(0, count)
       .map((s) => ({ ...sentenceRange(text, s.start, s.end), reason: `Matches a source over ${s.words} words. Rewrite it in your own words, or quote and cite it.` }));
+    // A reworded sentence still needs a citation; a further rewrite does not fix that, so only exact copies get rewrites.
     return suggestRewrites(text, targets, "academic", deps.llm, signal);
   }));
 

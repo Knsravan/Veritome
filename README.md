@@ -6,7 +6,7 @@ evidence and an honest note on how sure it is.
 
 | Tool | What it does | What it cannot do |
 | --- | --- | --- |
-| **Plagiarism** | Finds word-for-word overlap with titles and abstracts in OpenAlex, Crossref, Semantic Scholar and arXiv, optional Brave or Serper web search, and your own documents. Matched passages are highlighted with links to the source. | Cannot see paywalled full texts, theses or student-paper databases, and misses close paraphrase. A low score is not proof of originality. |
+| **Plagiarism** | Finds copied and reworded passages using exact-phrase search of arXiv, Europe PMC full text, Wikipedia, CORE full text (free key), OpenAlex, Crossref and Semantic Scholar, optional Brave or Serper web search, and your own documents. Each match links to its source. | Cannot see paywalled full texts, theses or student-paper databases. Heavy rewriting and translation can slip through. A low score is not proof of originality. |
 | **AI writing patterns** | Sentence-length variation, vocabulary variety (MATTR), stock phrases and opening connectives, plus an optional language-model opinion. Gives a score with an uncertainty range and per-sentence highlights. | Cannot prove who wrote a text. Careful, edited and non-native human writing can score high. |
 | **Humaniser** | Revises stiff, formulaic prose while citations, maths, URLs and numbers stay locked. Shows the pattern score before and after. | Does not make text human-written. Disclose AI assistance where your publisher asks. |
 | **Paraphraser** | Academic, simple, concise or expanded rewrites with the same protections and checks. | Meaning can drift in ways a number check cannot catch. Read every rewrite. |
@@ -64,6 +64,8 @@ All settings are environment variables and all are optional; see [.env.example](
 | `ALLOW_CLIENT_LLM`, `ALLOW_PRIVATE_LLM` | Let visitors bring their own model from Settings (off by default). Their URLs pass an SSRF guard; cloud metadata addresses are always refused. |
 | `LANGUAGETOOL_URL` | A LanguageTool server for broader grammar and spelling checks. |
 | `CONTACT_EMAIL` | Sent to Crossref and OpenAlex for their polite pools. Recommended. |
+| `OPENALEX_API_KEY` | Free and effectively required: without it OpenAlex shares a tiny daily budget across your server's IP address. |
+| `CORE_API_KEY` | Free: lets plagiarism checks search the full text of 30+ million open-access papers. |
 | `SEMANTIC_SCHOLAR_API_KEY` | Higher rate limits and full-text snippet search for plagiarism checks. |
 | `BRAVE_API_KEY`, `SERPER_API_KEY` | Optional web search for plagiarism checks. |
 | `LIBRARY_DIR` | Folder of documents every plagiarism check also compares against. |

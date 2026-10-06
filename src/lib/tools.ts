@@ -11,8 +11,8 @@ export const TOOLS: readonly ToolInfo[] = [
   {
     href: "/plagiarism",
     name: "Plagiarism",
-    does: "Finds word-for-word overlap with scholarly abstracts, optional web search and your own documents.",
-    cannot: "Cannot see paywalled full texts or student-paper databases, and misses close paraphrase.",
+    does: "Finds copied and reworded passages in open-access papers, abstracts, Wikipedia and your own documents.",
+    cannot: "Cannot see paywalled full texts or student-paper databases; heavy rewriting can slip through.",
   },
   {
     href: "/detector",
