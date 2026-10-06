@@ -123,6 +123,14 @@ test("OpenAlex client builds documented URLs", async () => {
   assert.match(calls[0]?.url ?? "", /\/works\?search=protein%20folding&per-page=5&select=.*&mailto=/);
   assert.match(calls[1]?.url ?? "", /\/works\/https:\/\/doi\.org\/10\.1038\/s41592-019-0000-0\?select=/);
   assert.match(calls[3]?.url ?? "", /filter=title\.search:Deep%20learning%20%20for%20protein%20folding/);
+  assert.equal(calls[0]?.headers.authorization, undefined);
+});
+
+test("OpenAlex API key goes in a header, never the URL", async () => {
+  const { fetch, calls } = mockFetch(() => jsonResponse({ results: [] }));
+  await createOpenAlex(http(fetch), { apiKey: "oa-key" }).search("x");
+  assert.equal(calls[0]?.headers.authorization, "Bearer oa-key");
+  assert.ok(!calls[0]?.url.includes("oa-key"));
 });
 
 test("Semantic Scholar mapping and key header", async () => {
@@ -225,4 +233,15 @@ test("dedupe and merge combine records for the same work", () => {
   assert.equal(dedupeWorks([a, { ...a, doi: "10.1/other", title: "Another paper" }]).length, 2);
   assert.equal(workKey({ title: "T", authors: [], arxivId: "2005.14165v2", sources: [] }), "arxiv:2005.14165");
   assert.equal(mergeWorks(a, a).title, a.title);
+});
+
+test("arXiv search drops stop words, which arXiv does not index", async () => {
+  const { arxivTerms } = await import("../../src/core/citations/sources/arxiv.ts");
+  assert.deepEqual(arxivTerms("Attention is all you need"), ["Attention", "need"]);
+  const { fetch, calls } = mockFetch(() => new Response("<feed></feed>"));
+  const a = createArxiv(http(fetch));
+  await a.search("Attention is all you need");
+  await a.searchByTitle?.('Attention "is" all you need');
+  assert.match(decodeURIComponent(calls[0]?.url ?? ""), /search_query=all:Attention AND all:need&/);
+  assert.match(decodeURIComponent(calls[1]?.url ?? ""), /search_query=ti:"Attention is all you need"&/);
 });

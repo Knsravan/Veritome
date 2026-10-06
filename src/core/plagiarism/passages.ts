@@ -11,6 +11,8 @@ export interface Passage {
   score: number;
   /** A run of consecutive words suitable for an exact-phrase web search. */
   phrase: string;
+  /** Up to two non-overlapping exact phrases, best first, so one edited word does not hide a copied passage. */
+  phrases?: string[];
   /** Keywords for databases that search topics rather than phrases. */
   keywords: string;
 }
@@ -19,6 +21,38 @@ function wordWeight(word: string): number {
   if (isStopword(word)) return 0;
   if (/^\d+$/.test(word)) return 0.2;
   return 1 + Math.min(word.length, 14) / 7;
+}
+
+/**
+ * One exact-phrase probe per sentence (its most distinctive run of `size` words),
+ * best first, up to `max`. Probing each sentence separately means a copied
+ * sentence next to an original one is still searched for.
+ */
+export function pickPhrases(text: string, size = 8, max = 3): string[] {
+  const out: Array<{ phrase: string; score: number }> = [];
+  for (const s of splitSentences(text)) {
+    const tokens = tokenize(s.text);
+    if (tokens.length < 6) continue;
+    const n = Math.min(size, tokens.length);
+    let best = 0;
+    let bestScore = -1;
+    let score = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      score += wordWeight((tokens[i] as { word: string }).word);
+      if (i >= n) score -= wordWeight((tokens[i - n] as { word: string }).word);
+      if (i >= n - 1 && score > bestScore) {
+        bestScore = score;
+        best = i - n + 1;
+      }
+    }
+    const first = tokens[best] as { start: number };
+    const last = tokens[best + n - 1] as { end: number };
+    out.push({ phrase: s.text.slice(first.start, last.end).replace(/\s+/g, " ").trim(), score: bestScore });
+  }
+  return out
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map((x) => x.phrase);
 }
 
 /** The most distinctive stretch of `size` consecutive words, for quoting in a search. */
@@ -85,6 +119,7 @@ export function selectPassages(checkText: string, maxPassages: number, options: 
       text: text.replace(/[\u0001\s]+/g, " ").trim(),
       score,
       phrase: pickPhrase(text.replace(/\u0001+/g, " ")),
+      phrases: pickPhrases(text.replace(/\u0001+/g, " ")),
       keywords: extractKeyphrases(text.replace(/\u0001+/g, " "), 8).join(" "),
     });
   };

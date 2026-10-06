@@ -31,3 +31,7 @@ Thumbs.db
 playwright-report/
 test-results/
 .tmp/
+
+# local document library (keep the README)
+library/*
+!library/README.md

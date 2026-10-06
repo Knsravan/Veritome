@@ -61,19 +61,26 @@ export interface OpenAlexClient {
   searchByTitle(title: string, perPage?: number): Promise<Work[]>;
 }
 
-export function createOpenAlex(http: Http, options: { mailto?: string; baseUrl?: string } = {}): OpenAlexClient {
+/**
+ * OpenAlex now meters requests: without an API key every caller on the same IP
+ * address shares one small daily budget. Keys are free; the key is sent as a
+ * header so it never appears in URLs or error messages.
+ */
+export function createOpenAlex(http: Http, options: { mailto?: string; baseUrl?: string; apiKey?: string } = {}): OpenAlexClient {
   const base = (options.baseUrl ?? "https://api.openalex.org").replace(/\/+$/, "");
   const mailto = options.mailto ? `&mailto=${encodeURIComponent(options.mailto)}` : "";
+  const req = options.apiKey ? { headers: { authorization: `Bearer ${options.apiKey}` } } : {};
   return {
     async search(query, perPage = 10) {
       const data = await http.json<{ results?: OpenAlexWork[] }>(
         `${base}/works?search=${encodeURIComponent(query)}&per-page=${perPage}&select=${SELECT}${mailto}`,
+        req,
       );
       return (data.results ?? []).map(mapOpenAlexWork);
     },
     async getByDoi(doi) {
       try {
-        const w = await http.json<OpenAlexWork>(`${base}/works/https://doi.org/${encodeURIComponent(doi).replace(/%2F/gi, "/")}?select=${SELECT}${mailto}`);
+        const w = await http.json<OpenAlexWork>(`${base}/works/https://doi.org/${encodeURIComponent(doi).replace(/%2F/gi, "/")}?select=${SELECT}${mailto}`, req);
         return mapOpenAlexWork(w);
       } catch (err) {
         if (err instanceof HttpError && err.status === 404) return null;
@@ -83,6 +90,7 @@ export function createOpenAlex(http: Http, options: { mailto?: string; baseUrl?:
     async searchByTitle(title, perPage = 5) {
       const data = await http.json<{ results?: OpenAlexWork[] }>(
         `${base}/works?filter=title.search:${encodeURIComponent(title.replace(/[,:|]/g, " "))}&per-page=${perPage}&select=${SELECT}${mailto}`,
+        req,
       );
       return (data.results ?? []).map(mapOpenAlexWork);
     },

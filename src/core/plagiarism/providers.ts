@@ -86,13 +86,186 @@ export function semanticScholarProvider(client: Pick<SemanticScholarClient, "sea
   };
 }
 
-export function arxivProvider(client: Pick<ArxivClient, "search">): SourceProvider {
+/** Exact phrases to try for a passage, best first (one per sentence). */
+export function phrasesOf(p: Passage): string[] {
+  const list = p.phrases?.length ? p.phrases : p.phrase ? [p.phrase] : [];
+  return list.filter((x) => x.split(/\s+/).length >= 5);
+}
+
+export function arxivProvider(client: Pick<ArxivClient, "search"> & Partial<Pick<ArxivClient, "searchAbstractPhrase">>): SourceProvider {
   return {
     name: "arXiv",
     kind: "scholarly",
-    coverage: "Titles and abstracts of preprints.",
+    coverage: "Titles and abstracts of about 2.5 million preprints, searched by exact phrase first.",
     async search(p) {
+      // An exact phrase finds copied abstracts precisely; topic keywords are the fallback.
+      if (client.searchAbstractPhrase) {
+        for (const phrase of phrasesOf(p)) {
+          const hits = await client.searchAbstractPhrase(phrase, 3);
+          if (hits.length) return hits.map((w) => workToSource(w, "arXiv"));
+        }
+      }
       return p.keywords ? (await client.search(p.keywords, 6)).map((w) => workToSource(w, "arXiv")) : [];
+    },
+  };
+}
+
+/** Removes XML/HTML markup from a full-text document. */
+export function stripMarkup(xml: string): string {
+  return stripTags(
+    xml
+      .replace(/<(script|style|ref-list|table-wrap|fig|disp-formula|tex-math)[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<\/(p|sec|title|abstract|div|li|h\d)>/gi, "\n"),
+  );
+}
+
+const FULL_TEXT_LIMIT = 400_000;
+
+interface EuropePmcResult {
+  id?: string;
+  source?: string;
+  pmcid?: string;
+  doi?: string;
+  title?: string;
+  authorString?: string;
+  pubYear?: string;
+  abstractText?: string;
+  isOpenAccess?: string;
+  inEPMC?: string;
+}
+
+/**
+ * Europe PMC searches abstracts of 45 million life-science articles and the full
+ * text of about 10 million open-access ones, so an exact phrase can be found
+ * anywhere in a paper, not only in its abstract.
+ */
+export function europePmcProvider(http: Http, options: { baseUrl?: string; maxFullText?: number } = {}): SourceProvider {
+  const base = (options.baseUrl ?? "https://www.ebi.ac.uk/europepmc/webservices/rest").replace(/\/+$/, "");
+  const maxFull = options.maxFullText ?? 2;
+  return {
+    name: "Europe PMC",
+    kind: "scholarly",
+    coverage: "Abstracts of 45 million life-science papers and full text of about 10 million open-access ones.",
+    async search(p) {
+      for (const phrase of phrasesOf(p)) {
+        const data = await http.json<{ resultList?: { result?: EuropePmcResult[] } }>(
+          `${base}/search?query=${encodeURIComponent(`"${phrase.replace(/"/g, "")}"`)}&format=json&resultType=core&pageSize=4`,
+        );
+        const results = data.resultList?.result ?? [];
+        if (results.length === 0) continue;
+        const docs: SourceDoc[] = [];
+        let fetched = 0;
+        for (const r of results) {
+          let text = [r.title, r.abstractText].filter(Boolean).map((x) => stripTags(x as string)).join(". ");
+          if (r.pmcid && r.isOpenAccess === "Y" && r.inEPMC === "Y" && fetched < maxFull) {
+            fetched++;
+            try {
+              const xml = await http.text(`${base}/${encodeURIComponent(r.pmcid)}/fullTextXML`, { timeoutMs: 20_000, retries: 0 });
+              text = stripMarkup(xml).slice(0, FULL_TEXT_LIMIT);
+            } catch {
+              // Abstract only when the full text cannot be fetched.
+            }
+          }
+          if (!text) continue;
+          const doi = r.doi?.toLowerCase();
+          docs.push({
+            id: doi ? `doi:${doi}` : `epmc:${r.source}:${r.id}`,
+            title: stripTags(r.title ?? "Untitled article"),
+            text,
+            provider: "Europe PMC",
+            kind: "scholarly",
+            url: doi ? `https://doi.org/${doi}` : `https://europepmc.org/article/${r.source}/${r.id}`,
+            ...(doi ? { doi } : {}),
+            ...(r.pubYear ? { year: Number(r.pubYear) } : {}),
+            ...(r.authorString ? { authors: r.authorString.split(",").slice(0, 3).join(",") + (r.authorString.split(",").length > 3 ? " et al." : "") } : {}),
+          });
+        }
+        return docs;
+      }
+      return [];
+    },
+  };
+}
+
+/** Wikipedia articles containing the exact phrase, compared in full. */
+export function wikipediaProvider(http: Http, options: { baseUrl?: string; lang?: string } = {}): SourceProvider {
+  const base = (options.baseUrl ?? `https://${options.lang ?? "en"}.wikipedia.org/w/api.php`).replace(/\/+$/, "");
+  return {
+    name: "Wikipedia",
+    kind: "web",
+    coverage: "Full text of Wikipedia articles containing the exact phrase.",
+    async search(p) {
+      for (const phrase of phrasesOf(p)) {
+        const data = await http.json<{ query?: { search?: Array<{ pageid: number; title: string }> } }>(
+          `${base}?action=query&list=search&format=json&srlimit=2&srsearch=${encodeURIComponent(`"${phrase.replace(/"/g, "")}"`)}`,
+        );
+        const hits = data.query?.search ?? [];
+        if (hits.length === 0) continue;
+        const docs: SourceDoc[] = [];
+        for (const h of hits) {
+          const page = await http.json<{ query?: { pages?: Record<string, { extract?: string; fullurl?: string }> } }>(
+            `${base}?action=query&prop=extracts|info&inprop=url&explaintext=1&format=json&pageids=${h.pageid}`,
+          );
+          const info = page.query?.pages?.[String(h.pageid)];
+          if (!info?.extract) continue;
+          docs.push({
+            id: `wikipedia:${h.pageid}`,
+            title: `${h.title} (Wikipedia)`,
+            text: info.extract.slice(0, FULL_TEXT_LIMIT),
+            provider: "Wikipedia",
+            kind: "web",
+            url: info.fullurl ?? `https://en.wikipedia.org/?curid=${h.pageid}`,
+          });
+        }
+        return docs;
+      }
+      return [];
+    },
+  };
+}
+
+interface CoreWork {
+  id?: number | string;
+  title?: string;
+  doi?: string;
+  yearPublished?: number;
+  authors?: Array<{ name?: string }>;
+  fullText?: string;
+  abstract?: string;
+  downloadUrl?: string;
+}
+
+/** CORE aggregates the full text of open-access papers from thousands of repositories. Needs a free key. */
+export function coreProvider(http: Http, apiKey: string, options: { baseUrl?: string } = {}): SourceProvider {
+  const base = (options.baseUrl ?? "https://api.core.ac.uk/v3").replace(/\/+$/, "");
+  return {
+    name: "CORE",
+    kind: "scholarly",
+    coverage: "Full text of over 30 million open-access papers from university and subject repositories.",
+    async search(p) {
+      for (const phrase of phrasesOf(p)) {
+        const data = await http.json<{ results?: CoreWork[] }>(`${base}/search/works?q=${encodeURIComponent(`"${phrase.replace(/"/g, "")}"`)}&limit=3`, {
+          headers: { authorization: `Bearer ${apiKey}` },
+        });
+        const results = (data.results ?? []).filter((r) => r.fullText || r.abstract);
+        if (results.length === 0) continue;
+        return results.map((r) => {
+          const doi = r.doi?.toLowerCase();
+          const names = (r.authors ?? []).map((a) => a.name ?? "").filter(Boolean);
+          return {
+            id: doi ? `doi:${doi}` : `core:${r.id}`,
+            title: r.title ?? "Untitled paper",
+            text: [r.title, r.fullText ?? r.abstract].filter(Boolean).join(". ").slice(0, FULL_TEXT_LIMIT),
+            provider: "CORE",
+            kind: "scholarly" as const,
+            url: doi ? `https://doi.org/${doi}` : (r.downloadUrl ?? `https://core.ac.uk/works/${r.id}`),
+            ...(doi ? { doi } : {}),
+            ...(r.yearPublished ? { year: r.yearPublished } : {}),
+            ...(names.length ? { authors: names.slice(0, 3).join("; ") + (names.length > 3 ? " et al." : "") } : {}),
+          };
+        });
+      }
+      return [];
     },
   };
 }

@@ -44,6 +44,17 @@ export interface ProviderStat {
 
 export type PlagiarismVerdict = "low" | "moderate" | "high";
 
+/** A sentence that rewords a source sentence (synonyms, reordering) rather than copying it. */
+export interface ParaphraseSpan {
+  start: number;
+  end: number;
+  text: string;
+  sourceId: string;
+  sourceText: string;
+  /** 0 to 1 concept overlap with the source sentence. */
+  similarity: number;
+}
+
 export interface PlagiarismReport {
   /** Share of words covered by at least one match, 0 to 100. */
   similarity: number;
@@ -51,6 +62,10 @@ export interface PlagiarismReport {
   words: number;
   matchedWords: number;
   spans: MatchedSpan[];
+  /** Reworded sentences, reported separately and not counted in `similarity`. */
+  paraphrases: ParaphraseSpan[];
+  /** Share of words in reworded sentences, 0 to 100. */
+  paraphrasePercent: number;
   sources: MatchedSource[];
   providers: ProviderStat[];
   excluded: { references: boolean; quotes: boolean; referenceWords: number };

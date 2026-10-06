@@ -5,6 +5,7 @@ import {
   COMMON_ACRONYMS,
   COMMON_MISSPELLINGS,
   CONFUSIONS,
+  LIKELY_CONFUSIONS,
   CONTRACTIONS,
   INFORMAL_PHRASES,
   SPELLING_VARIANTS,
@@ -250,13 +251,34 @@ export const articleAAn: Rule = (ctx) => {
 
 const confusionRules = CONFUSIONS.map(([re, replacement, message]) => ({ re, replacement, message }));
 
+/** "$2__STRIP_S" in a replacement means: the captured verb without its final "s". */
+function applyReplacement(match: string, re: RegExp, replacement: string): string {
+  const single = new RegExp(re.source, re.flags.replace("g", ""));
+  return match.replace(single, replacement).replace(/(\w+?)s__STRIP_S/g, "$1").replace(/__STRIP_S/g, "");
+}
+
 export const confusedWords: Rule = (ctx) => {
   const out: Issue[] = [];
   for (const { re, replacement, message } of confusionRules) {
-    const single = new RegExp(re.source, re.flags.replace("g", ""));
     for (const m of matches(re, ctx.checkText)) {
-      const fixed = matchCase(m[0], m[0].replace(single, replacement));
+      const fixed = matchCase(m[0], applyReplacement(m[0], re, replacement));
       out.push(make(ctx, "confused-words", "grammar", "error", message, m.index, m.index + m[0].length, [fixed]));
+    }
+  }
+  return out;
+};
+
+export const likelyConfusions: Rule = (ctx) => {
+  const out: Issue[] = [];
+  for (const [re, replacement, message] of LIKELY_CONFUSIONS) {
+    for (const m of matches(re, ctx.checkText)) {
+      if (replacement) {
+        out.push(make(ctx, "likely-confusion", "grammar", "warning", message, m.index, m.index + m[0].length, [matchCase(m[0], applyReplacement(m[0], re, replacement))]));
+      } else {
+        // Comparative then/than: flag just the word "then".
+        const at = m.index + m[0].trimEnd().lastIndexOf("then");
+        out.push(make(ctx, "likely-confusion", "grammar", "warning", message, at, at + 4, ["than"]));
+      }
     }
   }
   return out;
@@ -548,6 +570,7 @@ export const ALL_RULES: Record<string, Rule> = {
   "sentence-capital": lowercaseAfterPeriod,
   "a-an": articleAAn,
   "confused-words": confusedWords,
+  "likely-confusion": likelyConfusions,
   "passive-voice": passiveOveruse,
   contraction: contractions,
   "wordy-phrase": wordyPhrases,

@@ -1,0 +1,189 @@
+@import "tailwindcss";
+@import "@fontsource-variable/source-serif-4/index.css";
+@import "@fontsource-variable/source-serif-4/wght-italic.css";
+@import "@fontsource-variable/atkinson-hyperlegible-next/index.css";
+
+/*
+ * Veritome: the manuscript is a proof sheet on a cool desk; findings are proof marks.
+ * Colours are tokens so light and dark themes share every component.
+ */
+:root {
+  --desk: #e4e9ef;
+  --desk-deep: #d5dce5;
+  --page: #ffffff;
+  --ink: #1c2733;
+  --ink-soft: #4a5868;
+  --ink-faint: #536276;
+  --rule: #c7d0db;
+  --action: #1d4e89;
+  --action-ink: #ffffff;
+  --action-soft: #dbe7f5;
+  --mark-match: #f7e26b;
+  --mark-match-line: #a68a00;
+  --mark-ai: #5a42b5;
+  --mark-ai-soft: #ebe6fb;
+  --mark-grammar: #c0352b;
+  --mark-grammar-soft: #fbe5e3;
+  --mark-cite: #0f766e;
+  --mark-cite-soft: #d9f2ee;
+  --ok: #22603b;
+  --ok-soft: #dff1e6;
+  --warn: #744800;
+  --warn-soft: #fbefd6;
+  --danger: #9e1c25;
+  --danger-soft: #fbe3e4;
+  --focus: #1d4e89;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --desk: #12171e;
+    --desk-deep: #0c1015;
+    --page: #1b222c;
+    --ink: #e3e9f0;
+    --ink-soft: #b2bfcd;
+    --ink-faint: #8796a8;
+    --rule: #334050;
+    --action: #8ab8f0;
+    --action-ink: #0c1a2c;
+    --action-soft: #1f3550;
+    --mark-match: #6b5a00;
+    --mark-match-line: #e6c93a;
+    --mark-ai: #b3a3f5;
+    --mark-ai-soft: #2d2652;
+    --mark-grammar: #f08a80;
+    --mark-grammar-soft: #4a2321;
+    --mark-cite: #5fd3c4;
+    --mark-cite-soft: #12403b;
+    --ok: #74c995;
+    --ok-soft: #173b26;
+    --warn: #e7b65a;
+    --warn-soft: #3e2f10;
+    --danger: #f1868c;
+    --danger-soft: #4a1d21;
+    --focus: #8ab8f0;
+  }
+}
+
+@theme inline {
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
+  --font-sans: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --color-desk: var(--desk);
+  --color-desk-deep: var(--desk-deep);
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-action: var(--action);
+  --color-action-ink: var(--action-ink);
+  --color-action-soft: var(--action-soft);
+  --color-match: var(--mark-match);
+  --color-match-line: var(--mark-match-line);
+  --color-ai: var(--mark-ai);
+  --color-ai-soft: var(--mark-ai-soft);
+  --color-grammar: var(--mark-grammar);
+  --color-grammar-soft: var(--mark-grammar-soft);
+  --color-cite: var(--mark-cite);
+  --color-cite-soft: var(--mark-cite-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+}
+
+html {
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--desk);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--action-soft);
+}
+
+@layer components {
+/* The manuscript sheet: serif, comfortable measure, generous leading. */
+.sheet-text {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  max-width: 68ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Proof marks. Each kind differs by more than colour (underline style, border) for colour-blind readers. */
+.mark {
+  border-radius: 2px;
+  cursor: pointer;
+  color: inherit;
+}
+.mark-match {
+  background: color-mix(in srgb, var(--mark-match) 70%, transparent);
+  box-shadow: inset 0 -2px 0 var(--mark-match-line);
+}
+.mark-ai {
+  background: var(--mark-ai-soft);
+  text-decoration: underline wavy var(--mark-ai);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.mark-ai-medium {
+  text-decoration: underline dotted var(--mark-ai);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.mark-grammar {
+  text-decoration: underline solid var(--mark-grammar);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.mark-grammar.is-info {
+  text-decoration-style: dashed;
+}
+.mark-cite {
+  background: var(--mark-cite-soft);
+  border-bottom: 2px dashed var(--mark-cite);
+}
+.mark[aria-current="true"] {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.diff-add {
+  background: var(--ok-soft);
+  text-decoration: none;
+}
+.diff-del {
+  background: var(--danger-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--danger);
+}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

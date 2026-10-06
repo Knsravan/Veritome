@@ -181,6 +181,32 @@ export const CONFUSIONS: ReadonlyArray<readonly [RegExp, string, string]> = [
   [/\bin regards to\b/gi, "in regard to", "Use 'in regard to' or 'regarding'."],
   [/\bcould care less\b/gi, "could not care less", "The usual idiom is 'could not care less'."],
   [/\bfor all intensive purposes\b/gi, "for all intents and purposes", "Mis-heard idiom."],
+  [/\bits (been|a|an|not|clear|possible|likely|unlikely|important|necessary|difficult|evident|known|true|worth)\b/gi, "it's $1", "'It's' (it is / it has) needs an apostrophe here."],
+  [/\b(an|the|no|any|a|significant|positive|negative|strong|large|small|main|overall|direct|indirect) affect (of|on)\b/gi, "$1 effect $2", "Use the noun 'effect' here; 'affect' is usually the verb."],
+  [/\b(results|findings|studies|analyses|data sets|datasets|experiments|these results|they|we) (shows|suggests|indicates|demonstrates|reveals|confirms)\b/gi, "$1 $2__STRIP_S", "The verb should agree with the plural subject."],
+  [/\b(this|the|our|each|every) (study|result|analysis|model|method|paper|finding|experiment|figure|table) (show|suggest|indicate|demonstrate|reveal|confirm)\b/gi, "$1 $2 $3s", "The verb should agree with the singular subject."],
+  [/\b(results|findings|studies|analyses) was\b/gi, "$1 were", "Plural subject: use 'were'."],
+  [/\bless (participants|patients|samples|studies|people|subjects|errors|cases|items|observations|students|respondents|individuals|trials|papers)\b/gi, "fewer $1", "Use 'fewer' with things you can count."],
+  [/\b(the|a|an|large|small|total|greater|smaller) amount of (participants|patients|samples|studies|people|subjects|errors|cases|items|observations|students|respondents|individuals|trials|papers)\b/gi, "$1 number of $2", "Use 'number of' with things you can count."],
+  [/\bet al(?![.\w])/g, "et al.", "'et al.' takes a full stop."],
+  [/\bprinciple (investigator|component|components|author|aim|reason|finding|findings)\b/gi, "principal $1", "'Principal' means main; 'principle' means a rule."],
+  [/\bcomplimentary (approach|approaches|method|methods|technique|techniques|data|information|evidence|analysis|analyses|role|roles|perspective|perspectives)\b/gi, "complementary $1", "'Complementary' means completing each other; 'complimentary' means praising or free."],
+  [/\b(this|the|a) phenomena\b/gi, "$1 phenomenon", "Singular: 'phenomenon' (plural 'phenomena')."],
+  [/\b(this|the|a) criteria\b/gi, "$1 criterion", "Singular: 'criterion' (plural 'criteria')."],
+  [/\bdependant (variable|variables|on)\b/gi, "dependent $1", "'Dependent' is the adjective."],
+  [/\bstatistically significance\b/gi, "statistical significance", "Use the adjective 'statistical' before the noun."],
+  [/\bwho's (work|study|data|results|findings|research|paper|papers|contribution|contributions)\b/gi, "whose $1", "'Whose' shows possession; 'who's' means 'who is'."],
+  [/\bloose (weight|data|information|accuracy|precision|track)\b/gi, "lose $1", "'Lose' means to misplace or fail to keep; 'loose' means not tight."],
+];
+
+/** Likely errors that can occasionally be intended, reported as warnings rather than errors. */
+export const LIKELY_CONFUSIONS: ReadonlyArray<readonly [RegExp, string, string]> = [
+  [
+    /\b(more|less|fewer|better|worse|greater|higher|lower|larger|smaller|faster|slower|earlier|later|longer|shorter|stronger|weaker)(\s+[a-z]+){1,3}\s+then\s+(?=(?:we|they|expected|anticipated|predicted|planned|intended|required|needed|usual|before|previously|reported|those|that|in|at|the|a|our|their|other|ever)\b)/gi,
+    "",
+    "Possibly 'than': use 'than' for comparisons and 'then' for time.",
+  ],
+  [/\bdifferent than\b/gi, "different from", "'Different from' is preferred in formal writing."],
 ];
 
 /** Frequent misspellings that dictionaries also catch, kept here so the checker works with no dictionary. */

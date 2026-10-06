@@ -3,6 +3,7 @@ import { maskProtected } from "../text/protect.ts";
 import { blankQuotedText, splitReferences } from "../text/sections.ts";
 import { tokenize } from "../text/tokens.ts";
 import { buildBodyIndex, findRuns, findSelfRepeats, type Run } from "./match.ts";
+import { findParaphrases } from "./paraphrase.ts";
 import { selectPassages } from "./passages.ts";
 import type { SourceDoc, SourceProvider } from "./providers.ts";
 import type { LibraryDoc, MatchedSource, MatchedSpan, PlagiarismReport, PlagiarismVerdict, ProviderStat } from "./types.ts";
@@ -17,6 +18,8 @@ export interface PlagiarismOptions {
   excludeQuotes?: boolean;
   excludeReferences?: boolean;
   checkSelf?: boolean;
+  /** Also look for reworded sentences. Default true. */
+  paraphrases?: boolean;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
 }
@@ -57,8 +60,12 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   };
 
   const found = new Map<string, { doc: SourceDoc; runs: Run[] }>();
+  // Every document seen, for the paraphrase pass (capped to bound the work).
+  const seen = new Map<string, SourceDoc>();
   const addDoc = (doc: SourceDoc) => {
-    if (found.has(doc.id) || doc.text.trim() === "") return;
+    if (doc.text.trim() === "") return;
+    if (!seen.has(doc.id) && seen.size < 500) seen.set(doc.id, doc);
+    if (found.has(doc.id)) return;
     const words = tokenize(doc.text).map((t) => t.word);
     const runs = findRuns(index, words, matchOpts);
     if (runs.length) found.set(doc.id, { doc, runs });
@@ -89,7 +96,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   }
 
   // External search.
-  const maxPassages = options.maxPassages ?? 24;
+  const maxPassages = options.maxPassages ?? 40;
   if (providers.length && tokens.length >= 8) {
     const passages = selectPassages(working, maxPassages);
     const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
@@ -175,12 +182,43 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   });
 
   const similarity = tokens.length ? round1((matchedWords / tokens.length) * 100) : 0;
+
+  // Reworded sentences: skip those already mostly covered by an exact match.
+  const paraphrases =
+    options.paraphrases === false
+      ? []
+      : findParaphrases(working, [...seen.values()].map((d) => ({ id: d.id, text: d.text }))).filter((pm) => {
+          const inside = spans.filter((sp) => sp.start < pm.end && pm.start < sp.end).reduce((n, sp) => n + Math.min(sp.end, pm.end) - Math.max(sp.start, pm.start), 0);
+          return inside < (pm.end - pm.start) * 0.5;
+        });
+  const paraphraseWords = paraphrases.reduce((n, pm) => n + tokenize(pm.text).length, 0);
+  // Sources that only explain reworded sentences still belong in the list.
+  for (const pm of paraphrases) {
+    if (sources.some((x) => x.id === pm.sourceId)) continue;
+    const doc = seen.get(pm.sourceId);
+    if (!doc) continue;
+    sources.push({
+      id: doc.id,
+      title: doc.title,
+      kind: doc.kind,
+      provider: doc.provider,
+      matchedWords: 0,
+      percent: 0,
+      ...(doc.url ? { url: doc.url } : {}),
+      ...(doc.doi ? { doi: doc.doi } : {}),
+      ...(doc.year ? { year: doc.year } : {}),
+      ...(doc.authors ? { authors: doc.authors } : {}),
+    });
+  }
+  for (const pm of paraphrases) pm.text = body.slice(pm.start, pm.end).replace(/\s+/g, " ");
   return {
     similarity,
     verdict: verdictFor(similarity),
     words: tokens.length,
     matchedWords,
     spans,
+    paraphrases,
+    paraphrasePercent: tokens.length ? round1((paraphraseWords / tokens.length) * 100) : 0,
     sources,
     providers: [...stats.values()],
     excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },

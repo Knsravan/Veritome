@@ -77,7 +77,7 @@ export function findClaimsNeedingCitations(text: string, options: { minScore?: n
 // ---------------------------------------------------------------------------
 
 const GENERIC = new Set(
-  "study studies research result results show shown shows found finding findings suggest suggests indicate indicates significantly however therefore thus also many much more most several various different similar recent recently previous previously increasingly widely commonly typically generally often well known based using used use paper work approach method methods analysis case cases new high higher low lower large larger small smaller number data effect effects".split(
+  "study studies research result results show shown shows found finding findings suggest suggests indicate indicates significantly however therefore thus also many much more most several various different similar recent recently previous previously increasingly widely commonly typically generally often well known based using used use paper work approach method methods analysis case cases new high higher low lower large larger small smaller number data effect effects possible make makes made allow allows allowed enable enables solely very able".split(
     " ",
   ),
 );
@@ -148,8 +148,10 @@ export function rankWorks(claim: string, works: readonly Work[]): CitationSugges
     const bigram = Math.min(1, adjacentPairs / 3);
 
     const topical = 0.55 * titleHit + 0.3 * abstractHit + 0.15 * bigram;
+    // Well-cited work is usually what reviewers expect to see cited, so citations count
+    // for a quarter of the score once the topic clearly matches.
     const prior = Math.min(1, Math.log10(1 + (work.citationCount ?? 0)) / 5);
-    let relevance = topical * 0.88 + (topical > 0.15 ? prior * 0.12 : 0);
+    let relevance = topical >= 0.3 ? topical * 0.75 + prior * 0.25 : topical * 0.75;
     let reason = `Matches ${new Set([...inTitle, ...inAbstract]).size} of ${queryStems.length} key terms${inTitle.length ? ` (${inTitle.length} in the title)` : ""}.`;
     if (work.retraction) {
       relevance *= 0.2;
@@ -165,7 +167,7 @@ export function rankWorks(claim: string, works: readonly Work[]): CitationSugges
 export interface FinderDeps {
   openalex?: Pick<OpenAlexClient, "search">;
   semanticscholar?: Pick<SemanticScholarClient, "search">;
-  crossref?: Pick<CrossrefClient, "search">;
+  crossref?: Pick<CrossrefClient, "search" | "searchMostCited">;
   arxiv?: Pick<ArxivClient, "search">;
 }
 
@@ -191,6 +193,7 @@ export async function suggestCitations(claim: string, deps: FinderDeps, options:
   if (deps.openalex) jobs.push(["OpenAlex", deps.openalex.search(query, 15)]);
   if (deps.semanticscholar) jobs.push(["Semantic Scholar", deps.semanticscholar.search(query, 15)]);
   if (deps.crossref) jobs.push(["Crossref", deps.crossref.search(query, 10)]);
+  if (deps.crossref?.searchMostCited) jobs.push(["Crossref (most cited)", deps.crossref.searchMostCited(query, 20)]);
   if (deps.arxiv) jobs.push(["arXiv", deps.arxiv.search(query, 8)]);
 
   const settled = await Promise.allSettled(jobs.map(([, p]) => p));

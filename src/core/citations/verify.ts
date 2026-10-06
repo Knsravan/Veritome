@@ -54,7 +54,7 @@ export interface VerifierDeps {
   crossref: Pick<CrossrefClient, "getWork" | "search">;
   openalex?: Pick<OpenAlexClient, "getByDoi" | "searchByTitle">;
   datacite?: Pick<DataCiteClient, "getWork">;
-  arxiv?: Pick<ArxivClient, "getById">;
+  arxiv?: Pick<ArxivClient, "getById" | "searchByTitle">;
 }
 
 function ascii(s: string): string {
@@ -68,7 +68,27 @@ function familyMatches(a: Author, b: Author): boolean {
   return x === y || x.endsWith(` ${y}`) || y.endsWith(` ${x}`) || (a.organization === true && (x.startsWith(y) || y.startsWith(x)));
 }
 
+const CONTAINER_STOP = new Set(["of", "the", "and", "on", "for", "in", "a", "an", "&", "annual", "volume", "vol", "long", "short", "papers", "proceedings", "conference", "meeting"]);
+
+/** True when an acronym in one name ("NAACL-HLT") spells initials of the other name's words, in order. */
+function acronymMatch(short: string, long: string): boolean {
+  const acronyms = short.match(/\b[A-Z][A-Z0-9]{2,}\b/g) ?? [];
+  if (acronyms.length === 0) return false;
+  const initials = long
+    .split(/[^A-Za-z0-9]+/)
+    .filter((w) => w && !CONTAINER_STOP.has(w.toLowerCase()))
+    .map((w) => w.charAt(0).toUpperCase())
+    .join("");
+  const isSubsequence = (needle: string) => {
+    let i = 0;
+    for (const ch of initials) if (ch === needle.charAt(i)) i++;
+    return i === needle.length;
+  };
+  return acronyms.every((a) => isSubsequence(a.replace(/\d/g, "")));
+}
+
 function containerSimilarity(a: string, b: string): number {
+  if (acronymMatch(a, b) || acronymMatch(b, a)) return 0.9;
   const ta = titleTokens(a);
   const tb = titleTokens(b);
   if (ta.length === 0 || tb.length === 0) return 0;
@@ -94,9 +114,11 @@ export interface MatchScore {
 
 /** How well a parsed entry agrees with a candidate record. Missing fields do not count against it. */
 export function scoreMatch(ref: ParsedReference, work: Work): MatchScore {
-  const titleSim = ref.title
-    ? Math.max(titleSimilarity(ref.title, work.title), 0.9 * titleContainedIn(work.title, ref.raw))
-    : titleContainedIn(work.title, ref.raw) * (titleTokens(work.title).length >= 3 ? 1 : 0.5);
+  // Containment in the raw entry rescues badly parsed titles, but a short title such as
+  // "Deep learning" is contained in many unrelated entries, so it only counts when long.
+  const workTokens = titleTokens(work.title).length;
+  const containment = titleContainedIn(work.title, ref.raw) * (workTokens >= 5 ? 0.9 : workTokens >= 3 ? 0.6 : 0.4);
+  const titleSim = ref.title ? Math.max(titleSimilarity(ref.title, work.title), containment) : containment / 0.9;
 
   let authors: number | null = null;
   if (ref.authors.length > 0 && work.authors.length > 0) {
@@ -244,6 +266,15 @@ export async function verifyReference(ref: ParsedReference, deps: VerifierDeps):
           lookupFailed = lookupFailed || candidates.length === 0;
         }
       }
+      // Conference papers (NeurIPS, ICLR) often have no DOI record; their arXiv version does.
+      const sofar = bestCandidate(ref, candidates);
+      if (ref.title && deps.arxiv?.searchByTitle && (!sofar || sofar.score.score < VERIFIED_SCORE || sofar.score.parts.year === 0)) {
+        try {
+          candidates.push(...(await deps.arxiv.searchByTitle(ref.title, 3)));
+        } catch {
+          // arXiv is a fallback; its failure alone does not make the entry unchecked.
+        }
+      }
       const best = bestCandidate(ref, candidates);
       if (best && (!match || best.score.score > match.score.score + 0.05)) match = best;
     }
@@ -275,6 +306,10 @@ export async function verifyReference(ref: ParsedReference, deps: VerifierDeps):
     check.notes.push("The entry itself matches a different record than its DOI, so the DOI is probably wrong.");
     status = "mismatch";
   }
+  if (status === "verified" && check.discrepancies.some((d) => d.field !== "container")) {
+    // The record is right but the entry has a wrong detail, which a reader should fix.
+    status = "likely";
+  }
   if (status === "not_found") {
     check.match = undefined;
     check.score = 0;
@@ -299,7 +334,8 @@ export function markDuplicates(checks: ReferenceCheck[]): void {
   const seen: ReferenceCheck[] = [];
   for (const c of checks) {
     const dup = seen.find((s) => {
-      if (s.ref.doi && c.ref.doi) return s.ref.doi === c.ref.doi;
+      const doiTrusted = (x: ReferenceCheck) => x.ref.doi && !x.flags.includes("doi_points_elsewhere") && !x.flags.includes("doi_not_found");
+      if (doiTrusted(s) && doiTrusted(c)) return s.ref.doi === c.ref.doi;
       if (s.ref.title && c.ref.title) return titleSimilarity(s.ref.title, c.ref.title) >= 0.95 && s.ref.year === c.ref.year;
       return normalizeTitle(s.raw) === normalizeTitle(c.raw);
     });
