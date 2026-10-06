@@ -89,6 +89,8 @@ export function TextSource({
             type="file"
             accept={ACCEPT}
             className="sr-only"
+            tabIndex={-1}
+            aria-label="Upload a file"
             id={`${id}-file`}
             onChange={(e) => {
               const f = e.target.files?.[0];

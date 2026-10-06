@@ -4,7 +4,12 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
-  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "server-only": fileURLToPath(new URL("./tests/web/server-only-stub.ts", import.meta.url)),
+    },
+  },
   test: {
     include: ["tests/web/**/*.test.{ts,tsx}"],
     environment: "jsdom",

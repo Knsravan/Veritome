@@ -55,10 +55,10 @@ export function scoreSentences(sentences: readonly AnalysedSentence[]): Sentence
     let lean = 0;
     const reasons: string[] = [];
     const clicheWeight = s.cliches.reduce((n, c) => n + c.weight, 0);
-    if (clicheWeight > 0) {
-      lean += Math.min(1.2, clicheWeight * 0.35);
-      reasons.push(`Uses ${s.cliches.map((c) => `“${c.phrase.replace(/,$/, "")}”`).join(", ")}`);
-    }
+    // An opening connective is reported once, as an opener, not again as a stock phrase.
+    const phrases = s.cliches.map((c) => c.phrase.replace(/,$/, "")).filter((p) => p !== s.transition);
+    if (clicheWeight > 0) lean += Math.min(1.2, clicheWeight * 0.35);
+    if (phrases.length) reasons.push(`Uses ${phrases.map((p) => `“${p}”`).join(", ")}`);
     if (s.transition) {
       lean += 0.35;
       reasons.push(`Opens with “${s.transition}”`);

@@ -13,24 +13,24 @@
   --page: #ffffff;
   --ink: #1c2733;
   --ink-soft: #4a5868;
-  --ink-faint: #6b7a8c;
+  --ink-faint: #536276;
   --rule: #c7d0db;
   --action: #1d4e89;
   --action-ink: #ffffff;
   --action-soft: #dbe7f5;
   --mark-match: #f7e26b;
   --mark-match-line: #a68a00;
-  --mark-ai: #6e56cf;
+  --mark-ai: #5a42b5;
   --mark-ai-soft: #ebe6fb;
   --mark-grammar: #c0352b;
   --mark-grammar-soft: #fbe5e3;
   --mark-cite: #0f766e;
   --mark-cite-soft: #d9f2ee;
-  --ok: #2f7d4f;
+  --ok: #22603b;
   --ok-soft: #dff1e6;
-  --warn: #9a6200;
+  --warn: #744800;
   --warn-soft: #fbefd6;
-  --danger: #b4232c;
+  --danger: #9e1c25;
   --danger-soft: #fbe3e4;
   --focus: #1d4e89;
 }
@@ -118,6 +118,7 @@ body {
   background: var(--action-soft);
 }
 
+@layer components {
 /* The manuscript sheet: serif, comfortable measure, generous leading. */
 .sheet-text {
   font-family: var(--font-serif);
@@ -174,6 +175,7 @@ body {
   background: var(--danger-soft);
   text-decoration: line-through;
   text-decoration-color: var(--danger);
+}
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -53,7 +53,7 @@ export function LibraryPicker({ items, onChange, serverCount }: { items: Library
           ))}
         </ul>
       )}
-      <input ref={ref} type="file" multiple accept=".docx,.pdf,.tex,.md,.txt" className="sr-only" tabIndex={-1} onChange={(e) => e.target.files && void add(e.target.files)} />
+      <input ref={ref} type="file" multiple accept=".docx,.pdf,.tex,.md,.txt" className="sr-only" tabIndex={-1} aria-label="Add documents" onChange={(e) => e.target.files && void add(e.target.files)} />
       <Button variant="secondary" busy={busy} onClick={() => ref.current?.click()} disabled={items.length >= 20}>
         Add documents
       </Button>
