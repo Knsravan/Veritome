@@ -5,9 +5,44 @@
   "description": "Open-source pre-publication toolkit for researchers: plagiarism, AI-text detection, humaniser, paraphraser, citation finder and grammar checker.",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "npm run test:core && npm run test:web",
     "test:core": "node --test \"tests/core/**/*.test.ts\"",
-    "typecheck:core": "tsc --noEmit -p tsconfig.json"
+    "test:web": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:core": "tsc --noEmit -p tsconfig.json",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.0",
+    "mammoth": "^1.13.0",
+    "next": "^16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "unpdf": "^1.8.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9",
+    "vitest": "^5.0.3"
   }
 }
