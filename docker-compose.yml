@@ -1,0 +1,52 @@
+# Veritome with optional LanguageTool and Ollama.
+#
+#   docker compose up -d                                   # Veritome only
+#   docker compose --profile languagetool up -d            # plus a local LanguageTool server
+#   docker compose --profile ollama up -d                  # plus a local language model
+#   docker compose exec ollama ollama pull llama3.1:8b     # once, to download the model
+#
+# Settings come from .env (copy .env.example). With the profiles enabled, point
+# LANGUAGETOOL_URL at http://languagetool:8010 and LLM_BASE_URL at http://ollama:11434/v1.
+
+services:
+  veritome:
+    build: .
+    image: veritome:latest
+    restart: unless-stopped
+    ports:
+      - "${VERITOME_PORT:-3000}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LIBRARY_DIR: /library
+    volumes:
+      # Optional shared document library (earlier papers to compare against). Read-only.
+      - ./library:/library:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  languagetool:
+    profiles: ["languagetool"]
+    image: erikvl87/languagetool:latest
+    restart: unless-stopped
+    environment:
+      Java_Xms: 512m
+      Java_Xmx: 1g
+    expose:
+      - "8010"
+
+  ollama:
+    profiles: ["ollama"]
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    expose:
+      - "11434"
+    volumes:
+      - ollama:/root/.ollama
+
+volumes:
+  ollama:

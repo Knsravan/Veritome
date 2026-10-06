@@ -23,7 +23,7 @@ export async function loadLibrary(dir: string | undefined): Promise<LibraryDoc[]
     return [];
   }
   for (const name of names.sort()) {
-    if (!SUPPORTED.has(extname(name).toLowerCase()) || docs.length >= 500) continue;
+    if (!SUPPORTED.has(extname(name).toLowerCase()) || /^readme\./i.test(name) || name.startsWith(".") || docs.length >= 500) continue;
     const path = join(dir, name);
     try {
       if (!(await stat(path)).isFile()) continue;
