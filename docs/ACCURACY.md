@@ -96,7 +96,7 @@ The checker compares your text with titles and abstracts from OpenAlex, Crossref
 snippets from optional Brave or Serper web search, and full text of documents you add to your library. It
 **cannot read paywalled full texts, theses, student-paper databases or private repositories**, which is where
 commercial services such as iThenticate have their advantage. A low score is therefore not proof of
-originality. Matches are word-for-word runs (by default at least 8 words, small gaps allowed); close
+originality. Matches are word-for-word runs (by default at least 6 words, with gaps of up to 2 edited words bridged); close
 paraphrase is not detected. Quotations and the reference list are excluded by default.
 
 ## Citation checker and finder
