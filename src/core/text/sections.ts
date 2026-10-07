@@ -42,3 +42,22 @@ export function blankQuotedText(text: string, minLength = 40): string {
     whole.length >= minLength ? " ".repeat(whole.length) : whole,
   );
 }
+
+/**
+ * The author block of a paper: what sits between the title line and the abstract (names, departments,
+ * institutions, emails). Every paper from the same department shares it, so it is no evidence of copying.
+ * Returns null when no abstract heading is found near the start.
+ */
+export function frontMatter(text: string): { start: number; end: number } | null {
+  const head = text.slice(0, 6000);
+  const abs = /(^|\n)[ \t]*(?:abstract|a\s?b\s?s\s?t\s?r\s?a\s?c\s?t|summary)\b[\s.:—–-]*/i.exec(head);
+  if (!abs) return null;
+  const firstBreak = text.indexOf("\n");
+  if (firstBreak < 0 || firstBreak >= abs.index) return null;
+  const block = text.slice(firstBreak, abs.index);
+  // Only when it looks like an author block: short lines, or emails and affiliations.
+  const lines = block.split("\n").filter((l) => l.trim());
+  const looksLikeAuthors = /@|\b(dept|department|university|institute|college|school|faculty|laborator(y|ies))\b/i.test(block) || lines.every((l) => l.trim().split(/\s+/).length <= 12);
+  if (!lines.length || !looksLikeAuthors) return null;
+  return { start: firstBreak, end: abs.index + abs[1]!.length };
+}

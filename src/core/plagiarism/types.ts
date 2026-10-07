@@ -115,7 +115,7 @@ export interface PlagiarismReport {
   disguises?: TrickFlag[];
   /** Phrases typical of synonym-swapping paraphrasing tools, such as "counterfeit consciousness". */
   tortured?: TorturedPhrase[];
-  excluded: { references: boolean; quotes: boolean; referenceWords: number };
+  excluded: { references: boolean; quotes: boolean; referenceWords: number; /** Words in the author block (names, affiliations), left out. */ authorBlockWords?: number };
   warnings: string[];
   disclaimer: string;
 }

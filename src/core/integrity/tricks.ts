@@ -1,4 +1,4 @@
-import { CONFUSABLES, hasConfusable, unconfuseWord } from "./confusables.ts";
+import { CONFUSABLES, hasConfusable, mixedWordLooksDisguised, unconfuseWord } from "./confusables.ts";
 
 export type TrickKind = "lookalike_letters" | "invisible_characters" | "unusual_spaces" | "hidden_text";
 
@@ -68,7 +68,8 @@ export function findTricks(text: string): TrickFlag[] {
       // English sentence), not inside genuinely Cyrillic or Greek text.
       const around = text.slice(Math.max(0, start - 40), start) + text.slice(start + word.length, start + word.length + 40);
       const latinContext = (around.match(/[A-Za-z]/g) ?? []).length > 3 * (around.match(/[\u0370-\u03ff\u0400-\u04ff]/g) ?? []).length + 5;
-      if (fixed !== visible && (/[A-Za-z]/.test(visible) || (visible.length >= 2 && latinContext))) {
+      const disguised = /[A-Za-z]/.test(visible) ? mixedWordLooksDisguised(visible) : visible.length >= 3 && latinContext;
+      if (fixed !== visible && disguised) {
         const count = [...visible].filter((c) => CONFUSABLES[c] !== undefined).length;
         flags.push({ kind: "lookalike_letters", start, end: start + word.length, text: word, count });
       }

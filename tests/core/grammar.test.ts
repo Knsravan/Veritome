@@ -318,3 +318,10 @@ test("correct academic sentences raise no confusion issues", () => {
     "The effect of temperature was strong, and it affects growth. The principal component explained most variance.";
   assert.deepEqual(checkGrammarLocal(text).issues.filter((i) => i.rule === "confused-words" || i.rule === "likely-confusion"), []);
 });
+
+test("tables and line breaks are not mistaken for long sentences or repeated words", () => {
+  const table = "Symbol\nMeaning\nμ, ν\nMean photon number of signal and decoy pulses\npμ, pν, p0\nProbability of each intensity\n" + "Q\nGain of each intensity measured at the receiver after the channel\n".repeat(6);
+  assert.equal(find(table, "long-sentence").length, 0);
+  assert.equal(find("Quantum key distribution network\nNetwork simulator settings are listed below.", "repeated-word").length, 0);
+  assert.equal(find("The the cat sat.", "repeated-word").length, 1);
+});

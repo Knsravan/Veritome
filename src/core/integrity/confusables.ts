@@ -37,3 +37,14 @@ export function unconfuseWord(word: string): string {
   if (!allConfusable && !LATIN_RE.test(word)) return word;
   return chars.map((c) => CONFUSABLES[c] ?? c).join("");
 }
+
+/**
+ * Whether a word that mixes Latin letters with look-alikes reads as a disguised English word rather than
+ * notation. Symbols in maths and physics (Qν, Eν, pν) are two letters, one Latin and one Greek, so a disguised
+ * word needs three letters or more ("thе" or "sее" with Cyrillic е still count).
+ */
+export function mixedWordLooksDisguised(word: string): boolean {
+  const letters = [...word].filter((c) => /\p{L}/u.test(c));
+  const latin = letters.filter((c) => /[A-Za-z]/.test(c)).length;
+  return latin >= 1 && letters.length >= 3;
+}

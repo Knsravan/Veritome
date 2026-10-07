@@ -22,8 +22,12 @@ export const PDF_COLORS = {
   tintNeutral: "#e6e9ee",
 } as const;
 
-/** The standard PDF fonts only cover Latin-1 plus a few typographic marks; anything else becomes "?". */
+let unicode = false;
+
+/** The standard PDF fonts only cover Latin-1 plus a few typographic marks; anything else becomes "?". With the
+ * embedded DejaVu fonts loaded (see loadUnicodeFonts), Greek letters, maths symbols and most scripts print as they are. */
 export function pdfSafe(s: string): string {
+  if (unicode) return s.replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "");
   return s
     .replace(/[‐‑‒]/g, "-")
     .replace(/ /g, " ")
@@ -34,6 +38,45 @@ const hex = (c: string): [number, number, number] => {
   const n = parseInt(c.replace("#", ""), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
+
+const FONT_FILES: Array<[file: string, family: string, style: string]> = [
+  ["DejaVuSans.ttf", "DejaVuSans", "normal"],
+  ["DejaVuSans-Bold.ttf", "DejaVuSans", "bold"],
+  ["DejaVuSans-Oblique.ttf", "DejaVuSans", "italic"],
+  ["DejaVuSerif.ttf", "DejaVuSerif", "normal"],
+  ["DejaVuSerif-Italic.ttf", "DejaVuSerif", "italic"],
+];
+
+function base64(bytes: ArrayBuffer): string {
+  const u = new Uint8Array(bytes);
+  let bin = "";
+  for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/**
+ * Embeds fonts that cover Greek, maths symbols and most scripts, so a paper's μ, ν, ≤ or names in other
+ * alphabets print correctly. Falls back to the standard fonts (with "?" for such characters) if they cannot load.
+ */
+export async function loadUnicodeFonts(doc: jsPDF, baseUrl = "/fonts/"): Promise<boolean> {
+  unicode = false;
+  if (typeof fetch !== "function") return false;
+  try {
+    const files = await Promise.all(FONT_FILES.map(async ([f]) => {
+      const r = await fetch(`${baseUrl}${f}`);
+      if (!r.ok) throw new Error(f);
+      return r.arrayBuffer();
+    }));
+    FONT_FILES.forEach(([f, family, style], i) => {
+      doc.addFileToVFS(f, base64(files[i]!));
+      doc.addFont(f, family, style);
+    });
+    unicode = true;
+  } catch {
+    unicode = false;
+  }
+  return unicode;
+}
 
 export interface Mark {
   start: number;
@@ -80,7 +123,11 @@ export class PdfWriter {
   }
 
   font(size: number, style: "normal" | "bold" | "italic" = "normal", family: "helvetica" | "times" = "helvetica") {
-    this.doc.setFont(family, style);
+    if (unicode) {
+      // DejaVu has no bold serif in this set; bold text uses the sans.
+      const fam = family === "times" && style !== "bold" ? "DejaVuSerif" : "DejaVuSans";
+      this.doc.setFont(fam, style);
+    } else this.doc.setFont(family, style);
     this.doc.setFontSize(size);
   }
 

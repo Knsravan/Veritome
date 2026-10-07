@@ -197,7 +197,10 @@ test("full report runs offline, shows tabs and offers downloads @mobile", async 
   }
   const pdf = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download PDF report" }).click();
-  expect((await pdf).suggestedFilename()).toMatch(/^veritome-report-.*\.pdf$/);
+  const saved = await pdf;
+  expect(saved.suggestedFilename()).toMatch(/^veritome-report-.*\.pdf$/);
+  // Fonts that cover Greek and maths symbols are embedded.
+  expect((await import("node:fs")).readFileSync((await saved.path())!).toString("latin1")).toContain("DejaVuSans");
   await page.getByText("More formats").click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download Markdown" }).click();

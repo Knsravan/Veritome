@@ -97,7 +97,8 @@ const ALLOWED_REPEATS = new Set(["had had", "that that", "is is", "do do", "bye 
 
 export const repeatedWord: Rule = (ctx) => {
   const out: Issue[] = [];
-  for (const m of matches(/\b([\p{L}']{2,})(\s+)\1\b/giu, ctx.checkText)) {
+  // Same line only: a word ending one line and starting the next (a heading, a table cell) is not a repeat.
+  for (const m of matches(/\b([\p{L}']{2,})([ \t]+)\1\b/giu, ctx.checkText)) {
     const pair = m[0].toLowerCase().replace(/\s+/g, " ");
     if (ALLOWED_REPEATS.has(pair)) continue;
     out.push(
@@ -200,6 +201,9 @@ export const lowercaseAfterPeriod: Rule = (ctx) => {
   }
   for (const para of ctx.paragraphs) {
     const first = /^[a-z][a-z']*/.exec(para.text);
+    // A paragraph that continues a sentence (after an equation or a figure, say) may start in lower case.
+    const before = ctx.checkText.slice(0, para.start).trimEnd();
+    if (before && !/[.!?:"”)\]]$/.test(before)) continue;
     if (first && STARTERS.has(first[0])) {
       out.push(
         make(ctx, "sentence-capital", "grammar", "error", "A paragraph should start with a capital letter.", para.start, para.start + first[0].length, [matchCase("A", first[0])]),
@@ -406,6 +410,9 @@ export const longSentences: Rule = (ctx) => {
   for (const s of ctx.sentences) {
     const n = countWords(s.text);
     if (n <= limit) continue;
+    // Tables, algorithms and lists run over several short lines; they are not one long sentence.
+    const lines = s.text.split("\n").filter((l) => l.trim());
+    if (lines.length >= 3 && lines.filter((l) => countWords(l) <= 12).length >= lines.length * 0.6) continue;
     out.push(
       make(
         ctx,
