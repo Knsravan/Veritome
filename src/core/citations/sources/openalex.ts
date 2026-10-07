@@ -59,6 +59,17 @@ export interface OpenAlexClient {
   /** Returns null when OpenAlex does not know the DOI. */
   getByDoi(doi: string): Promise<Work | null>;
   searchByTitle(title: string, perPage?: number): Promise<Work[]>;
+  /** Works whose text (title, abstract and, where OpenAlex has it, full text) contains this exact phrase. */
+  searchPhrase?(phrase: string, perPage?: number): Promise<Work[]>;
+}
+
+/** Letters, digits, hyphens and apostrophes only, so a phrase cannot break the query syntax. */
+export function cleanPhrase(phrase: string): string {
+  return phrase
+    .replace(/[^\p{L}\p{N}'’\- ]+/gu, " ")
+    .replace(/\b(AND|OR|NOT)\b/g, (w) => w.toLowerCase())
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -86,6 +97,15 @@ export function createOpenAlex(http: Http, options: { mailto?: string; baseUrl?:
         if (err instanceof HttpError && err.status === 404) return null;
         throw err;
       }
+    },
+    async searchPhrase(phrase, perPage = 3) {
+      const clean = cleanPhrase(phrase);
+      if (clean.split(" ").length < 4) return [];
+      const data = await http.json<{ results?: OpenAlexWork[] }>(
+        `${base}/works?search=${encodeURIComponent(`"${clean}"`)}&per-page=${perPage}&select=${SELECT}${mailto}`,
+        req,
+      );
+      return (data.results ?? []).map(mapOpenAlexWork);
     },
     async searchByTitle(title, perPage = 5) {
       const data = await http.json<{ results?: OpenAlexWork[] }>(

@@ -97,7 +97,7 @@ Reproduce or retrain with the steps in `scripts/train/README.md`, or measure on 
 | Europe PMC | Abstracts of 45 million life-science papers and the **full text** of about 10 million open-access ones | No |
 | Wikipedia | Full text of matching articles | No |
 | Crossref | Titles, and abstracts where publishers deposit them | No (contact email recommended) |
-| OpenAlex | Titles and abstracts of about 250 million works | Free key, effectively required |
+| OpenAlex | Titles and abstracts of about 250 million works, plus full text where OpenAlex has it, searched by exact phrase first | Free key, effectively required |
 | Semantic Scholar | Titles and abstracts; with a key also full-text snippets | Optional |
 | CORE | **Full text** of 30+ million open-access papers | Free key |
 | Brave or Serper | Web search snippets | Paid beyond free tiers |

@@ -2,7 +2,7 @@ import type { Http } from "../infra/http.ts";
 import type { ArxivClient } from "../citations/sources/arxiv.ts";
 import { stripTags } from "../citations/sources/common.ts";
 import type { CrossrefClient } from "../citations/sources/crossref.ts";
-import type { OpenAlexClient } from "../citations/sources/openalex.ts";
+import { cleanPhrase, type OpenAlexClient } from "../citations/sources/openalex.ts";
 import type { SemanticScholarClient } from "../citations/sources/semanticscholar.ts";
 import type { Work } from "../citations/types.ts";
 import type { Passage } from "./passages.ts";
@@ -53,12 +53,26 @@ export function workToSource(work: Work, provider: string): SourceDoc {
   return doc;
 }
 
-export function openAlexProvider(client: Pick<OpenAlexClient, "search">): SourceProvider {
+export function openAlexProvider(client: Pick<OpenAlexClient, "search"> & Partial<Pick<OpenAlexClient, "searchPhrase">>): SourceProvider {
   return {
     name: "OpenAlex",
     kind: "scholarly",
-    coverage: "Titles and abstracts of about 250 million scholarly works.",
+    coverage: "Titles and abstracts of about 250 million scholarly works, and full text where OpenAlex has it, searched by exact phrase first.",
     async search(p) {
+      if (client.searchPhrase) {
+        // At most two phrases per passage to keep within the API budget.
+        for (const phrase of phrasesOf(p).slice(0, 2)) {
+          const hits = await client.searchPhrase(phrase, 3);
+          if (hits.length) {
+            // OpenAlex confirmed the phrase is in each work, possibly in full text we cannot see,
+            // so the phrase itself is added to the comparison text.
+            return hits.map((w) => {
+              const doc = workToSource(w, "OpenAlex");
+              return { ...doc, text: `${doc.text} … ${phrase}` };
+            });
+          }
+        }
+      }
       return p.keywords ? (await client.search(p.keywords, 10)).map((w) => workToSource(w, "OpenAlex")) : [];
     },
   };
@@ -244,7 +258,7 @@ export function coreProvider(http: Http, apiKey: string, options: { baseUrl?: st
     coverage: "Full text of over 30 million open-access papers from university and subject repositories.",
     async search(p) {
       for (const phrase of phrasesOf(p)) {
-        const data = await http.json<{ results?: CoreWork[] }>(`${base}/search/works?q=${encodeURIComponent(`"${phrase.replace(/"/g, "")}"`)}&limit=3`, {
+        const data = await http.json<{ results?: CoreWork[] }>(`${base}/search/works?q=${encodeURIComponent(`"${cleanPhrase(phrase)}"`)}&limit=3`, {
           headers: { authorization: `Bearer ${apiKey}` },
         });
         const results = (data.results ?? []).filter((r) => r.fullText || r.abstract);
