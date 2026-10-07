@@ -207,8 +207,8 @@ export function PlagiarismTool() {
           Plagiarism check
         </h1>
         <p className="animate-fade-up mt-3 text-lg text-ink-soft" style={{ ["--i" as string]: 2 }}>
-          One check covers everything: copied and reworded passages, AI-written paragraphs, references and grammar. Every finding is marked in your
-          text with what to do about it.
+          One check covers everything: copied and reworded passages, AI-written paragraphs, references and grammar. Every finding is underlined on
+          your paper, in its own layout, with what to do about it.
         </p>
       </header>
 

@@ -167,3 +167,28 @@ test("a real Word file is shown in its exact layout and the PDF report carries i
   // The paper's page is in the report as a picture.
   expect(bytes.toString("latin1")).toMatch(/\/Subtype \/Image/);
 });
+
+test("OpenDocument and RTF papers are read and checked", async ({ page }) => {
+  const zip = new JSZip();
+  zip.file("mimetype", "application/vnd.oasis.opendocument.text");
+  zip.file(
+    "content.xml",
+    '<?xml version="1.0"?><office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text>' +
+      '<text:h text:outline-level="1">Late-season respiration</text:h>' +
+      `<text:p>${PARA}</text:p></office:text></office:body></office:document-content>`,
+  );
+  await page.goto("/plagiarism");
+  await page.getByLabel("Upload your paper").setInputFiles({ name: "paper.odt", mimeType: "application/vnd.oasis.opendocument.text", buffer: await zip.generateAsync({ type: "nodebuffer" }) });
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
+  await page.getByLabel("Scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check my paper" }).click();
+  const sheet = page.getByLabel("Your paper with every finding underlined");
+  await expect(sheet.getByText("Late-season respiration")).toHaveClass(/font-display/);
+  await expect(sheet.getByRole("button", { name: /Phrase typical of a paraphrasing tool/ })).toBeVisible();
+
+  await page.goto("/plagiarism");
+  const rtf = String.raw`{\rtf1\ansi{\fonttbl{\f0 Times;}}\f0 ` + PARA.replace(/\./g, ".\\par ") + "}";
+  await page.getByLabel("Upload your paper").setInputFiles({ name: "paper.rtf", mimeType: "application/rtf", buffer: Buffer.from(rtf) });
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
+  await expect(page.getByText("RTF", { exact: true }).first()).toBeVisible();
+});

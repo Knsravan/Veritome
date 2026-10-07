@@ -24,8 +24,8 @@ export interface LoadedPaper {
   notes: string[];
 }
 
-export const ACCEPT = ".docx,.pdf,.tex,.md,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
-const FORMATS = ["DOCX", "PDF", "LaTeX", "Markdown", "TXT"];
+export const ACCEPT = ".docx,.pdf,.odt,.rtf,.tex,.md,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
+const FORMATS = ["DOCX", "PDF", "ODT", "RTF", "LaTeX", "Markdown", "TXT"];
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
 const size = (n: number) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
@@ -60,6 +60,18 @@ export async function loadPaper(file: File, onNote?: (s: string) => void): Promi
     form.append("file", file);
     const r = await postForm<{ text: string; warnings: string[] }>("/api/extract", form);
     return { ...base, text: r.text, words: countWords(r.text), doc: null, images: 0, notes: r.warnings };
+  }
+  if (kind === "odt") {
+    const { readOdt } = await import("@/lib/doc/odt");
+    const doc = await readOdt(file.name, new Uint8Array(await file.arrayBuffer()));
+    if (countWords(doc.text) < 10) throw new Error(`${file.name} has almost no text.`);
+    return { ...base, text: doc.text, words: countWords(doc.text), doc, images: doc.images.length, notes: doc.warnings };
+  }
+  if (kind === "rtf") {
+    const { rtfToText } = await import("@/core/text/rtf");
+    const text = rtfToText(await file.text());
+    if (countWords(text) < 10) throw new Error(`${file.name} has almost no text.`);
+    return { ...base, text, words: countWords(text), doc: null, images: 0, notes: [] };
   }
   if (kind === "txt" || kind === "md" || kind === "tex") {
     const raw = (await file.text()).replace(/\r\n?/g, "\n");

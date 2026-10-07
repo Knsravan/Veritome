@@ -31,11 +31,16 @@ async function readFile(file: File): Promise<Paper> {
     if (!doc || doc.text.replace(/\s/g, "").length < 50) throw new Error(`${file.name}: no readable text was found.`);
     return { id, name, text: doc.text, doc };
   }
+  if (ext === "odt" || ext === "rtf") {
+    const { loadPaper } = await import("@/components/FileDrop");
+    const p = await loadPaper(file);
+    return { id, name, text: p.text, doc: p.doc };
+  }
   if (ext === "txt" || ext === "md" || ext === "tex") {
     const raw = await file.text();
     return { id, name, text: ext === "tex" ? latexToText(raw) : raw.replace(/\r\n?/g, "\n"), doc: null };
   }
-  throw new Error(`${file.name}: use .docx, .pdf, .txt, .md or .tex files.`);
+  throw new Error(`${file.name}: use .docx, .pdf, .odt, .rtf, .txt, .md or .tex files.`);
 }
 
 /** Cell shade for an overlap: one hue, darker for more shared text, so the grid reads at a glance. */
@@ -230,7 +235,7 @@ export function CompareTool() {
               <UploadIcon size={22} />
             </span>
             <p className="font-semibold">Drop the papers here</p>
-            <p className="text-sm text-ink-faint">Word (.docx), PDF, LaTeX, Markdown or plain text. Two or more.</p>
+            <p className="text-sm text-ink-faint">Word (.docx), PDF, OpenDocument, RTF, LaTeX, Markdown or plain text. Two or more.</p>
             <Button variant="secondary" onClick={() => input.current?.click()}>
               <FileIcon /> Choose files
             </Button>
@@ -238,7 +243,7 @@ export function CompareTool() {
               ref={input}
               type="file"
               multiple
-              accept=".docx,.pdf,.txt,.md,.tex"
+              accept=".docx,.pdf,.odt,.rtf,.txt,.md,.tex"
               className="sr-only"
               aria-label="Add papers"
               onChange={(e) => {
