@@ -55,6 +55,8 @@ export interface DocImage {
 export interface DocxModel {
   kind: "docx";
   name: string;
+  /** The original file, to show it in its exact layout. */
+  data?: Uint8Array;
   text: string;
   blocks: Block[];
   images: DocImage[];

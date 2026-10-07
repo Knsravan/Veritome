@@ -389,6 +389,96 @@ function PdfView({ doc, ctx }: { doc: PdfModel; ctx: Ctx }) {
 }
 
 /**
+ * A Word file in its exact layout (pages, columns, fonts) with findings drawn on as underlines. Falls back to
+ * the structured view if the file cannot be laid out.
+ */
+function DocxExact({ doc, ctx, marks, fallback }: { doc: DocxModel; ctx: Ctx; marks: readonly TextMark[]; fallback: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const pages = useRef<HTMLDivElement>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [zoom, setZoom] = useState(1);
+  const key = marks.map((m) => `${m.id}:${m.start}:${m.end}:${m.className}:${m.group ?? ""}`).join(",");
+  const onSelect = ctx.onSelect;
+
+  useEffect(() => {
+    let off = false;
+    setState("loading");
+    void import("@/lib/doc/docx-exact")
+      .then(({ renderDocx }) => renderDocx(pages.current!, doc.data!))
+      .then(() => {
+        if (off) return;
+        // Size the pages to fit before showing them, so nothing jumps once they appear.
+        const page = pages.current?.querySelector<HTMLElement>("section.docx");
+        if (page && box.current) setZoom(Math.min(1, (box.current.clientWidth - 8) / page.offsetWidth));
+        setState("ready");
+      })
+      .catch(() => !off && setState("error"));
+    return () => {
+      off = true;
+    };
+  }, [doc.data]);
+
+  useEffect(() => {
+    if (state !== "ready" || !pages.current) return;
+    void import("@/lib/doc/docx-exact").then(({ drawMarks }) => drawMarks(pages.current!, ctx.text, marks, Boolean(onSelect)));
+    // `key` stands for the marks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, key, ctx.text]);
+
+  useEffect(() => {
+    const root = pages.current;
+    if (state !== "ready" || !root) return;
+    for (const el of Array.from(root.querySelectorAll("mark.is-active"))) el.classList.remove("is-active");
+    if (ctx.activeId) for (const el of Array.from(root.querySelectorAll(`mark[data-mark="${CSS.escape(ctx.activeId)}"]`))) el.classList.add("is-active");
+  }, [ctx.activeId, state, key]);
+
+  // Fit the pages to the available width.
+  useEffect(() => {
+    const el = box.current;
+    if (state !== "ready" || !el || !("ResizeObserver" in window)) return;
+    const fit = () => {
+      const page = pages.current?.querySelector<HTMLElement>("section.docx");
+      if (!page) return;
+      const z = Math.min(1, (el.clientWidth - 8) / page.offsetWidth);
+      setZoom((old) => (Math.abs(old - z) > 0.01 ? z : old));
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [state]);
+
+  if (state === "error") return <>{fallback}</>;
+  const pick = (target: EventTarget | null) => {
+    const el = (target as HTMLElement | null)?.closest?.("mark[data-mark]") as HTMLElement | null;
+    if (el?.dataset.mark) onSelect?.(el.dataset.mark);
+  };
+  return (
+    <div ref={box} className="docx-exact relative min-h-40 overflow-hidden [contain:paint]">
+      {state === "loading" && (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-ink-faint">
+          <span className="inline-block size-5 animate-spin rounded-full border-2 border-current border-r-transparent" /> Laying out your paper…
+        </div>
+      )}
+      <div
+        ref={pages}
+        style={{ zoom }}
+        className={cx("transition-opacity duration-500", state === "ready" ? "opacity-100" : "pointer-events-none invisible absolute inset-x-0 top-0 opacity-0")}
+        onClick={(e) => pick(e.target)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            const el = e.target as HTMLElement;
+            if (el.matches?.("mark[data-mark]")) {
+              e.preventDefault();
+              pick(el);
+            }
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+/**
  * Your paper with its findings drawn on it. With an uploaded Word or PDF file it keeps the original layout
  * (headings, emphasis, lists, tables, images, or the PDF pages themselves); pasted text is shown as text.
  * Marks can overlap: a passage can be both copied and AI-like, and both show.
@@ -412,7 +502,11 @@ export function DocumentView({
   const ctx: Ctx = { text, segs, activeId: activeId ?? null, ...(onSelect ? { onSelect } : {}), placed: new Set() };
   const usable = doc && doc.text === text ? doc : null;
   if (!usable || layout === "plain") return <PlainView ctx={ctx} />;
-  return usable.kind === "docx" ? <DocxView doc={usable} ctx={ctx} /> : <PdfView doc={usable} ctx={ctx} />;
+  if (usable.kind === "docx") {
+    const structured = <DocxView doc={usable} ctx={ctx} />;
+    return usable.data && typeof window !== "undefined" ? <DocxExact doc={usable} ctx={ctx} marks={marks} fallback={structured} /> : structured;
+  }
+  return <PdfView doc={usable} ctx={ctx} />;
 }
 
 /** Switch between the paper's original layout and plain text. */

@@ -147,3 +147,23 @@ test("compare papers finds the pair that shares text, and shows where", async ({
   await pair.getByRole("button", { name: /Shared passage 1/ }).first().click();
   await axe(page);
 });
+
+test("a real Word file is shown in its exact layout and the PDF report carries its pages", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/plagiarism");
+  await page.getByRole("button", { name: "Try a sample paper" }).click();
+  await expect(page.getByText("Sample paper.docx")).toBeVisible();
+  await page.getByLabel("Scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check my paper" }).click();
+  const sheet = page.getByLabel("Your paper with every finding underlined");
+  await expect(sheet.locator("section.docx").first()).toBeVisible({ timeout: 30_000 });
+  await expect(sheet.locator("mark[role=button]").first()).toBeVisible();
+  await page.getByRole("tabpanel").getByRole("button", { name: "Next" }).click();
+  await expect(page.getByLabel("Selected finding")).toBeVisible();
+  const pdf = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PDF report" }).click();
+  const saved = await pdf;
+  const bytes = (await import("node:fs")).readFileSync((await saved.path())!);
+  // The paper's page is in the report as a picture.
+  expect(bytes.toString("latin1")).toMatch(/\/Subtype \/Image/);
+});

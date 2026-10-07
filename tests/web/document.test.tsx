@@ -49,8 +49,9 @@ describe("segmentMarks", () => {
 });
 
 describe("DocumentView", () => {
-  it("draws the Word layout with underlines that can be selected", async () => {
-    const doc = await readDocx("paper.docx", await makeDocx(BODY, { image: PNG_1PX }));
+  it("draws the structured Word view with underlines that can be selected", async () => {
+    // Without the original bytes the structured view is used (the exact layout needs a real browser).
+    const { data: _bytes, ...doc } = await readDocx("paper.docx", await makeDocx(BODY, { image: PNG_1PX }));
     const start = doc.text.indexOf("Soil respiration");
     let picked = "";
     render(
@@ -73,5 +74,25 @@ describe("DocumentView", () => {
   it("falls back to plain text when the document does not match the checked text", () => {
     render(<DocumentView doc={null} text="Plain words here." marks={[]} />);
     expect(screen.getByText("Plain words here.")).toBeInTheDocument();
+  });
+});
+
+describe("exact Word layout marks", () => {
+  it("lines up the checked text with the laid-out page and underlines the right words", async () => {
+    const { drawMarks } = await import("@/lib/doc/docx-exact");
+    const host = document.createElement("div");
+    // Laid-out pages can split words across elements and add list numbers the checked text does not have.
+    host.innerHTML = '<section class="docx"><header>Running head</header><p><span>1.</span> Soil resp<span>iration</span> was high in   October.</p><p>Second para.</p></section>';
+    document.body.appendChild(host);
+    const text = "Soil respiration was high in October.\n\nSecond para.";
+    const start = text.indexOf("respiration");
+    drawMarks(host, text, [{ id: "m1", start, end: start + "respiration was".length, className: "mark-match", label: "Copied" }]);
+    const marks = [...host.querySelectorAll("mark[data-mark=m1]")].map((m) => m.textContent).join("|");
+    expect(marks).toBe("resp|iration|was");
+    const first = host.querySelector('mark[tabindex="0"]');
+    expect(first?.id).toBe("mark-m1");
+    expect(first?.getAttribute("role")).toBe("button");
+    expect(host.querySelector("header mark")).toBeNull();
+    host.remove();
   });
 });
