@@ -97,3 +97,30 @@ test("arXiv provider tries exact phrases before keywords", async () => {
 test("stripMarkup keeps paragraphs and drops reference lists and formulas", () => {
   assert.equal(stripMarkup("<p>A <i>b</i>.</p><disp-formula>x=1</disp-formula><p>C.</p>"), "A b . C.");
 });
+
+test("cleanPhrase strips query syntax so a phrase cannot break a search", async () => {
+  const { cleanPhrase } = await import("../../src/core/citations/sources/openalex.ts");
+  assert.equal(cleanPhrase('cells (n = 12), "treated" AND washed: twice'), "cells n 12 treated and washed twice");
+});
+
+test("OpenAlex provider tries exact phrases first and keeps the confirmed phrase in the text", async () => {
+  const { openAlexProvider } = await import("../../src/core/plagiarism/providers.ts");
+  const asked: string[] = [];
+  const work = { title: "Deep residual learning", authors: [], doi: "10.1/resnet", sources: ["openalex" as const] };
+  const p = openAlexProvider({
+    search: async (q) => (asked.push(`kw:${q}`), []),
+    searchPhrase: async (q) => (asked.push(`ph:${q}`), q.startsWith("eta") ? [work] : []),
+  });
+  const docs = await p.search(passage);
+  assert.deepEqual(asked, ["ph:alpha beta gamma delta epsilon zeta", "ph:eta theta iota kappa lambda mu"]);
+  assert.equal(docs[0]?.id, "doi:10.1/resnet");
+  assert.match(docs[0]!.text, /… eta theta iota kappa lambda mu$/);
+});
+
+test("OpenAlex phrase search sends a quoted, cleaned phrase", async () => {
+  const { createOpenAlex } = await import("../../src/core/citations/sources/openalex.ts");
+  const { fetch, calls } = mockFetch(() => jsonResponse({ results: [] }));
+  await createOpenAlex(http(fetch), { apiKey: "k" }).searchPhrase?.("residual (learning) framework to ease");
+  assert.match(decodeURIComponent(calls[0]!.url), /works\?search="residual learning framework to ease"&/);
+  assert.equal(calls[0]?.headers.authorization, "Bearer k");
+});
