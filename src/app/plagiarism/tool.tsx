@@ -7,8 +7,9 @@ import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
 import { PlagiarismResultView } from "@/components/PlagiarismResultView";
 import { TextSource } from "@/components/TextSource";
 import { Button, Checkbox, Notice } from "@/components/ui";
+import type { DetectorResult } from "@/core/detector/types";
 import type { PlagiarismReport } from "@/core/plagiarism/types";
-import { ApiError, postNdjson } from "@/lib/api";
+import { ApiError, postJson, postNdjson } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 
 type Event = { type: "step"; done: number; total: number } | { type: "result"; report: PlagiarismReport } | { type: "error"; error: string };
@@ -52,6 +53,8 @@ export function PlagiarismTool() {
   const [excludeReferences, setExcludeReferences] = useState(true);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [result, setResult] = useState<PlagiarismReport | null>(null);
+  const [checkAi, setCheckAi] = useState(true);
+  const [ai, setAi] = useState<DetectorResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<{ done: number; total: number } | null>(null);
   const ctrl = useRef<AbortController | null>(null);
@@ -72,7 +75,10 @@ export function PlagiarismTool() {
     ctrl.current = c;
     setError(null);
     setResult(null);
+    setAi(null);
     setStep({ done: 0, total: 0 });
+    // The AI check runs on this server only (no language model), alongside the search; it does not need consent.
+    const aiCheck = checkAi ? postJson<DetectorResult>("/api/detect", { text, useLlm: false }, c.signal).catch(() => null) : Promise.resolve(null);
     setChecked(text);
     let report: PlagiarismReport | null = null;
     try {
@@ -88,6 +94,7 @@ export function PlagiarismTool() {
       );
       if (c.signal.aborted) return;
       if (!report) throw new ApiError("The check stopped before it finished. Try again.", 0);
+      setAi(await aiCheck);
       setResult(report);
     } catch (err) {
       if (!c.signal.aborted) setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -129,7 +136,7 @@ export function PlagiarismTool() {
             <DownloadIcon /> Save as PDF
           </Button>
         </header>
-        <PlagiarismResultView text={checked} report={result} />
+        <PlagiarismResultView text={checked} report={result} ai={ai} />
       </article>
     );
   }
@@ -139,7 +146,7 @@ export function PlagiarismTool() {
       <header className="max-w-3xl">
         <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">Plagiarism check</h1>
         <p className="mt-2 text-lg text-ink-soft">
-          Finds passages that match published papers, the web or your own documents, tells you which ones need fixing and shows you exactly how.
+          Finds passages that match published papers, the web or your own documents, checks how much reads as AI-written, and shows you exactly what to fix.
         </p>
       </header>
       {error && (
@@ -167,6 +174,15 @@ export function PlagiarismTool() {
                 disabled={!external || web.length === 0}
                 label="The open web"
                 hint={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
+              />
+            </fieldset>
+            <fieldset className="space-y-3">
+              <legend className="font-semibold">Also check</legend>
+              <Checkbox
+                checked={checkAi}
+                onChange={setCheckAi}
+                label="AI writing"
+                hint="Shows how much of the text reads as AI-written. Runs on this server; nothing extra is sent anywhere."
               />
             </fieldset>
             <fieldset className="space-y-3">

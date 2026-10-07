@@ -158,8 +158,11 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     const perSentence = new Map<number, number>();
     for (const r of runs) for (let t = r.start; t < r.end; t++) perSentence.set(sentenceOf[t]!, (perSentence.get(sentenceOf[t]!) ?? 0) + 1);
     // A short run on its own (such as "the association between air pollution and") is a stock phrase, not copying,
-    // unless it makes up most of its sentence.
-    return runs.filter((r) => r.end - r.start >= 10 || (perSentence.get(sentenceOf[r.start]!) ?? 0) >= 0.5 * (sentenceSize[sentenceOf[r.start]!] ?? Infinity));
+    // unless it has 8 or more words and makes up most of its sentence. Six-word sentences such as "Our results
+    // agree with this view" are too common to count.
+    return runs.filter(
+      (r) => r.end - r.start >= 10 || (r.end - r.start >= 8 && (perSentence.get(sentenceOf[r.start]!) ?? 0) >= 0.5 * (sentenceSize[sentenceOf[r.start]!] ?? Infinity)),
+    );
   };
 
   const found = new Map<string, { doc: SourceDoc; runs: Run[] }>();

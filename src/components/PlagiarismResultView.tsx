@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { aiBreakdown, type AiBreakdown } from "@/core/detector/breakdown";
+import type { DetectorResult } from "@/core/detector/types";
 import { ISSUE_TEXT, reviewReport, type Issue, type IssueKind } from "@/core/plagiarism/review";
 import type { MatchedSource, PlagiarismReport, SourceExcerpt } from "@/core/plagiarism/types";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";
@@ -152,11 +154,76 @@ function FindingDetail({
   );
 }
 
-export function PlagiarismResultView({ text, report }: { text: string; report: PlagiarismReport }) {
+const AI_LABEL = { ai: "Likely AI-written", uncertain: "Unclear", human: "Likely human-written" } as const;
+const AI_STYLE = { ai: "bg-ai", uncertain: "bg-ink-faint/50", human: "bg-ok" } as const;
+
+/** The AI-writing score: what share of the text reads as machine-written, with how far to trust it. */
+function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
+  return (
+    <section aria-label="AI writing summary" className="card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
+      <div className="lg:min-w-48 lg:border-r lg:border-rule lg:pr-8">
+        <p className="text-sm font-semibold text-ink-soft">AI writing</p>
+        {b.judged ? (
+          <>
+            <p className="font-serif text-6xl font-semibold tracking-tight tabular-nums">
+              {b.aiPercent}
+              <span className="text-3xl text-ink-faint">%</span>
+            </p>
+            <p className="mt-1 font-semibold">
+              {b.aiPercent >= 20 ? "Parts read as AI-written" : b.aiPercent > 0 ? "A little reads as AI-written" : "No AI-written parts found"}
+            </p>
+            <p className="text-sm text-ink-soft">of the text is in paragraphs that read as likely AI-written.</p>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 font-serif text-4xl font-semibold text-ink-faint">–</p>
+            <p className="mt-1 text-sm text-ink-soft">Not enough text to judge. AI detection needs about 150 words or more.</p>
+          </>
+        )}
+      </div>
+      <div className="space-y-3">
+        {b.judged && (
+          <div>
+            <p className="text-sm font-semibold">How the text reads</p>
+            <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-desk-deep" aria-hidden>
+              {(["ai", "uncertain", "human"] as const).map((k) => (
+                <span key={k} className={AI_STYLE[k]} style={{ width: `${k === "ai" ? b.aiPercent : k === "human" ? b.humanPercent : b.uncertainPercent}%` }} />
+              ))}
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              {(["ai", "uncertain", "human"] as const).map((k) => (
+                <li key={k} className="flex items-center gap-1.5">
+                  <span aria-hidden className={cx("size-2.5 rounded-full", AI_STYLE[k])} />
+                  {AI_LABEL[k]}: <span className="font-semibold tabular-nums">{k === "ai" ? b.aiPercent : k === "human" ? b.humanPercent : b.uncertainPercent}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="rounded-md bg-desk/60 px-3 py-2 text-sm text-ink-soft">
+          <p>
+            <span className="font-semibold text-ink">How far to trust this: </span>
+            in testing, it wrongly flagged 2 of 764 paragraphs written by people before AI tools existed (0.3%), and caught about half of
+            AI-written texts. A high score is a reason to look again, never proof; edited or paraphrased AI text often passes.
+          </p>
+        </div>
+        {ai.warnings.filter((w) => !w.includes("per-section")).length > 0 && (
+          <p className="text-sm text-ink-faint">{ai.warnings.filter((w) => !w.includes("per-section")).join(" ")}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function PlagiarismResultView({ text, report, ai }: { text: string; report: PlagiarismReport; ai?: DetectorResult | null }) {
   const [minWords, setMinWords] = useState(0);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
+  const [view, setView] = useState<"matches" | "ai">("matches");
+  const aiB = useMemo(() => (ai ? aiBreakdown(ai, text) : null), [ai, text]);
+  const aiRegions = aiB?.regions.filter((x) => x.kind !== "human") ?? [];
+  const aiFlagged = aiRegions.filter((x) => x.kind === "ai");
   const r = useMemo(() => reviewReport(report, { minWords, excludeSources: excluded }), [report, minWords, excluded]);
   const byId = useMemo(() => new Map(report.sources.map((s) => [s.id, s])), [report.sources]);
   const colour = sourceColours(r.primary);
@@ -273,10 +340,53 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
         </div>
       </section>
 
+      {ai && aiB && <AiSummary ai={ai} b={aiB} />}
+
       <ProofLayout
         sheet={
           <Sheet label="Your text with matched passages">
-            {marks.length === 0 ? (
+            {aiB?.judged && (
+              <div role="radiogroup" aria-label="Highlight in the text" className="mb-4 inline-flex rounded-lg border border-rule p-0.5 text-sm print:hidden">
+                {(
+                  [
+                    ["matches", "Matches with sources"],
+                    ["ai", `AI writing (${aiRegions.length})`],
+                  ] as const
+                ).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="radio"
+                    aria-checked={view === v}
+                    onClick={() => {
+                      setView(v);
+                      setActive(null);
+                    }}
+                    className={cx("rounded-md px-3 py-1.5 font-semibold", view === v ? "bg-action text-action-ink" : "text-ink-soft hover:bg-desk")}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {view === "ai" && aiB ? (
+              <>
+                <p className="mb-4 text-sm text-ink-faint">
+                  <span className="mark mark-ai px-1">Wavy underline</span>: likely AI-written. <span className="mark mark-ai-medium px-1">Dotted</span>: unclear.
+                  Each paragraph is judged on its own; short paragraphs are grouped until there are at least 150 words to judge.
+                </p>
+                <AnnotatedText
+                  text={text}
+                  marks={aiRegions.map((x, i) => ({
+                    id: `ai${i}`,
+                    start: x.start,
+                    end: x.end,
+                    className: x.kind === "ai" ? "mark-ai" : "mark-ai-medium",
+                    label: x.kind === "ai" ? "Likely AI-written" : "Unclear whether AI-written",
+                  }))}
+                />
+              </>
+            ) : marks.length === 0 ? (
               <p className="text-ink-soft">No matched passages in the sources that were searched. Read the limits beside this before relying on it.</p>
             ) : (
               <>
@@ -316,11 +426,43 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
 
             <section aria-labelledby="mistakes-h">
               <h3 id="mistakes-h" className="font-semibold">
-                What to fix ({r.issues.length})
+                What to fix ({r.issues.length + aiFlagged.length})
               </h3>
+              {aiFlagged.length > 0 && (
+                <details open className="card mt-2 overflow-hidden">
+                  <summary className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-semibold">
+                    <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-ai" />
+                    <span className="flex-1">Reads as AI-written</span>
+                    <span className="rounded-full bg-ai-soft px-2 text-xs text-ai tabular-nums">{aiFlagged.length}</span>
+                  </summary>
+                  <p className="border-t border-rule px-3 py-2 text-sm text-ink-soft">
+                    Rewrite these parts in your own words and voice. If you used an AI tool, say so in the way your journal or university asks. This is a
+                    pattern match, not proof, so ignore it if you wrote the text yourself.
+                  </p>
+                  <ol className="divide-y divide-rule border-t border-rule">
+                    {aiFlagged.map((x, i) => (
+                      <li key={x.start}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setView("ai");
+                            requestAnimationFrame(() => focusMark(`ai${aiRegions.indexOf(x)}`));
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-desk/60"
+                        >
+                          <span className="line-clamp-2 font-serif">“{text.slice(x.start, x.end).replace(/\s+/g, " ")}”</span>
+                          <span className="text-xs text-ink-faint">
+                            Part {i + 1} · about {text.slice(x.start, x.end).split(/\s+/).length} words
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
               {r.issues.length === 0 ? (
                 <p className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
-                  <CheckIcon size={16} className="text-ok" strokeWidth={2.4} /> Nothing to fix in the sources searched.
+                  <CheckIcon size={16} className="text-ok" strokeWidth={2.4} /> No copied or reworded passages in the sources searched.
                 </p>
               ) : (
                 <div className="mt-2 space-y-3">
