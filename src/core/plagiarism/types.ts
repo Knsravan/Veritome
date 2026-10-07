@@ -21,6 +21,10 @@ export interface MatchedSource {
   matchedWords: number;
   /** Share of the checked text, 0 to 100. */
   percent: number;
+  /** Words credited to this source as the best match for a passage. Each matched word is credited to one source only. */
+  primaryWords: number;
+  /** primaryWords as a share of the checked text; these add up to the overall similarity. */
+  primaryPercent: number;
 }
 
 export interface MatchedSpan {
@@ -29,8 +33,29 @@ export interface MatchedSpan {
   end: number;
   words: number;
   text: string;
-  /** Ids of sources containing this passage, best first. */
+  /** Ids of sources containing this passage, best first. The first is the source the passage is credited to. */
   sourceIds: string[];
+  /** Whether an in-text citation appears in the same sentence(s). */
+  cited: boolean;
+  /** The citation found, such as "(He et al., 2016)" or "[3]". */
+  citation?: string;
+  /** The matching wording in the credited source, with a little context, for a side-by-side view. */
+  sourceExcerpt?: SourceExcerpt;
+}
+
+export interface SourceExcerpt {
+  text: string;
+  /** Offsets of the shared wording inside `text`. */
+  matchStart: number;
+  matchEnd: number;
+}
+
+/** A quotation in the text. Quotations are left out of the similarity score but still need a citation. */
+export interface QuotedPassage {
+  start: number;
+  end: number;
+  text: string;
+  cited: boolean;
 }
 
 export interface ProviderStat {
@@ -55,6 +80,8 @@ export interface ParaphraseSpan {
   sourceText: string;
   /** 0 to 1 concept overlap with the source sentence. */
   similarity: number;
+  /** Whether an in-text citation appears in the same sentence. */
+  cited: boolean;
 }
 
 export interface PlagiarismReport {
@@ -69,6 +96,10 @@ export interface PlagiarismReport {
   /** Share of words in reworded sentences, 0 to 100. */
   paraphrasePercent: number;
   sources: MatchedSource[];
+  /** Quotations found in the text (left out of the score). */
+  quotes: QuotedPassage[];
+  /** The parts of the text used as search queries, so readers can see what was checked online. */
+  searched: Array<{ start: number; end: number }>;
   providers: ProviderStat[];
   excluded: { references: boolean; quotes: boolean; referenceWords: number };
   warnings: string[];

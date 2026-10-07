@@ -170,3 +170,36 @@ export function libraryDocs(body: Record<string, unknown>): LibraryInput[] {
   }
   return out;
 }
+
+/**
+ * Streams newline-delimited JSON: whatever `work` sends as it goes, then `{ type: "result", ... }` or
+ * `{ type: "error", error }`. Lets long checks show progress and keeps the connection alive.
+ */
+export function ndjsonStream<R>(bucket: string, work: (send: (event: object) => void) => Promise<R>, wrap: (result: R) => object): Response {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (event: object) => {
+        try {
+          controller.enqueue(enc.encode(`${JSON.stringify(event)}\n`));
+        } catch {
+          // The client went away; the abort signal stops the remaining work.
+        }
+      };
+      try {
+        send({ type: "result", ...wrap(await work(send)) });
+      } catch (err) {
+        const aborted = err instanceof Error && err.name === "AbortError";
+        if (!aborted) console.error(`[veritome] ${bucket} failed: ${err instanceof Error ? err.name : "unknown error"}`);
+        send({ type: "error", error: aborted ? "The request was cancelled." : "Something went wrong on the server. Try again, or with a shorter text." });
+      } finally {
+        try {
+          controller.close();
+        } catch {
+          // Already closed by the client.
+        }
+      }
+    },
+  });
+  return new Response(stream, { headers: { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" } });
+}

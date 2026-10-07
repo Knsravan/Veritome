@@ -114,3 +114,66 @@ test("failed searches are explained without URLs or status codes", async () => {
   assert.equal(failureReason(new Error("The operation timed out")), "the service did not answer in time");
   assert.equal(failureReason(new Error("HTTP 503 for x")), "the service had a server error");
 });
+
+const ORIGINAL = "Deeper neural networks are more difficult to train and we present a residual learning framework to ease the training of networks";
+const multi = (docs: Array<{ id: string; text: string; year?: number }>): SourceProvider => ({
+  name: "Multi",
+  kind: "scholarly",
+  coverage: "test",
+  async search() {
+    return docs.map((d) => ({ id: d.id, title: `Doc ${d.id}`, text: d.text, provider: "Multi", kind: "scholarly" as const, ...(d.year ? { year: d.year } : {}) }));
+  },
+});
+
+test("each passage is credited to one source, the oldest on a tie, and credits add up to the similarity", async () => {
+  const text = `Our image classifiers were trained on leaf photographs from four farms. ${ORIGINAL}. We used twelve layers in the end.`;
+  const r = await checkPlagiarism(text, {
+    providers: [
+      multi([
+        { id: "quoter", text: `As noted before, ${ORIGINAL}, which we follow.`, year: 2020 },
+        { id: "original", text: `Abstract. ${ORIGINAL} that are substantially deeper.`, year: 2015 },
+      ]),
+    ],
+  });
+  assert.equal(r.spans.length, 1);
+  assert.deepEqual(r.spans[0]?.sourceIds, ["original", "quoter"]);
+  assert.equal(r.sources[0]?.id, "original");
+  assert.equal(r.sources[1]?.primaryWords, 0);
+  const credited = r.sources.reduce((n, s) => n + s.primaryPercent, 0);
+  assert.ok(Math.abs(credited - r.similarity) < 0.2, `${credited} vs ${r.similarity}`);
+  const ex = r.spans[0]?.sourceExcerpt;
+  assert.ok(ex, "has a source excerpt");
+  assert.match(ex!.text.slice(ex!.matchStart, ex!.matchEnd).toLowerCase(), /^deeper neural networks.*training of networks$/);
+  assert.ok(r.searched.length > 0);
+});
+
+test("matches are marked cited or uncited, and quotations without a citation are listed", async () => {
+  const cited = `Our classifiers were trained on leaf photographs. ${ORIGINAL} (He et al., 2016). We used twelve layers.`;
+  const r1 = await checkPlagiarism(cited, { providers: [multi([{ id: "o", text: ORIGINAL }])] });
+  assert.equal(r1.spans[0]?.cited, true);
+  assert.equal(r1.spans[0]?.citation, "He et al., 2016");
+  const uncited = `Our classifiers were trained on leaf photographs. ${ORIGINAL}. We used twelve layers.`;
+  const r2 = await checkPlagiarism(uncited, { providers: [multi([{ id: "o", text: ORIGINAL }])] });
+  assert.equal(r2.spans[0]?.cited, false);
+
+  const quoted = `Our classifiers were trained on leaf photographs. As one paper put it, "residual connections make very deep networks trainable in practice". We used twelve layers.`;
+  const r3 = await checkPlagiarism(quoted, { providers: [] });
+  assert.equal(r3.quotes.length, 1);
+  assert.equal(r3.quotes[0]?.cited, false);
+});
+
+test("short texts have every sentence searched, with short sentences joined", () => {
+  const sentences = [
+    "Leaf photographs were collected from four farms in the coastal district during two monsoon seasons.",
+    "Short note here.",
+    "Residual connections allow very deep convolutional networks to be optimised without degradation of accuracy.",
+    "Our own classifier used twelve layers and was trained for forty epochs on one graphics card.",
+  ];
+  const text = sentences.join(" ");
+  const ps = selectPassages(text, 40);
+  for (const s of sentences) {
+    const at = text.indexOf(s);
+    assert.ok(ps.some((p) => p.start <= at && p.end >= at + s.length), `not searched: ${s}`);
+  }
+  assert.ok(ps.every((a, i) => ps.every((b, j) => i === j || a.end <= b.start || b.end <= a.start)), "passages do not overlap");
+});

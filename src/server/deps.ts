@@ -61,6 +61,8 @@ function buildClients(cfg: ServerConfig, http: Http) {
     datacite: createDataCite(http),
     // CORE's free plan allows only a few requests a minute.
     coreHttp: pacedHttp(http, { service: "CORE", minIntervalMs: 6500, maxRequests: 12 }),
+    // Brave's free plan allows one query a second and 2,000 a month, so a check spends at most 30.
+    braveHttp: pacedHttp(http, { service: "Brave Search", minIntervalMs: 1100, maxRequests: 30 }),
   };
 }
 
@@ -87,7 +89,7 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
   // CORE's free plan allows only a few requests a minute.
   if (cfg.coreApiKey) providers.push(coreProvider(c.coreHttp, cfg.coreApiKey));
   if (cfg.semanticScholarKey) providers.push(semanticScholarSnippetProvider(http, { apiKey: cfg.semanticScholarKey }));
-  if (options.web && cfg.braveApiKey) providers.push(braveProvider(http, cfg.braveApiKey));
+  if (options.web && cfg.braveApiKey) providers.push(braveProvider(c.braveHttp, cfg.braveApiKey));
   if (options.web && cfg.serperApiKey) providers.push(serperProvider(http, cfg.serperApiKey));
   return providers;
 }

@@ -1,3 +1,4 @@
+import { ISSUE_TEXT, reviewReport, type IssueKind } from "../plagiarism/review.ts";
 import type { PaperReport, ToolId } from "./report.ts";
 
 export type ActionLevel = "high" | "medium" | "low";
@@ -27,38 +28,34 @@ export function buildActionList(report: PaperReport, limitPerKind = 5): ActionIt
 
   if (report.plagiarism.status === "done") {
     const p = report.plagiarism.result;
+    const r = reviewReport(p);
     const byId = new Map(p.sources.map((s) => [s.id, s]));
-    const external = p.spans.filter((s) => s.sourceIds.some((id) => byId.get(id)?.kind !== "self")).sort((a, b) => b.words - a.words);
-    for (const s of external.slice(0, limitPerKind)) {
-      const src = byId.get(s.sourceIds.find((id) => byId.get(id)?.kind !== "self") ?? "");
+    const from = (id: string | undefined) => {
+      const src = id ? byId.get(id) : undefined;
+      return src ? `“${clip(src.title, 80)}”` : "a published source";
+    };
+    const shown = new Map<IssueKind, number>();
+    for (const i of r.issues) {
+      if (i.kind === "reworded_cited" || i.kind === "repeated") continue;
+      const n = shown.get(i.kind) ?? 0;
+      shown.set(i.kind, n + 1);
+      if (n >= limitPerKind) continue;
+      const t = ISSUE_TEXT[i.kind];
       add({
-        id: `plag-${s.start}`,
-        level: s.words >= 15 || p.verdict === "high" ? "high" : "medium",
+        id: `plag-${i.kind}-${i.start}`,
+        level: i.kind === "copied_uncited" ? "high" : i.kind === "copied_cited" ? (i.words >= 15 ? "high" : "medium") : "medium",
         tool: "plagiarism",
-        title: `${s.words} words match ${src ? `“${clip(src.title, 80)}”` : "a published source"}`,
-        detail: "Put the passage in quotation marks and cite the source, or rewrite it in your own words and cite it.",
-        quote: clip(s.text),
+        title:
+          i.kind === "quote_uncited"
+            ? t.title
+            : `${t.title}: ${i.kind.startsWith("copied") ? `${i.words} words match` : "closely follows"} ${from(i.sourceId)}`,
+        detail: t.fix,
+        quote: clip(i.text),
       });
     }
-    if (external.length > limitPerKind) {
-      add({
-        id: "plag-more",
-        level: "medium",
-        tool: "plagiarism",
-        title: `${plural(external.length - limitPerKind, "more matched passage")}`,
-        detail: "See the Similarity tab for every match and its source.",
-      });
-    }
-    for (const pm of p.paraphrases.slice(0, limitPerKind)) {
-      const src = byId.get(pm.sourceId);
-      add({
-        id: `para-${pm.start}`,
-        level: "medium",
-        tool: "plagiarism",
-        title: `Sentence closely rewords ${src ? `“${clip(src.title, 80)}”` : "a source"}`,
-        detail: "Rewording still needs a citation. Make sure the source is cited here.",
-        quote: clip(pm.text),
-      });
+    const extra = [...shown.values()].reduce((n, c) => n + Math.max(0, c - limitPerKind), 0);
+    if (extra > 0) {
+      add({ id: "plag-more", level: "medium", tool: "plagiarism", title: `${plural(extra, "more passage")} to fix`, detail: "See the Similarity tab for every finding and its source." });
     }
   }
 
