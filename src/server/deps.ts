@@ -88,7 +88,12 @@ export function languageToolOptions(cfg: ServerConfig, options: { allowPublic?: 
 /** Server LLM, or a browser-supplied one when the operator allows it (checked by the SSRF guard). */
 export async function llmClient(cfg: ServerConfig, override?: ClientLlmOverride): Promise<LlmClient | undefined> {
   const config = await resolveLlmConfig({
-    env: { LLM_BASE_URL: cfg.llm.baseUrl, LLM_MODEL: cfg.llm.model, LLM_API_KEY: cfg.llm.apiKey },
+    env: {
+      LLM_BASE_URL: cfg.llm.baseUrl,
+      LLM_MODEL: cfg.llm.model,
+      LLM_API_KEY: cfg.llm.apiKey,
+      LLM_REASONING_EFFORT: cfg.llm.reasoningEffort,
+    },
     override,
     allowClientConfig: cfg.allowClientLlm,
     allowPrivate: cfg.allowPrivateLlm,

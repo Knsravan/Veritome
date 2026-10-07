@@ -1,7 +1,7 @@
 import "server-only";
 
 export interface ServerConfig {
-  llm: { baseUrl?: string; model?: string; apiKey?: string };
+  llm: { baseUrl?: string; model?: string; apiKey?: string; reasoningEffort?: string };
   /** Let the browser supply its own LLM endpoint. Off by default; turn on only for private deployments. */
   allowClientLlm: boolean;
   /** Allow browser-supplied LLM URLs on localhost or private networks (e.g. Ollama). */
@@ -43,6 +43,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
   if (str(env.LLM_BASE_URL)) cfg.llm.baseUrl = str(env.LLM_BASE_URL);
   if (str(env.LLM_MODEL)) cfg.llm.model = str(env.LLM_MODEL);
   if (str(env.LLM_API_KEY)) cfg.llm.apiKey = str(env.LLM_API_KEY);
+  if (str(env.LLM_REASONING_EFFORT)) cfg.llm.reasoningEffort = str(env.LLM_REASONING_EFFORT);
   set("languageToolUrl", str(env.LANGUAGETOOL_URL));
   set("braveApiKey", str(env.BRAVE_API_KEY));
   set("serperApiKey", str(env.SERPER_API_KEY));
