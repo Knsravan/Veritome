@@ -128,3 +128,21 @@ test("pictures used twice, including a flipped copy, are found", async ({ page }
   await expect(panel.getByText(/One copy is flipped/).first()).toBeVisible();
   await axe(page);
 });
+
+test("compare papers finds the pair that shares text, and shows where", async ({ page }) => {
+  await page.goto("/compare");
+  const shared = "Waterlogged sediments kept microbial activity unusually elevated across the floodplain well into October, long after upland plots had cooled.";
+  await page.getByLabel("Add papers").setInputFiles([
+    { name: "Ana.txt", mimeType: "text/plain", buffer: Buffer.from(`Ana studied riparian alder stands over two summers. ${shared} She ends with her own idea about nitrogen.`) },
+    { name: "Ben.txt", mimeType: "text/plain", buffer: Buffer.from(`Ben looked at the same river. ${shared} He then measured something else entirely in winter.`) },
+    { name: "Cat.txt", mimeType: "text/plain", buffer: Buffer.from("Cat wrote about coastal dunes and the movement of sand over three stormy winters in great detail.") },
+  ]);
+  await expect(page.getByRole("button", { name: /Remove/ })).toHaveCount(3);
+  await page.getByRole("button", { name: "Compare 3 papers" }).click();
+  await expect(page.getByRole("heading", { name: /1 pair shares 10% or more/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Ana and Ben: \d+% shared/ })).toBeVisible();
+  const pair = page.getByLabel("Pair comparison");
+  await expect(pair).toContainText("Ana and Ben: 1 shared passage");
+  await pair.getByRole("button", { name: /Shared passage 1/ }).first().click();
+  await axe(page);
+});

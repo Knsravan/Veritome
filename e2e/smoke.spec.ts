@@ -9,14 +9,14 @@ async function axe(page: Page) {
 test("home page shows all tools and passes axe @mobile", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Check your paper before reviewers do.");
-  await expect(page.locator("#tools li")).toHaveCount(6);
+  await expect(page.locator("#tools li")).toHaveCount(7);
   await axe(page);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
 });
 
 test("every tool page loads and passes axe", async ({ page }) => {
-  for (const path of ["/plagiarism", "/detector", "/humaniser", "/paraphraser", "/citations", "/grammar", "/settings", "/about"]) {
+  for (const path of ["/plagiarism", "/compare", "/detector", "/humaniser", "/paraphraser", "/citations", "/grammar", "/settings", "/about"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await axe(page);

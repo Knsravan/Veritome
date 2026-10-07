@@ -6,15 +6,17 @@ evidence and an honest note on how sure it is.
 
 | Tool | What it does | What it cannot do |
 | --- | --- | --- |
-| **Plagiarism** | Finds copied and reworded passages using exact-phrase search of arXiv, Europe PMC full text, Wikipedia, CORE full text (free key), OpenAlex, Crossref and Semantic Scholar, optional Brave or Serper web search, and your own documents. Each match links to its source. | Cannot see paywalled full texts, theses or student-paper databases. Heavy rewriting and translation can slip through. A low score is not proof of originality. |
+| **Plagiarism (full check)** | Finds copied and reworded passages using exact-phrase search of arXiv, Europe PMC full text, Wikipedia, CORE full text (free key), OpenAlex, Crossref and Semantic Scholar, optional Brave or Serper web search, and your own documents, then compares matched papers in full where a free copy exists. Also catches disguised text (look-alike letters, invisible characters, hidden text), paraphrasing-tool phrases ("counterfeit consciousness"), text translated from English sources, reuse of your own earlier papers (ORCID or name), and problems in pictures (the same picture twice, even flipped; figures matching a source; copied text inside pictures, read by OCR). Runs the AI, citation and grammar checks in the same report, shown on the paper in its original layout. | Cannot see paywalled full texts, theses or student-paper databases, and cannot reverse-search pictures across the web. Heavy rewriting can slip through. A low score is not proof of originality. |
 | **AI writing patterns** | A classifier trained on about 90,000 labelled human and machine texts, calibrated so roughly 1 in 100 human texts or fewer is flagged. Undoes evasion tricks (lookalike letters, invisible characters), scores long documents section by section, and shows the wording behind the score. | Cannot prove who wrote a text. Catches about half of machine text in testing; paraphrased text and new models are often "inconclusive". |
 | **Humaniser** | Revises stiff, formulaic prose while citations, maths, URLs and numbers stay locked. Shows the pattern score before and after. | Does not make text human-written. Disclose AI assistance where your publisher asks. |
 | **Paraphraser** | Academic, simple, concise or expanded rewrites with the same protections and checks. | Meaning can drift in ways a number check cannot catch. Read every rewrite. |
 | **Citations** | Verifies each reference against Crossref, OpenAlex, DataCite and arXiv; flags retractions, wrong DOIs and mismatched details; cross-checks in-text citations; finds papers for uncited claims; formats in six styles and BibTeX. | "Not found" is not "fabricated": books and reports are often missing from these databases. Suggested papers may not support your claim. |
+| **Compare papers** | For teachers: compares a class's papers with each other in the browser (nothing uploaded), with a heatmap and side-by-side shared passages; assignment text can be left out. | Finds passages shared word for word (with small edits), not reworded or translated sharing. |
 | **Grammar** | High-precision academic-style rules, common misspellings and readability scores, plus LanguageTool when connected. Fixes apply in place. | The built-in rules are not a full grammar parser; readability formulas are rough guides. |
 
-The **Full report** runs all six on a whole paper (paste it, or upload .docx, .pdf, .tex, .md or .txt) and exports
-Markdown or JSON.
+The **Plagiarism** check is the full report: it runs every check on a whole paper (paste it, or upload .docx, .pdf
+including scanned PDFs, .tex, .md or .txt), shows every finding underlined on the paper in its original layout, and
+exports PDF, Markdown or JSON. Word and PDF files are read in the browser; only the text is sent for checking.
 
 ## Honest limits
 

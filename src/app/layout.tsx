@@ -51,6 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   <p className="font-semibold">Tools</p>
                   <ul className="mt-3 space-y-2 text-ink-soft">
                     <li><Link href="/plagiarism" className="hover:text-ink hover:underline">Plagiarism (full check)</Link></li>
+                    <li><Link href="/compare" className="hover:text-ink hover:underline">Compare papers</Link></li>
                     <li><Link href="/detector" className="hover:text-ink hover:underline">AI patterns</Link></li>
                     <li><Link href="/citations" className="hover:text-ink hover:underline">Citations</Link></li>
                     <li><Link href="/grammar" className="hover:text-ink hover:underline">Grammar</Link></li>
