@@ -5,6 +5,11 @@ export interface LlmConfig {
   baseUrl: string;
   apiKey?: string;
   model: string;
+  /**
+   * Sent as `reasoning_effort`. Thinking models (such as Gemini) count thinking
+   * against max_tokens, so a low value keeps short replies from coming back empty.
+   */
+  reasoningEffort?: string;
 }
 
 export class LlmNotConfiguredError extends Error {
@@ -58,12 +63,13 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
   });
   const url = chatCompletionsUrl(config.baseUrl);
 
-  async function call(req: ChatRequest, json: boolean): Promise<string> {
+  async function call(req: ChatRequest, json: boolean, reasoning: boolean): Promise<string> {
     const body = JSON.stringify({
       model: config.model,
       temperature: req.temperature ?? 0.7,
       ...(req.maxTokens ? { max_tokens: req.maxTokens } : {}),
       ...(json ? { response_format: { type: "json_object" } } : {}),
+      ...(reasoning && config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
       messages: [
         { role: "system", content: req.system },
         { role: "user", content: req.user },
@@ -89,12 +95,12 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
     model: config.model,
     async chat(req) {
       try {
-        return await call(req, req.json === true);
+        return await call(req, req.json === true, true);
       } catch (err) {
         if (err instanceof HttpError) {
-          if (req.json && err.status === 400) {
-            // Some servers do not support response_format.
-            return call(req, false).catch((e) => {
+          if ((req.json || config.reasoningEffort) && err.status === 400) {
+            // Some servers do not support response_format or reasoning_effort.
+            return call(req, false, false).catch((e) => {
               throw mapError(e);
             });
           }

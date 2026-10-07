@@ -41,5 +41,11 @@ export async function resolveLlmConfig(options: ResolveOptions): Promise<LlmConf
   const baseUrl = env.LLM_BASE_URL?.trim();
   const model = env.LLM_MODEL?.trim();
   if (!baseUrl || !model) return null;
-  return { baseUrl, model, ...(env.LLM_API_KEY ? { apiKey: env.LLM_API_KEY } : {}) };
+  const reasoningEffort = env.LLM_REASONING_EFFORT?.trim();
+  return {
+    baseUrl,
+    model,
+    ...(env.LLM_API_KEY ? { apiKey: env.LLM_API_KEY } : {}),
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+  };
 }
