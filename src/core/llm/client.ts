@@ -5,6 +5,8 @@ export interface LlmConfig {
   baseUrl: string;
   apiKey?: string;
   model: string;
+  /** Sent as reasoning_effort ("none", "minimal", "low", "medium", "high") for models that think before answering. */
+  reasoningEffort?: string;
 }
 
 export class LlmNotConfiguredError extends Error {
@@ -58,11 +60,12 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
   });
   const url = chatCompletionsUrl(config.baseUrl);
 
-  async function call(req: ChatRequest, json: boolean): Promise<string> {
+  async function call(req: ChatRequest, json: boolean, limit = true): Promise<string> {
     const body = JSON.stringify({
       model: config.model,
       temperature: req.temperature ?? 0.7,
-      ...(req.maxTokens ? { max_tokens: req.maxTokens } : {}),
+      ...(req.maxTokens && limit ? { max_tokens: req.maxTokens } : {}),
+      ...(config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
       ...(json ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: req.system },
@@ -79,6 +82,10 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
       },
     });
     const content = data.choices?.[0]?.message?.content;
+    if ((typeof content !== "string" || content.trim() === "") && limit && req.maxTokens && data.choices?.[0]?.finish_reason === "length") {
+      // Thinking models (Gemini, o-series) can spend the whole limit on reasoning; ask again without it.
+      return call(req, json, false);
+    }
     if (typeof content !== "string" || content.trim() === "") {
       throw new LlmError(data.error?.message ?? "The language model returned an empty response.");
     }

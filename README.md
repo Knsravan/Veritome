@@ -39,6 +39,8 @@ any result.
    click **Deploy**. No settings are needed for a first run.
 2. Optional, under **Settings → Environment Variables** (then **Redeploy**): `OPENALEX_API_KEY`, `CORE_API_KEY` and
    `CONTACT_EMAIL` for better searches, and `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` for real rewriting.
+   For Google Gemini: `LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`,
+   `LLM_MODEL=gemini-3.8-flash`, `LLM_API_KEY=<your Gemini key>`, and optionally `LLM_REASONING_EFFORT=low`.
 3. Optional: attach your own domain under **Settings → Domains**.
 
 On Vercel, uploads are limited to about 4 MB (Vercel's request limit) and each check can run for up to 5 minutes.
@@ -74,6 +76,7 @@ All settings are environment variables and all are optional; see [.env.example](
 | Variable | Purpose |
 | --- | --- |
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Any OpenAI-compatible endpoint for the paraphraser, humaniser and optional detector opinion. Without one, rewriting falls back to light rule-based edits and says so. |
+| `LLM_REASONING_EFFORT` | Optional for models that think first (Gemini, OpenAI o-series): `low` makes rewrites faster and cheaper. |
 | `ALLOW_CLIENT_LLM`, `ALLOW_PRIVATE_LLM` | Let visitors bring their own model from Settings (off by default). Their URLs pass an SSRF guard; cloud metadata addresses are always refused. |
 | `LANGUAGETOOL_URL` | A LanguageTool server for broader grammar and spelling checks. |
 | `CONTACT_EMAIL` | Sent to Crossref and OpenAlex for their polite pools. Recommended. |
