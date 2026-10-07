@@ -1,6 +1,7 @@
 import { checkPlagiarism } from "@/core/plagiarism/check";
-import { ownAuthor, hiddenRanges, libraryDocs, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
-import { fullTextFetcher, ownWorks, plagiarismProviders, scholarlyHttp } from "@/server/deps";
+import { llmTranslator } from "@/core/plagiarism/translated";
+import { ownAuthor, hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
+import { fullTextFetcher, llmClient, ownWorks, plagiarismProviders, scholarlyHttp } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
 export const runtime = "nodejs";
@@ -16,12 +17,14 @@ export const POST = route({ bucket: "plagiarism", weight: 0.25 }, async ({ cfg, 
   const library = [...(await loadLibrary(cfg.libraryDir)), ...libraryDocs(body)];
   const http = scholarlyHttp(cfg);
   const providers = external ? plagiarismProviders(cfg, http, { web: optionalBool(body, "web", true) }) : [];
+  const llm = external && optionalBool(body, "useLlm", true) ? await llmClient(cfg, llmOverride(body)) : undefined;
   const own = external ? await ownWorks(cfg, http, ownAuthor(body), req.signal) : undefined;
   const options = {
     ...(own ? { own } : ownAuthor(body) && external ? { notes: [OWN_MISSING] } : {}),
     providers,
     library,
     ...(external ? { fullText: fullTextFetcher(cfg, http) } : {}),
+    ...(llm ? { translate: llmTranslator(llm) } : {}),
     excludeQuotes: optionalBool(body, "excludeQuotes", true),
     excludeReferences: optionalBool(body, "excludeReferences", true),
     hiddenText: hiddenRanges(body, input.length),

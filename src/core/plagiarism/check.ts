@@ -8,6 +8,8 @@ import { buildBodyIndex, findRuns, findSelfRepeats, type Run } from "./match.ts"
 import { cleanForSearch, findTricks, type TrickFlag } from "../integrity/tricks.ts";
 import { findTorturedPhrases } from "../integrity/tortured.ts";
 import { findParaphrases } from "./paraphrase.ts";
+import { detectLanguage } from "../text/language.ts";
+import { findTranslatedCopies, type TranslatedMatch, type Translator } from "./translated.ts";
 import { selectPassages } from "./passages.ts";
 import type { SourceDoc, SourceProvider } from "./providers.ts";
 import type {
@@ -36,6 +38,8 @@ export interface PlagiarismOptions {
   paraphrases?: boolean;
   /** The author's own earlier papers, for the self-plagiarism check. */
   own?: { author: import("./ownwork.ts").OwnAuthor; docs: SourceDoc[] };
+  /** Translates sentences into English, for checking papers written in other languages against English sources. */
+  translate?: Translator;
   /** Notes to pass on to the reader, such as a lookup that failed before the check. */
   notes?: string[];
   /** Fetches the free full text of a matched paper that was found only by its abstract. */
@@ -418,6 +422,38 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     });
   }
   for (const pm of paraphrases) pm.text = body.slice(pm.start, pm.end).replace(/\s+/g, " ");
+  // Papers in other languages: translate to English and look for English sources.
+  const lang = detectLanguage(body);
+  let translated: TranslatedMatch[] = [];
+  let language: PlagiarismReport["language"];
+  if (lang.code !== "en" && lang.confidence >= 0.5 && tokens.length >= 30) {
+    language = { name: lang.name, translatedCheck: false };
+    if (!options.translate) warnings.push(`The text is in ${lang.name}. Checking it against English sources needs a language model to translate it, and none is set up, so only sources in ${lang.name} were found.`);
+    else if (providers.length && !options.signal?.aborted) {
+      const r = await findTranslatedCopies(body, lang.name, { translate: options.translate, providers, ...(options.signal ? { signal: options.signal } : {}), cited: (a, b) => Boolean(citeCheck(a, b)) });
+      translated = r.matches;
+      language.translatedCheck = r.translatedSentences > 0;
+      for (const d of r.docs) {
+        if (sources.some((x) => x.id === d.id)) continue;
+        sources.push({
+          id: d.id,
+          title: d.title,
+          kind: d.kind,
+          provider: d.provider,
+          matchedWords: 0,
+          percent: 0,
+          primaryWords: 0,
+          primaryPercent: 0,
+          ...(d.url ? { url: d.url } : {}),
+          ...(d.doi ? { doi: d.doi } : {}),
+          ...(d.year ? { year: d.year } : {}),
+          ...(d.authors ? { authors: d.authors } : {}),
+        });
+      }
+      if (!r.translatedSentences) warnings.push(`The text is in ${lang.name}, but it could not be translated this time, so it was not checked against English sources.`);
+    }
+  }
+
   const disguises: TrickFlag[] = [
     ...findTricks(body),
     ...(options.hiddenText ?? [])
@@ -440,6 +476,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     searched,
     providers: [...stats.values()],
     ...(options.own ? { ownAuthor: options.own.author } : {}),
+    ...(translated.length ? { translated } : {}),
+    ...(language ? { language } : {}),
     disguises,
     tortured,
     excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },

@@ -21,6 +21,7 @@ const KIND_STYLE: Record<IssueKind, { bar: string; chip: string; dot: string }> 
   disguised: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
   tortured: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
   copied_cited: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-serious)]" },
+  translated: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-serious)]" },
   own_work: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   reworded_uncited: { bar: "bg-ai", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   quote_uncited: { bar: "bg-cite", chip: "bg-cite-soft text-cite", dot: "bg-cite" },
@@ -34,6 +35,7 @@ const KIND_COLOR: Record<IssueKind, string> = {
   disguised: "var(--status-critical)",
   tortured: "var(--status-critical)",
   copied_cited: "var(--status-serious)",
+  translated: "var(--status-serious)",
   own_work: "var(--status-warning)",
   reworded_uncited: "var(--status-warning)",
   quote_uncited: "var(--chart-neutral)",
@@ -47,6 +49,7 @@ const SHORT_LABEL: Record<IssueKind, string> = {
   disguised: "Disguised text",
   tortured: "Paraphrasing-tool phrase",
   copied_cited: "Cited, missing quotation marks",
+  translated: "Translated, not cited",
   own_work: "Reused from your earlier paper",
   reworded_uncited: "Reworded, not cited",
   quote_uncited: "Quotation without citation",
@@ -271,7 +274,7 @@ export function PlagiarismResultView({
       id: issueId(i),
       start: i.start,
       end: i.end,
-      className: i.kind === "disguised" || i.kind === "tortured" ? "mark-flag" : i.kind.startsWith("reworded") ? "mark-para" : "mark-match",
+      className: i.kind === "disguised" || i.kind === "tortured" ? "mark-flag" : i.kind.startsWith("reworded") || i.kind === "translated" ? "mark-para" : "mark-match",
       label: `${ISSUE_TEXT[i.kind].title}${i.sourceId ? `, source ${number(i.sourceId) ?? ""}` : ""}`,
       ...(i.sourceId && colour.has(i.sourceId) ? { group: colour.get(i.sourceId)! } : {}),
     }));
@@ -329,6 +332,12 @@ export function PlagiarismResultView({
             <DownloadIcon /> {pdf === "busy" ? "Making the PDF" : "Download PDF report"}
           </Button>
         </div>
+      )}
+      {report.language?.translatedCheck && (
+        <Notice kind="info" title={`Your paper is in ${report.language.name}`}>
+          It was also translated into English and checked against English sources, to catch text translated from them. Translated matches are
+          dotted and listed under “Translated from a source without a citation”.
+        </Notice>
       )}
       {(r.breakdown.disguised > 0 || r.breakdown.tortured > 0) && (
         <section aria-label="Integrity flags" className="animate-fade-up rounded-2xl border border-danger/30 bg-danger-soft p-4 sm:p-5">
@@ -558,7 +567,7 @@ export function PlagiarismResultView({
                   source={selected.sourceId ? byId.get(selected.sourceId) : undefined}
                   number={number(selected.sourceId)}
                   excerpt={r.spans.find((s) => s.start === selected.start)?.sourceExcerpt}
-                  sourceSentence={r.paraphrases.find((p) => p.start === selected.start)?.sourceText}
+                  sourceSentence={r.paraphrases.find((p) => p.start === selected.start)?.sourceText ?? (selected.kind === "translated" ? report.translated?.find((t) => t.start === selected.start)?.sourceText : undefined)}
                   onExclude={exclude}
                   onClose={() => setActive(null)}
                 />

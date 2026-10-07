@@ -3,7 +3,7 @@ import { verdictFor } from "./check.ts";
 import type { MatchedSource, MatchedSpan, ParaphraseSpan, PlagiarismReport, PlagiarismVerdict, QuotedPassage } from "./types.ts";
 
 /** What kind of mistake a finding points to, from most to least serious. */
-export type IssueKind = "copied_uncited" | "disguised" | "tortured" | "copied_cited" | "own_work" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
+export type IssueKind = "copied_uncited" | "disguised" | "tortured" | "copied_cited" | "own_work" | "translated" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
 
 export interface Issue {
   kind: IssueKind;
@@ -49,6 +49,12 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
     fix: "Cite your earlier paper where you reuse its wording, and rewrite background and methods text where you can.",
     serious: false,
   },
+  translated: {
+    title: "Translated from a source without a citation",
+    why: "This sentence says the same as a sentence in an English source, translated. Translating someone else's text does not make it your own; it is still plagiarism without a citation.",
+    fix: "Cite the source, and write the idea in your own words rather than translating it.",
+    serious: true,
+  },
   reworded_uncited: {
     title: "Reworded from a source without a citation",
     why: "The sentence says the same thing as a source sentence in different words. Rewording does not remove the need to credit the idea.",
@@ -75,7 +81,7 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
   },
 };
 
-const ORDER: IssueKind[] = ["copied_uncited", "disguised", "tortured", "copied_cited", "own_work", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
+const ORDER: IssueKind[] = ["copied_uncited", "disguised", "tortured", "copied_cited", "own_work", "translated", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
 export interface ReviewFilters {
@@ -149,12 +155,14 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
   for (const sp of spans) credited.set(sp.sourceIds[0] as string, (credited.get(sp.sourceIds[0] as string) ?? 0) + sp.words);
   const touched = new Set(spans.flatMap((s) => s.sourceIds));
   for (const p of paraphrases) touched.add(p.sourceId);
+  const translated = (report.translated ?? []).filter((t) => !excluded.has(t.sourceId) && !t.cited);
+  for (const t of translated) touched.add(t.sourceId);
   const visible = report.sources.filter((s) => !excluded.has(s.id) && touched.has(s.id));
   const withCredit = visible.map((s) => {
     const w = credited.get(s.id) ?? 0;
     return { ...s, primaryWords: w, primaryPercent: round1((w / total) * 100) };
   });
-  const rewordedOnly = new Set(paraphrases.map((p) => p.sourceId));
+  const rewordedOnly = new Set([...paraphrases.map((p) => p.sourceId), ...translated.map((t) => t.sourceId)]);
   const primary = withCredit
     .filter((s) => s.primaryWords > 0 || (rewordedOnly.has(s.id) && !spans.some((sp) => sp.sourceIds.includes(s.id))))
     .sort((a, b) => b.primaryWords - a.primaryWords || b.matchedWords - a.matchedWords);
@@ -191,6 +199,15 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
     ...(report.quotes ?? [])
       .filter((q: QuotedPassage) => !q.cited)
       .map((q) => ({ kind: "quote_uncited" as IssueKind, start: q.start, end: q.end, words: countWords(q.text), text: q.text })),
+    ...translated.map((t) => ({
+      kind: "translated" as IssueKind,
+      start: t.start,
+      end: t.end,
+      words: countWords(t.text),
+      text: t.text,
+      sourceId: t.sourceId,
+      note: `In English: “${t.english}”`,
+    })),
     ...(report.disguises ?? []).map((d) => ({
       kind: "disguised" as IssueKind,
       start: d.start,

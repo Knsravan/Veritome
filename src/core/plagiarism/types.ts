@@ -107,6 +107,10 @@ export interface PlagiarismReport {
   providers: ProviderStat[];
   /** The author whose earlier papers were compared, for the self-plagiarism check. */
   ownAuthor?: import("./ownwork.ts").OwnAuthor;
+  /** Sentences translated from English sources, for papers not written in English. */
+  translated?: import("./translated.ts").TranslatedMatch[];
+  /** The paper's language when it is not English, and whether the translated check ran. */
+  language?: { name: string; translatedCheck: boolean };
   /** Disguised text: look-alike letters, invisible characters, odd spaces, hidden text. */
   disguises?: TrickFlag[];
   /** Phrases typical of synonym-swapping paraphrasing tools, such as "counterfeit consciousness". */
