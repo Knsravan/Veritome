@@ -100,14 +100,48 @@ Reproduce or retrain with the steps in `scripts/train/README.md`, or measure on 
 | OpenAlex | Titles and abstracts of about 250 million works, plus full text where OpenAlex has it, searched by exact phrase first | Free key, effectively required |
 | Semantic Scholar | Titles and abstracts; with a key also full-text snippets | Optional |
 | CORE | **Full text** of 30+ million open-access papers | Free key |
-| Brave or Serper | Web search snippets | Paid beyond free tiers |
+| Brave or Serper | Web search snippets (Brave's free plan: 2,000 searches a month, so at most 30 per check) | Free tier, then paid |
 | Your library | Full text of documents you add | No |
 
-Each passage is probed with one exact phrase per sentence, so a copied sentence next to an original one is still
-searched for. Matches are word-for-word runs (by default at least 6 words, with gaps of up to 2 edited words
+The text is cut into consecutive chunks of whole sentences (short sentences are joined), and every chunk is
+searched when there are no more than 40 chunks; longer texts are sampled evenly across their length, up to 40 searches.
+Every document found is then compared with the whole text, so one hit on a copied section finds all of it. Matches are word-for-word runs (by default at least 6 words, with gaps of up to 2 edited words
 bridged). **Reworded sentences** are reported separately: a sentence is flagged when a source sentence shares
 most of its ideas after folding word forms and common academic synonyms together ("demonstrate" and "show",
 "approach" and "framework"). They are not counted in the main percentage.
+
+A run shorter than 10 words is dropped as a stock phrase ("the association between air pollution and") unless
+that source shares at least 15 words with the text in total, or the run makes up at least half of its sentence.
+Each matched passage is credited to one source only (the one sharing most of it, the oldest on a tie), so the
+source percentages add up to the overall score; other sources containing the same words are listed separately.
+Each passage is also marked **cited** or **not cited**, from in-text citations in the same sentence, and quotations
+without a citation are listed even though they are left out of the score.
+
+### Measured accuracy (7 October 2026)
+
+`node scripts/evaluate-plagiarism.ts --live 30` builds cases from 377 Europe PMC abstracts in 12 fields: half
+serve as published sources, half as the author's own writing, and each case hides one source sentence (or none)
+inside original text. The full output is in [plagiarism-eval-2026-10-07.md](plagiarism-eval-2026-10-07.md).
+
+| Case | Found | Credited to the right source | Cited or not judged right |
+| --- | ---: | ---: | ---: |
+| Copied word for word (187) | 99.5% | 95.2% | 99.5% |
+| Copied, followed by a citation (187) | 99.5% | 95.2% | 100% |
+| Copied with every 6th word changed or dropped (187) | 100% | 95.7% | 99.5% |
+| Lightly reworded, 3+ synonym swaps (11) | 100% | 100% | – |
+| Original text only (185): any match at all | 4.9% | – | – |
+
+Most "wrong source" cases and most matches on original text turned out to be the same abstract published twice
+(a preprint and the journal version, or a conference supplement), which a reader would want to know about. The
+rest were near-identical methods sentences from related papers by the same groups. Before the stock-phrase rule
+and the rewording threshold were added, 19.6% of original texts had a match.
+
+**Live search** (Crossref and Europe PMC only, no keys, 30 copied sentences): **97%** found (29 of 30), up from
+30% before every sentence was searched (plain sentences used to be skipped as not distinctive enough); on the live site OpenAlex phrase search and Brave web search add to this. The sources
+in this test are Europe PMC abstracts, which favours Europe PMC.
+
+Limits of this test: the rewordings are mechanical, which is easier than a person or a language model
+paraphrasing freely, and abstracts are not full papers.
 
 ### Live test (6 October 2026)
 
