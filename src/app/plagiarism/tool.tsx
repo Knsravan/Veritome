@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useConsent } from "@/components/Consent";
-import { ArrowLeftIcon, ArrowRightIcon, DownloadIcon, ShieldIcon } from "@/components/icons";
+import { ArrowLeftIcon, ArrowRightIcon, ShieldIcon } from "@/components/icons";
 import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
 import { PlagiarismResultView } from "@/components/PlagiarismResultView";
 import { TextSource } from "@/components/TextSource";
@@ -132,9 +132,6 @@ export function PlagiarismTool() {
               {result.words.toLocaleString("en")} words checked · {new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
-          <Button onClick={() => window.print()} title="Opens the print dialog; choose “Save as PDF”" className="print:hidden">
-            <DownloadIcon /> Save as PDF
-          </Button>
         </header>
         <PlagiarismResultView text={checked} report={result} ai={ai} />
       </article>

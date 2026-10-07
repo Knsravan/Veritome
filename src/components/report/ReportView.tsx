@@ -376,6 +376,16 @@ function ExportMenu({ report }: { report: PaperReport }) {
           type="button"
           className="block w-full rounded px-3 py-2 text-left hover:bg-desk"
           onClick={() => {
+            close();
+            window.print();
+          }}
+        >
+          Print this page
+        </button>
+        <button
+          type="button"
+          className="block w-full rounded px-3 py-2 text-left hover:bg-desk"
+          onClick={() => {
             download("veritome-report.md", "text/markdown", reportToMarkdown(report));
             close();
           }}
@@ -404,6 +414,24 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const topRef = useRef<HTMLDivElement>(null);
   const title = guessTitle(text);
+  const [pdf, setPdf] = useState<"idle" | "busy" | "error">("idle");
+  const downloadPdf = async () => {
+    setPdf("busy");
+    try {
+      const { buildReportPdf } = await import("@/lib/pdf/report-pdf");
+      const url = URL.createObjectURL(await buildReportPdf(report, text));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `veritome-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setPdf("idle");
+    } catch {
+      setPdf("error");
+    }
+  };
   const date = new Date(report.generatedAt);
 
   const open = (t: TabId) => {
@@ -429,7 +457,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
 
   const panels: Record<TabId, ReactNode> = {
     overview: <Overview report={report} text={text} onOpen={open} />,
-    similarity: <SectionBody s={report.plagiarism}>{(r) => <PlagiarismResultView text={text} report={r} />}</SectionBody>,
+    similarity: <SectionBody s={report.plagiarism}>{(r) => <PlagiarismResultView text={text} report={r} ai={report.detector.status === "done" ? report.detector.result : null} showDownload={false} />}</SectionBody>,
     ai: <SectionBody s={report.detector}>{(r) => <DetectorResultView text={text} result={r} />}</SectionBody>,
     citations: <CitationsPanel report={report} />,
     grammar: <SectionBody s={report.grammar}>{(r) => <GrammarDetail text={text} result={r} />}</SectionBody>,
@@ -456,13 +484,16 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
           </p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
-          <Button variant="primary" onClick={() => window.print()} title="Opens the print dialog; choose “Save as PDF”">
-            <DownloadIcon /> Save as PDF
+          <Button variant="primary" onClick={() => void downloadPdf()} busy={pdf === "busy"}>
+            <DownloadIcon /> {pdf === "busy" ? "Making the PDF" : "Download PDF report"}
           </Button>
           <ExportMenu report={report} />
         </div>
       </header>
 
+      {pdf === "error" && (
+        <Notice kind="error">The PDF could not be made in this browser. Try another browser, or use Print this page under More formats.</Notice>
+      )}
       <section aria-label="Summary scores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {scores(report).map((s) => (
           <ScoreCard key={s.label} s={s} status={statusOf(report, s.tool)} onOpen={() => open(s.tab)} />

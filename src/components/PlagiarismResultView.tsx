@@ -5,19 +5,31 @@ import { aiBreakdown, type AiBreakdown } from "@/core/detector/breakdown";
 import type { DetectorResult } from "@/core/detector/types";
 import { ISSUE_TEXT, reviewReport, type Issue, type IssueKind } from "@/core/plagiarism/review";
 import type { MatchedSource, PlagiarismReport, SourceExcerpt } from "@/core/plagiarism/types";
+import { paragraphStats } from "@/core/report/paragraphs";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";
-import { AlertIcon, CheckIcon, InfoIcon, XIcon } from "./icons";
-import { Limits, ProofLayout, Sheet, Warnings, cx } from "./ui";
+import { ColumnStrip, StackedBar } from "./charts";
+import { AlertIcon, CheckIcon, DownloadIcon, InfoIcon, XIcon } from "./icons";
+import { Button, Limits, Notice, ProofLayout, Sheet, Warnings, cx } from "./ui";
 
 const VERDICT = { low: "Low similarity", moderate: "Some similarity to review", high: "High similarity" } as const;
 
 const KIND_STYLE: Record<IssueKind, { bar: string; chip: string; dot: string }> = {
-  copied_uncited: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-danger" },
-  copied_cited: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-warn" },
-  reworded_uncited: { bar: "bg-ai", chip: "bg-ai-soft text-ai", dot: "bg-ai" },
+  copied_uncited: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
+  copied_cited: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-serious)]" },
+  reworded_uncited: { bar: "bg-ai", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   quote_uncited: { bar: "bg-cite", chip: "bg-cite-soft text-cite", dot: "bg-cite" },
   reworded_cited: { bar: "bg-ink-faint", chip: "bg-desk-deep text-ink-soft", dot: "bg-ink-faint" },
   repeated: { bar: "bg-ink-soft", chip: "bg-desk-deep text-ink-soft", dot: "bg-ink-soft" },
+};
+
+/** Severity colours (status palette); every segment is also named in the legend. */
+const KIND_COLOR: Record<IssueKind, string> = {
+  copied_uncited: "var(--status-critical)",
+  copied_cited: "var(--status-serious)",
+  reworded_uncited: "var(--status-warning)",
+  quote_uncited: "var(--chart-neutral)",
+  reworded_cited: "var(--chart-neutral)",
+  repeated: "var(--chart-neutral)",
 };
 
 const BREAKDOWN_ORDER: IssueKind[] = ["copied_uncited", "copied_cited", "reworded_uncited", "repeated"];
@@ -155,7 +167,6 @@ function FindingDetail({
 }
 
 const AI_LABEL = { ai: "Likely AI-written", uncertain: "Unclear", human: "Likely human-written" } as const;
-const AI_STYLE = { ai: "bg-ai", uncertain: "bg-ink-faint/50", human: "bg-ok" } as const;
 
 /** The AI-writing score: what share of the text reads as machine-written, with how far to trust it. */
 function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
@@ -184,20 +195,15 @@ function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
       <div className="space-y-3">
         {b.judged && (
           <div>
-            <p className="text-sm font-semibold">How the text reads</p>
-            <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-desk-deep" aria-hidden>
-              {(["ai", "uncertain", "human"] as const).map((k) => (
-                <span key={k} className={AI_STYLE[k]} style={{ width: `${k === "ai" ? b.aiPercent : k === "human" ? b.humanPercent : b.uncertainPercent}%` }} />
-              ))}
-            </div>
-            <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-              {(["ai", "uncertain", "human"] as const).map((k) => (
-                <li key={k} className="flex items-center gap-1.5">
-                  <span aria-hidden className={cx("size-2.5 rounded-full", AI_STYLE[k])} />
-                  {AI_LABEL[k]}: <span className="font-semibold tabular-nums">{k === "ai" ? b.aiPercent : k === "human" ? b.humanPercent : b.uncertainPercent}%</span>
-                </li>
-              ))}
-            </ul>
+            <p className="mb-2 text-sm font-semibold">How the text reads</p>
+            <StackedBar
+              label="How the text reads"
+              segments={[
+                { key: "ai", label: AI_LABEL.ai, value: b.aiPercent, color: "var(--chart-ai)" },
+                { key: "uncertain", label: AI_LABEL.uncertain, value: b.uncertainPercent, color: "var(--chart-neutral)" },
+                { key: "human", label: AI_LABEL.human, value: b.humanPercent, color: "var(--chart-human)" },
+              ]}
+            />
           </div>
         )}
         <div className="rounded-md bg-desk/60 px-3 py-2 text-sm text-ink-soft">
@@ -215,16 +221,29 @@ function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
   );
 }
 
-export function PlagiarismResultView({ text, report, ai }: { text: string; report: PlagiarismReport; ai?: DetectorResult | null }) {
+export function PlagiarismResultView({
+  text,
+  report,
+  ai,
+  showDownload = true,
+}: {
+  text: string;
+  report: PlagiarismReport;
+  ai?: DetectorResult | null;
+  /** Offer a PDF of this report (off inside the full report, which has its own). */
+  showDownload?: boolean;
+}) {
   const [minWords, setMinWords] = useState(0);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [active, setActive] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
   const [view, setView] = useState<"matches" | "ai">("matches");
+  const [pdf, setPdf] = useState<"idle" | "busy" | "error">("idle");
   const aiB = useMemo(() => (ai ? aiBreakdown(ai, text) : null), [ai, text]);
   const aiRegions = aiB?.regions.filter((x) => x.kind !== "human") ?? [];
   const aiFlagged = aiRegions.filter((x) => x.kind === "ai");
   const r = useMemo(() => reviewReport(report, { minWords, excludeSources: excluded }), [report, minWords, excluded]);
+  const paras = useMemo(() => paragraphStats(text, { spans: r.spans, paraphrases: r.paraphrases }, aiB), [text, r.spans, r.paraphrases, aiB]);
   const byId = useMemo(() => new Map(report.sources.map((s) => [s.id, s])), [report.sources]);
   const colour = sourceColours(r.primary);
   const number = (id: string | undefined) => (id && colour.has(id) ? r.primary.findIndex((s) => s.id === id) + 1 : undefined);
@@ -259,8 +278,43 @@ export function PlagiarismResultView({ text, report, ai }: { text: string; repor
   const total = Math.max(1, report.words);
   const serious = r.issues.filter((i) => ISSUE_TEXT[i.kind].serious).length;
 
+  const downloadPdf = async () => {
+    setPdf("busy");
+    try {
+      const { buildPlagiarismPdf } = await import("@/lib/pdf/plagiarism-pdf");
+      const blob = await buildPlagiarismPdf({
+        text,
+        report,
+        reviewed: r,
+        ai: aiB,
+        ...(ai ? { aiThreshold: ai.model.thresholds.likelyAi } : {}),
+        paragraphs: paras,
+        filters: { minWords, excluded: [...excluded] },
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `veritome-similarity-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setPdf("idle");
+    } catch {
+      setPdf("error");
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {showDownload && (
+        <div className="flex flex-wrap items-center justify-end gap-3 print:hidden">
+          {pdf === "error" && <Notice kind="error">The PDF could not be made in this browser. Try another browser, or use your browser&rsquo;s Print and choose Save as PDF.</Notice>}
+          <Button onClick={() => void downloadPdf()} busy={pdf === "busy"}>
+            <DownloadIcon /> {pdf === "busy" ? "Making the PDF" : "Download PDF report"}
+          </Button>
+        </div>
+      )}
       <section aria-label="Similarity summary" className="card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
         <div className="lg:min-w-48 lg:border-r lg:border-rule lg:pr-8">
           <p className="font-serif text-6xl font-semibold tracking-tight tabular-nums">
@@ -274,26 +328,24 @@ export function PlagiarismResultView({ text, report, ai }: { text: string; repor
         </div>
         <div className="space-y-4">
           <div>
-            <p className="text-sm font-semibold">What the matches are</p>
-            <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-desk-deep" aria-hidden>
-              {BREAKDOWN_ORDER.map((k) => (
-                <span key={k} className={KIND_STYLE[k].bar} style={{ width: `${(r.breakdown[k] / total) * 100}%` }} />
-              ))}
-            </div>
-            <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-              {BREAKDOWN_ORDER.filter((k) => k !== "repeated" || r.breakdown[k] > 0).map((k) => (
-                <li key={k} className="flex items-center gap-1.5">
-                  <span aria-hidden className={cx("size-2.5 rounded-full", KIND_STYLE[k].dot)} />
-                  {SHORT_LABEL[k]}: <span className="font-semibold tabular-nums">{Math.round((r.breakdown[k] / total) * 1000) / 10}%</span>
-                </li>
-              ))}
-              {r.breakdown.quote_uncited > 0 && (
-                <li className="flex items-center gap-1.5">
-                  <span aria-hidden className={cx("size-2.5 rounded-full", KIND_STYLE.quote_uncited.dot)} />
-                  Quotations without citation: <span className="font-semibold tabular-nums">{r.breakdown.quote_uncited}</span>
-                </li>
-              )}
-            </ul>
+            <p className="mb-2 text-sm font-semibold">What the matches are</p>
+            <StackedBar
+              label="What the matches are, as a share of the text"
+              segments={BREAKDOWN_ORDER.filter((k) => k !== "repeated" || r.breakdown[k] > 0).map((k) => ({
+                key: k,
+                label: SHORT_LABEL[k],
+                value: (r.breakdown[k] / total) * 100,
+                color: KIND_COLOR[k],
+              }))}
+              legendExtra={
+                r.breakdown.quote_uncited > 0 ? (
+                  <li className="flex items-center gap-1.5">
+                    <span aria-hidden className={cx("size-2.5 rounded-full", KIND_STYLE.quote_uncited.dot)} />
+                    Quotations without citation: <span className="font-semibold tabular-nums">{r.breakdown.quote_uncited}</span>
+                  </li>
+                ) : undefined
+              }
+            />
             <p className="mt-2 text-sm text-ink-soft">
               {serious === 0 && r.issues.length === 0
                 ? "No problems found in the sources searched."
@@ -341,6 +393,56 @@ export function PlagiarismResultView({ text, report, ai }: { text: string; repor
       </section>
 
       {ai && aiB && <AiSummary ai={ai} b={aiB} />}
+
+      {paras.length >= 2 && (
+        <section aria-labelledby="where-h" className="card p-5 sm:p-6">
+          <h3 id="where-h" className="font-semibold">
+            Where in your document
+          </h3>
+          <p className="mt-1 text-sm text-ink-soft">One column per paragraph, in order. Select a column to jump to that paragraph's findings.</p>
+          <div className={cx("mt-4 grid gap-8", aiB?.judged && "lg:grid-cols-2")}>
+            <ColumnStrip
+              title="Text matching a source"
+              color="var(--chart-seq)"
+              data={paras.map((p) => ({
+                label: `Paragraph ${p.index}`,
+                value: Math.min(1, p.copied + p.reworded),
+                note: `${p.words} words${p.reworded > 0 ? `, ${Math.round(p.reworded * 100)}% reworded` : ""}`,
+              }))}
+              onSelect={(i) => {
+                const p = paras[i];
+                const hit = p && r.issues.find((x) => x.kind !== "quote_uncited" && x.start < p.end && x.end > p.start);
+                if (hit) {
+                  setView("matches");
+                  requestAnimationFrame(() => select(issueId(hit), "list"));
+                }
+              }}
+            />
+            {aiB?.judged && ai && (
+              <ColumnStrip
+                title="How AI-like each paragraph reads"
+                color="var(--chart-ai)"
+                threshold={ai.model.thresholds.likelyAi}
+                thresholdLabel="likely AI above this line"
+                data={paras.map((p) => ({
+                  label: `Paragraph ${p.index}`,
+                  value: p.ai ?? 0,
+                  note: p.aiKind === "ai" ? "likely AI-written" : p.aiKind === "human" ? "likely human-written" : "unclear",
+                }))}
+                format={(v) => `${Math.round(v * 100)} / 100`}
+                onSelect={(i) => {
+                  const p = paras[i];
+                  const k = p ? aiRegions.findIndex((x) => x.start < p.end && x.end > p.start) : -1;
+                  if (k >= 0) {
+                    setView("ai");
+                    requestAnimationFrame(() => focusMark(`ai${k}`));
+                  }
+                }}
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       <ProofLayout
         sheet={
@@ -431,7 +533,7 @@ export function PlagiarismResultView({ text, report, ai }: { text: string; repor
               {aiFlagged.length > 0 && (
                 <details open className="card mt-2 overflow-hidden">
                   <summary className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm font-semibold">
-                    <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-ai" />
+                    <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-[var(--chart-ai)]" />
                     <span className="flex-1">Reads as AI-written</span>
                     <span className="rounded-full bg-ai-soft px-2 text-xs text-ai tabular-nums">{aiFlagged.length}</span>
                   </summary>
