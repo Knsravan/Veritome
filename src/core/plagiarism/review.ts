@@ -1,8 +1,9 @@
+import { TRICK_TEXT } from "../integrity/tricks.ts";
 import { verdictFor } from "./check.ts";
 import type { MatchedSource, MatchedSpan, ParaphraseSpan, PlagiarismReport, PlagiarismVerdict, QuotedPassage } from "./types.ts";
 
 /** What kind of mistake a finding points to, from most to least serious. */
-export type IssueKind = "copied_uncited" | "copied_cited" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
+export type IssueKind = "copied_uncited" | "disguised" | "tortured" | "copied_cited" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
 
 export interface Issue {
   kind: IssueKind;
@@ -13,6 +14,8 @@ export interface Issue {
   /** The source the passage is credited to, when there is one. */
   sourceId?: string;
   citation?: string;
+  /** A short note specific to this finding, such as the standard term a mangled phrase replaced. */
+  note?: string;
 }
 
 export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: string; serious: boolean }> = {
@@ -20,6 +23,18 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
     title: "Copied without a citation",
     why: "These words appear in a published source and nothing here says where they came from. Editors treat this as plagiarism.",
     fix: "Rewrite the idea in your own words and cite the source, or put the exact words in quotation marks and cite the source.",
+    serious: true,
+  },
+  disguised: {
+    title: "Disguised text",
+    why: "The text has been altered so that it looks normal but checkers cannot read it: letters swapped for look-alikes from another alphabet, invisible characters or hidden text. Turnitin and journal editors treat this as a deliberate attempt to hide copying.",
+    fix: "Retype the passage normally. If it came from a source, quote or rewrite it and cite the source.",
+    serious: true,
+  },
+  tortured: {
+    title: "Phrase typical of a paraphrasing tool",
+    why: "A standard term has been replaced by an odd synonym phrase (for example “counterfeit consciousness” for “artificial intelligence”). Tools that swap words to hide copying produce these, and journals now screen for them.",
+    fix: "Use the standard term, then compare the passage with its original source and cite it.",
     serious: true,
   },
   copied_cited: {
@@ -54,7 +69,7 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
   },
 };
 
-const ORDER: IssueKind[] = ["copied_uncited", "copied_cited", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
+const ORDER: IssueKind[] = ["copied_uncited", "disguised", "tortured", "copied_cited", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
 export interface ReviewFilters {
@@ -170,6 +185,22 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
     ...(report.quotes ?? [])
       .filter((q: QuotedPassage) => !q.cited)
       .map((q) => ({ kind: "quote_uncited" as IssueKind, start: q.start, end: q.end, words: countWords(q.text), text: q.text })),
+    ...(report.disguises ?? []).map((d) => ({
+      kind: "disguised" as IssueKind,
+      start: d.start,
+      end: d.end,
+      words: Math.max(1, countWords(d.text)),
+      text: d.text.replace(/\s+/g, " "),
+      note: `${TRICK_TEXT[d.kind].title}. ${TRICK_TEXT[d.kind].why}`,
+    })),
+    ...(report.tortured ?? []).map((t) => ({
+      kind: "tortured" as IssueKind,
+      start: t.start,
+      end: t.end,
+      words: countWords(t.text),
+      text: t.text,
+      note: `Most likely replaces “${t.expected}”.`,
+    })),
   ].sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind) || b.words - a.words);
 
   const breakdown = Object.fromEntries(ORDER.map((k) => [k, 0])) as Record<IssueKind, number>;

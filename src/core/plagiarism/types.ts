@@ -1,3 +1,5 @@
+import type { TrickFlag } from "../integrity/tricks.ts";
+import type { TorturedPhrase } from "../integrity/tortured.ts";
 import type { SourceKind } from "./providers.ts";
 
 /** A document the user supplies to compare against, such as a previous paper or a colleague's draft. */
@@ -101,6 +103,10 @@ export interface PlagiarismReport {
   /** The parts of the text used as search queries, so readers can see what was checked online. */
   searched: Array<{ start: number; end: number }>;
   providers: ProviderStat[];
+  /** Disguised text: look-alike letters, invisible characters, odd spaces, hidden text. */
+  disguises?: TrickFlag[];
+  /** Phrases typical of synonym-swapping paraphrasing tools, such as "counterfeit consciousness". */
+  tortured?: TorturedPhrase[];
   excluded: { references: boolean; quotes: boolean; referenceWords: number };
   warnings: string[];
   disclaimer: string;

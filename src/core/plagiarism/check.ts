@@ -5,6 +5,8 @@ import { blankQuotedText, splitReferences } from "../text/sections.ts";
 import { splitSentences } from "../text/sentences.ts";
 import { tokenize, type Token } from "../text/tokens.ts";
 import { buildBodyIndex, findRuns, findSelfRepeats, type Run } from "./match.ts";
+import { cleanForSearch, findTricks, type TrickFlag } from "../integrity/tricks.ts";
+import { findTorturedPhrases } from "../integrity/tortured.ts";
 import { findParaphrases } from "./paraphrase.ts";
 import { selectPassages } from "./passages.ts";
 import type { SourceDoc, SourceProvider } from "./providers.ts";
@@ -32,6 +34,8 @@ export interface PlagiarismOptions {
   checkSelf?: boolean;
   /** Also look for reworded sentences. Default true. */
   paraphrases?: boolean;
+  /** Hidden text found in the original file (white or tiny text), with offsets into the checked text. */
+  hiddenText?: Array<{ start: number; end: number }>;
   signal?: AbortSignal;
   onProgress?: (done: number, total: number) => void;
 }
@@ -205,7 +209,14 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   // External search.
   const maxPassages = options.maxPassages ?? 40;
   if (providers.length && tokens.length >= 8) {
-    const passages = selectPassages(working, maxPassages);
+    // Queries use the restored wording, so disguised letters do not hide a passage from the search.
+    const passages = selectPassages(working, maxPassages).map((p) => ({
+      ...p,
+      text: cleanForSearch(p.text),
+      phrase: cleanForSearch(p.phrase),
+      ...(p.phrases ? { phrases: p.phrases.map(cleanForSearch) } : {}),
+      keywords: cleanForSearch(p.keywords),
+    }));
     searched.push(...passages.map((p) => ({ start: p.start, end: p.end })));
     const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
     let done = 0;
@@ -368,6 +379,14 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     });
   }
   for (const pm of paraphrases) pm.text = body.slice(pm.start, pm.end).replace(/\s+/g, " ");
+  const disguises: TrickFlag[] = [
+    ...findTricks(body),
+    ...(options.hiddenText ?? [])
+      .filter((h) => h.end <= body.length && h.end > h.start)
+      .map((h) => ({ kind: "hidden_text" as const, start: h.start, end: h.end, text: body.slice(h.start, h.end), count: h.end - h.start })),
+  ].sort((a, b) => a.start - b.start);
+  const tortured = findTorturedPhrases(body);
+  if (disguises.length) warnings.push("Parts of the text were disguised (look-alike letters, invisible characters or hidden text). They were restored before checking.");
   const quotes: QuotedPassage[] = excludeQuotes ? findQuotations(body).map((q) => ({ ...q, cited: Boolean(citeCheck(q.start, q.end)) })) : [];
   return {
     similarity,
@@ -381,6 +400,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     quotes,
     searched,
     providers: [...stats.values()],
+    disguises,
+    tortured,
     excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },
     warnings,
     disclaimer: DISCLAIMER,
