@@ -37,7 +37,12 @@ export interface PlagiarismOptions {
   /** Also look for reworded sentences. Default true. */
   paraphrases?: boolean;
   /** The author's own earlier papers, for the self-plagiarism check. */
-  own?: { author: import("./ownwork.ts").OwnAuthor; docs: SourceDoc[] };
+  own?: {
+    author: import("./ownwork.ts").OwnAuthor;
+    docs: SourceDoc[];
+    /** Which of these DOIs are the author's own (for older papers outside `docs`). */
+    whichAreOwn?: (dois: string[], signal?: AbortSignal) => Promise<Set<string>>;
+  };
   /** Translates sentences into English, for checking papers written in other languages against English sources. */
   translate?: Translator;
   /** Notes to pass on to the reader, such as a lookup that failed before the check. */
@@ -388,6 +393,15 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       };
     })
     .sort((a, b) => b.primaryWords - a.primaryWords || b.matchedWords - a.matchedWords);
+
+  // Matched papers that turn out to be the author's own (older work not among the recent papers fetched).
+  if (options.own?.whichAreOwn) {
+    const dois = sources.filter((x) => x.kind === "scholarly" && x.doi).map((x) => x.doi!);
+    if (dois.length) {
+      const mine = await options.own.whichAreOwn(dois.slice(0, 50), options.signal).catch(() => new Set<string>());
+      for (const x of sources) if (x.doi && mine.has(x.doi.toLowerCase())) x.kind = "own";
+    }
+  }
 
   const similarity = tokens.length ? round1((matchedWords / tokens.length) * 100) : 0;
 

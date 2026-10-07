@@ -43,7 +43,7 @@ interface OAWork {
  * The author's own earlier papers, for a self-plagiarism (text recycling) check: found through OpenAlex by ORCID
  * iD (exact) or by name (the best-known author with that name, which is shown so the user can check it).
  */
-export async function findOwnWorks(who: string, deps: OwnWorkDeps, signal?: AbortSignal, max = 40): Promise<{ author: OwnAuthor; docs: SourceDoc[] } | null> {
+export async function findOwnWorks(who: string, deps: OwnWorkDeps, signal?: AbortSignal, max = 40): Promise<{ author: OwnAuthor; docs: SourceDoc[]; whichAreOwn: (dois: string[], signal?: AbortSignal) => Promise<Set<string>> } | null> {
   const base = (deps.openalexBase ?? "https://api.openalex.org").replace(/\/+$/, "");
   const mailto = deps.mailto ? `&mailto=${encodeURIComponent(deps.mailto)}` : "";
   const req = { ...(deps.openAlexKey ? { headers: { authorization: `Bearer ${deps.openAlexKey}` } } : {}), ...(signal ? { signal } : {}) };
@@ -95,7 +95,20 @@ export async function findOwnWorks(who: string, deps: OwnWorkDeps, signal?: Abor
         // Abstract only.
       }
     }
+  const authorId = id;
   return {
+    whichAreOwn: async (dois: string[], sig?: AbortSignal) => {
+      const out = new Set<string>();
+      const list = dois.map((d) => d.toLowerCase()).filter((d) => /^10\.[^\s|,]+$/.test(d));
+      for (let i = 0; i < list.length; i += 25) {
+        const res = await deps.http.json<{ results?: Array<{ doi?: string | null }> }>(
+          `${base}/works?filter=author.id:${authorId},doi:${list.slice(i, i + 25).map((d) => encodeURIComponent(d)).join("|")}&per-page=50&select=doi${mailto}`,
+          { ...req, ...(sig ? { signal: sig } : {}) },
+        );
+        for (const w of res.results ?? []) if (w.doi) out.add(w.doi.replace(/^https?:\/\/doi\.org\//i, "").toLowerCase());
+      }
+      return out;
+    },
     author: {
       name: author.display_name ?? who,
       ...(author.orcid ? { orcid: author.orcid.replace(/^https?:\/\/orcid\.org\//, "") } : {}),

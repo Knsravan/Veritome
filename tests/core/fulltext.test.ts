@@ -109,3 +109,16 @@ test("a paper in Spanish is translated and matched against English sources", asy
   const noModel = await checkPlagiarism(spanish, { providers: [provider] });
   assert.ok(noModel.warnings.some((w) => w.includes("needs a language model")));
 });
+
+test("an older matched paper by the same author counts as their own work", async () => {
+  const provider: SourceProvider = {
+    name: "Test",
+    kind: "scholarly",
+    coverage: "",
+    search: async () => [{ id: "doi:10.9/older", doi: "10.9/older", title: "Older paper", text: BODY, provider: "Test", kind: "scholarly" }],
+  };
+  const own = { author: { name: "Ada Lovelace", works: 0, fullTexts: 0 }, docs: [], whichAreOwn: async (dois: string[]) => new Set(dois.filter((d) => d === "10.9/older")) };
+  const report = await checkPlagiarism(BODY, { providers: [provider], own, paraphrases: false });
+  assert.equal(report.sources[0]?.kind, "own");
+  assert.ok(reviewReport(report).issues.every((i) => i.kind === "own_work"));
+});

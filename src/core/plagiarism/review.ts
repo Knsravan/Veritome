@@ -178,9 +178,10 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
     return false;
   });
 
+  const ownIds = new Set(report.sources.filter((x) => x.kind === "own").map((x) => x.id));
   const issues: Issue[] = [
     ...spans.map((sp) => ({
-        kind: (sp.sourceIds[0] === "self" ? "repeated" : sp.sourceIds[0]!.startsWith("own:") ? "own_work" : sp.cited ? "copied_cited" : "copied_uncited") as IssueKind,
+        kind: (sp.sourceIds[0] === "self" ? "repeated" : ownIds.has(sp.sourceIds[0]!) ? "own_work" : sp.cited ? "copied_cited" : "copied_uncited") as IssueKind,
         start: sp.start,
         end: sp.end,
         words: sp.words,
