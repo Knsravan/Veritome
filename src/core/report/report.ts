@@ -144,10 +144,13 @@ export function buildOverview(r: Omit<PaperReport, "overview" | "generatedAt" | 
 
   return [
     item("plagiarism", r.plagiarism, (p) => {
-      const external = p.sources.filter((s) => s.kind !== "self").length;
+      const external = p.sources.filter((s) => s.kind !== "self" && (s.primaryWords > 0 || s.matchedWords === 0)).length;
+      const uncited = p.spans.filter((s) => !s.cited && s.sourceIds[0] !== "self");
+      const uncitedWords = uncited.reduce((n, s) => n + s.words, 0);
+      const serious = uncited.some((s) => s.words >= 15) || p.spans.some((s) => s.cited && s.words >= 15);
       return {
-        status: p.verdict === "high" ? "attention" : p.verdict === "moderate" || p.paraphrasePercent >= 5 ? "review" : "ok",
-        headline: `${p.similarity}% of words match ${external} external source${external === 1 ? "" : "s"}${p.paraphrasePercent > 0 ? `, plus ${p.paraphrasePercent}% reworded` : ""}${p.providers.some((x) => x.kind !== "self") ? "" : " (no external search configured)"}.`,
+        status: p.verdict === "high" || serious ? "attention" : p.verdict === "moderate" || p.paraphrasePercent >= 5 || uncitedWords > 0 ? "review" : "ok",
+        headline: `${p.similarity}% of words match ${external} source${external === 1 ? "" : "s"}${uncitedWords ? ` (${uncitedWords} words copied without a citation)` : ""}${p.paraphrasePercent > 0 ? `, plus ${p.paraphrasePercent}% reworded` : ""}${p.providers.some((x) => x.kind !== "self") ? "" : " (no external search configured)"}.`,
       };
     }),
     item("detector", r.detector, (d) => ({

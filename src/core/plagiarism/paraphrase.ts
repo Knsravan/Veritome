@@ -87,7 +87,7 @@ export interface ParaphraseMatch {
 }
 
 export interface ParaphraseOptions {
-  /** Minimum similarity to report. Default 0.6. */
+  /** Minimum similarity to report. Default 0.65. */
   threshold?: number;
   /** Sentences need at least this many content words. Default 7. */
   minConcepts?: number;
@@ -111,7 +111,7 @@ export function findParaphrases(
   sources: ReadonlyArray<{ id: string; text: string }>,
   options: ParaphraseOptions = {},
 ): ParaphraseMatch[] {
-  const threshold = options.threshold ?? 0.6;
+  const threshold = options.threshold ?? 0.65;
   const minConcepts = options.minConcepts ?? 7;
   const body: Indexed[] = [];
   const index = new Map<string, number[]>();

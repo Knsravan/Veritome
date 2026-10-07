@@ -96,8 +96,9 @@ export interface SelectOptions {
 }
 
 /**
- * Picks passages to use as search probes. The document is divided into as many
- * bins as there are probes and the most distinctive passage of each bin wins, so
+ * Picks passages to use as search probes. The text is cut into consecutive chunks of whole sentences (short
+ * sentences are joined with the next one), so no sentence is skipped. When there are more chunks than probes, the
+ * document is divided into as many bins as there are probes and the most distinctive chunk of each bin wins, so
  * the whole manuscript is sampled rather than only its opening.
  */
 export function selectPassages(checkText: string, maxPassages: number, options: SelectOptions = {}): Passage[] {
@@ -108,37 +109,50 @@ export function selectPassages(checkText: string, maxPassages: number, options: 
 
   const consider = (start: number, end: number) => {
     const text = checkText.slice(start, end);
-    const words = tokenize(text).length;
-    if (words < minWords || words > maxWords) return;
+    if (tokenize(text).length < minWords) return;
     if (/^(?:table|figure|fig\.|equation)\b/i.test(text.trim())) return;
     const score = distinctiveness(text);
-    if (score < 5) return;
+    const clean = text.replace(/\u0001+/g, " ");
     candidates.push({
       start,
       end,
       text: text.replace(/[\u0001\s]+/g, " ").trim(),
       score,
-      phrase: pickPhrase(text.replace(/\u0001+/g, " ")),
-      phrases: pickPhrases(text.replace(/\u0001+/g, " ")),
-      keywords: extractKeyphrases(text.replace(/\u0001+/g, " "), 8).join(" "),
+      phrase: pickPhrase(clean),
+      phrases: pickPhrases(clean),
+      keywords: extractKeyphrases(clean, 8).join(" "),
     });
   };
 
-  for (let i = 0; i < sentences.length; i++) {
-    const a = sentences[i] as { start: number; end: number };
-    consider(a.start, a.end);
-    const b = sentences[i + 1];
-    if (b && !/\n\s*\n/.test(checkText.slice(a.end, b.start))) consider(a.start, b.end);
+  // Consecutive chunks: a sentence on its own when it is long enough, otherwise joined with the following ones
+  // (up to maxWords) so short sentences are searched too.
+  for (let i = 0; i < sentences.length; ) {
+    const first = sentences[i] as { start: number; end: number };
+    let j = i;
+    let words = tokenize(checkText.slice(first.start, first.end)).length;
+    while (words < minWords && j + 1 < sentences.length) {
+      const next = sentences[j + 1] as { start: number; end: number };
+      const more = tokenize(checkText.slice(next.start, next.end)).length;
+      if (words + more > maxWords) break;
+      j++;
+      words += more;
+    }
+    consider(first.start, (sentences[j] as { end: number }).end);
+    i = j + 1;
   }
   if (candidates.length === 0 || maxPassages <= 0) return [];
+  // With enough searches for everything, search everything: copied sentences can be plain ones.
+  if (candidates.length <= maxPassages) return candidates.filter((c) => c.phrase);
+  // Otherwise skip the blandest chunks and sample the rest evenly.
+  const pool = candidates.filter((c) => c.score >= 5);
 
   const total = checkText.length || 1;
-  const bins = Math.min(maxPassages, candidates.length);
+  const bins = Math.min(maxPassages, pool.length);
   const chosen: Passage[] = [];
   for (let b = 0; b < bins; b++) {
     const lo = (b / bins) * total;
     const hi = ((b + 1) / bins) * total;
-    const inBin = candidates
+    const inBin = pool
       .filter((c) => c.start >= lo && c.start < hi && !chosen.some((x) => c.start < x.end && x.start < c.end))
       .sort((x, y) => y.score - x.score);
     const pick = inBin[0];

@@ -1,12 +1,24 @@
 import { mapLimit, RequestBudgetExceeded } from "../infra/http.ts";
 import { maskProtected } from "../text/protect.ts";
+import { findInTextCitations } from "../citations/intext.ts";
 import { blankQuotedText, splitReferences } from "../text/sections.ts";
-import { tokenize } from "../text/tokens.ts";
+import { splitSentences } from "../text/sentences.ts";
+import { tokenize, type Token } from "../text/tokens.ts";
 import { buildBodyIndex, findRuns, findSelfRepeats, type Run } from "./match.ts";
 import { findParaphrases } from "./paraphrase.ts";
 import { selectPassages } from "./passages.ts";
 import type { SourceDoc, SourceProvider } from "./providers.ts";
-import type { LibraryDoc, MatchedSource, MatchedSpan, PlagiarismReport, PlagiarismVerdict, ProviderStat } from "./types.ts";
+import type {
+  LibraryDoc,
+  MatchedSource,
+  MatchedSpan,
+  ParaphraseSpan,
+  PlagiarismReport,
+  PlagiarismVerdict,
+  ProviderStat,
+  QuotedPassage,
+  SourceExcerpt,
+} from "./types.ts";
 
 export interface PlagiarismOptions {
   providers?: SourceProvider[];
@@ -45,6 +57,61 @@ export function failureReason(err: unknown): string {
   return "the service could not be reached";
 }
 
+const yearOf = (e: { doc: SourceDoc }) => e.doc.year ?? 9999;
+
+/**
+ * Returns a function that finds an in-text citation in the sentence(s) around a range of the body, or the next
+ * sentence when it is short (a citation is sometimes left on its own after a long quotation).
+ */
+export function citationFinder(body: string): (start: number, end: number) => string | undefined {
+  const cites = findInTextCitations(body);
+  const sentences = splitSentences(body);
+  return (start, end) => {
+    const inside = sentences.filter((x) => x.end > start && x.start < end);
+    const from = Math.min(start, inside[0]?.start ?? start);
+    const to = Math.max(end, inside[inside.length - 1]?.end ?? end);
+    return cites.find((c) => c.start >= from && c.start <= to)?.raw;
+  };
+}
+
+/** Quotations long enough to be left out of the score (the same rule as blankQuotedText). */
+export function findQuotations(body: string, minLength = 40): Array<{ start: number; end: number; text: string }> {
+  const out: Array<{ start: number; end: number; text: string }> = [];
+  for (const m of body.matchAll(/(["“])([^"“”\n]{1,2000}?)(["”])/g)) {
+    if (m[0].length < minLength) continue;
+    out.push({ start: m.index, end: m.index + m[0].length, text: m[0].replace(/\s+/g, " ") });
+  }
+  return out;
+}
+
+/** The credited source's own wording for a passage, with about 15 words of context either side. */
+function sourceExcerpt(entry: { doc: SourceDoc; runs: Run[] }, srcTokens: Token[], from: number, to: number): SourceExcerpt | undefined {
+  let best: Run | undefined;
+  let bestOverlap = 0;
+  for (const r of entry.runs) {
+    const overlap = Math.min(r.end, to) - Math.max(r.start, from);
+    if (overlap > bestOverlap) [best, bestOverlap] = [r, overlap];
+  }
+  if (!best || !srcTokens.length) return undefined;
+  const a = Math.min(srcTokens.length - 1, Math.max(0, best.sourceStart + Math.max(0, from - best.start)));
+  const b = Math.min(srcTokens.length - 1, a + Math.max(1, Math.min(best.end, to) - Math.max(best.start, from)) - 1);
+  const ctxA = Math.max(0, a - 15);
+  const ctxB = Math.min(srcTokens.length - 1, b + 15);
+  const base = (srcTokens[ctxA] as Token).start;
+  const text = entry.doc.text.slice(base, (srcTokens[ctxB] as Token).end);
+  return {
+    text: `${ctxA > 0 ? "…" : ""}${text}${ctxB < srcTokens.length - 1 ? "…" : ""}`.replace(/\s+/g, " "),
+    // Offsets are recomputed after whitespace collapsing below.
+    ...collapsedOffsets(entry.doc.text, base, (srcTokens[a] as Token).start, (srcTokens[b] as Token).end, ctxA > 0 ? 1 : 0),
+  };
+}
+
+/** Maps offsets in the original source text to offsets in the excerpt after whitespace runs become single spaces. */
+function collapsedOffsets(src: string, base: number, start: number, end: number, prefix: number): { matchStart: number; matchEnd: number } {
+  const collapse = (s: string) => s.replace(/\s+/g, " ").length;
+  return { matchStart: prefix + collapse(src.slice(base, start)), matchEnd: prefix + collapse(src.slice(base, end)) };
+}
+
 export async function checkPlagiarism(text: string, options: PlagiarismOptions = {}): Promise<PlagiarismReport> {
   const providers = options.providers ?? [];
   const excludeRefs = options.excludeReferences ?? true;
@@ -69,6 +136,32 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     return s;
   };
 
+  // Sentence of every token, to judge whether a short match is a whole copied sentence or a stock phrase.
+  const sentenceOf = new Int32Array(tokens.length);
+  const sentenceSize: number[] = [];
+  {
+    const sents = splitSentences(working);
+    let k = 0;
+    sents.forEach((sn, si) => {
+      sentenceSize[si] = 0;
+      while (k < tokens.length && (tokens[k] as Token).start < sn.end) {
+        sentenceOf[k] = si;
+        sentenceSize[si]!++;
+        k++;
+      }
+    });
+    for (; k < tokens.length; k++) sentenceOf[k] = Math.max(0, sents.length - 1);
+  }
+  const significant = (runs: Run[]): Run[] => {
+    const total = runs.reduce((n, r) => n + (r.end - r.start), 0);
+    if (total >= 15) return runs;
+    const perSentence = new Map<number, number>();
+    for (const r of runs) for (let t = r.start; t < r.end; t++) perSentence.set(sentenceOf[t]!, (perSentence.get(sentenceOf[t]!) ?? 0) + 1);
+    // A short run on its own (such as "the association between air pollution and") is a stock phrase, not copying,
+    // unless it makes up most of its sentence.
+    return runs.filter((r) => r.end - r.start >= 10 || (perSentence.get(sentenceOf[r.start]!) ?? 0) >= 0.5 * (sentenceSize[sentenceOf[r.start]!] ?? Infinity));
+  };
+
   const found = new Map<string, { doc: SourceDoc; runs: Run[] }>();
   // Every document seen, for the paraphrase pass (capped to bound the work).
   const seen = new Map<string, SourceDoc>();
@@ -77,10 +170,11 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     if (!seen.has(doc.id) && seen.size < 500) seen.set(doc.id, doc);
     if (found.has(doc.id)) return;
     const words = tokenize(doc.text).map((t) => t.word);
-    const runs = findRuns(index, words, matchOpts);
+    const runs = significant(findRuns(index, words, matchOpts));
     if (runs.length) found.set(doc.id, { doc, runs });
   };
 
+  const searched: Array<{ start: number; end: number }> = [];
   if (tokens.length < 8) warnings.push("The text is too short for a meaningful similarity check.");
 
   // Library documents.
@@ -109,6 +203,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   const maxPassages = options.maxPassages ?? 40;
   if (providers.length && tokens.length >= 8) {
     const passages = selectPassages(working, maxPassages);
+    searched.push(...passages.map((p) => ({ start: p.start, end: p.end })));
     const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
     let done = 0;
     const firstError = new Map<string, unknown>();
@@ -166,7 +261,17 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   const order = entries.map((_, i) => i).sort((a, b) => (perSource[b] as number) - (perSource[a] as number));
   const rank = new Map(order.map((idx, r) => [idx, r]));
 
+  // Citations and sentence bounds, to tell a cited match from an uncited one.
+  const citeCheck = citationFinder(body);
+  const sourceTokens = new Map<number, Token[]>();
+  const tokensOf = (i: number) => {
+    let t = sourceTokens.get(i);
+    if (!t) sourceTokens.set(i, (t = tokenize((entries[i] as { doc: SourceDoc }).doc.text)));
+    return t;
+  };
+
   const spans: MatchedSpan[] = [];
+  const primaryWords = new Map<number, number>();
   let matchedWords = 0;
   for (let t = 0; t < tokens.length; ) {
     if ((covering[t] as number[]).length === 0) {
@@ -175,48 +280,69 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     }
     let end = t;
     while (end < tokens.length && (covering[end] as number[]).length > 0) end++;
-    const ids = new Set<number>();
-    for (let k = t; k < end; k++) for (const i of covering[k] as number[]) ids.add(i);
+    const inSpan = new Map<number, number>();
+    for (let k = t; k < end; k++) for (const i of new Set(covering[k] as number[])) inSpan.set(i, (inSpan.get(i) ?? 0) + 1);
+    // Best first: the source sharing most of this passage; on a tie, the oldest (most likely the original), then overall rank.
+    const ids = [...inSpan.keys()].sort(
+      (a, b) =>
+        (inSpan.get(b) as number) - (inSpan.get(a) as number) ||
+        yearOf(entries[a] as { doc: SourceDoc }) - yearOf(entries[b] as { doc: SourceDoc }) ||
+        (rank.get(a) as number) - (rank.get(b) as number),
+    );
+    const primary = ids[0] as number;
+    primaryWords.set(primary, (primaryWords.get(primary) ?? 0) + (end - t));
     const start = (tokens[t] as { start: number }).start;
     const stop = (tokens[end - 1] as { end: number }).end;
+    const cite = citeCheck(start, stop);
+    const excerpt = sourceExcerpt(entries[primary] as { doc: SourceDoc; runs: Run[] }, tokensOf(primary), t, end);
     spans.push({
       start,
       end: stop,
       words: end - t,
       text: body.slice(start, stop).replace(/\s+/g, " "),
-      sourceIds: [...ids].sort((a, b) => (rank.get(a) as number) - (rank.get(b) as number)).map((i) => (entries[i] as { doc: SourceDoc }).doc.id),
+      sourceIds: ids.map((i) => (entries[i] as { doc: SourceDoc }).doc.id),
+      cited: Boolean(cite),
+      ...(cite ? { citation: cite } : {}),
+      ...(excerpt ? { sourceExcerpt: excerpt } : {}),
     });
     matchedWords += end - t;
     t = end;
   }
 
-  const sources: MatchedSource[] = order.map((i) => {
-    const { doc } = entries[i] as { doc: SourceDoc };
-    const n = perSource[i] as number;
-    return {
-      id: doc.id,
-      title: doc.title,
-      kind: doc.kind,
-      provider: doc.provider,
-      matchedWords: n,
-      percent: round1((n / Math.max(1, tokens.length)) * 100),
-      ...(doc.url ? { url: doc.url } : {}),
-      ...(doc.doi ? { doi: doc.doi } : {}),
-      ...(doc.year ? { year: doc.year } : {}),
-      ...(doc.authors ? { authors: doc.authors } : {}),
-    };
-  });
+  const total = Math.max(1, tokens.length);
+  const sources: MatchedSource[] = order
+    .map((i) => {
+      const { doc } = entries[i] as { doc: SourceDoc };
+      const n = perSource[i] as number;
+      const p = primaryWords.get(i) ?? 0;
+      return {
+        id: doc.id,
+        title: doc.title,
+        kind: doc.kind,
+        provider: doc.provider,
+        matchedWords: n,
+        percent: round1((n / total) * 100),
+        primaryWords: p,
+        primaryPercent: round1((p / total) * 100),
+        ...(doc.url ? { url: doc.url } : {}),
+        ...(doc.doi ? { doi: doc.doi } : {}),
+        ...(doc.year ? { year: doc.year } : {}),
+        ...(doc.authors ? { authors: doc.authors } : {}),
+      };
+    })
+    .sort((a, b) => b.primaryWords - a.primaryWords || b.matchedWords - a.matchedWords);
 
   const similarity = tokens.length ? round1((matchedWords / tokens.length) * 100) : 0;
 
   // Reworded sentences: skip those already mostly covered by an exact match.
-  const paraphrases =
+  const reworded =
     options.paraphrases === false
       ? []
       : findParaphrases(working, [...seen.values()].map((d) => ({ id: d.id, text: d.text }))).filter((pm) => {
           const inside = spans.filter((sp) => sp.start < pm.end && pm.start < sp.end).reduce((n, sp) => n + Math.min(sp.end, pm.end) - Math.max(sp.start, pm.start), 0);
           return inside < (pm.end - pm.start) * 0.5;
         });
+  const paraphrases: ParaphraseSpan[] = reworded.map((pm) => ({ ...pm, cited: Boolean(citeCheck(pm.start, pm.end)) }));
   const paraphraseWords = paraphrases.reduce((n, pm) => n + tokenize(pm.text).length, 0);
   // Sources that only explain reworded sentences still belong in the list.
   for (const pm of paraphrases) {
@@ -230,6 +356,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       provider: doc.provider,
       matchedWords: 0,
       percent: 0,
+      primaryWords: 0,
+      primaryPercent: 0,
       ...(doc.url ? { url: doc.url } : {}),
       ...(doc.doi ? { doi: doc.doi } : {}),
       ...(doc.year ? { year: doc.year } : {}),
@@ -237,6 +365,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     });
   }
   for (const pm of paraphrases) pm.text = body.slice(pm.start, pm.end).replace(/\s+/g, " ");
+  const quotes: QuotedPassage[] = excludeQuotes ? findQuotations(body).map((q) => ({ ...q, cited: Boolean(citeCheck(q.start, q.end)) })) : [];
   return {
     similarity,
     verdict: verdictFor(similarity),
@@ -246,6 +375,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     paraphrases,
     paraphrasePercent: tokens.length ? round1((paraphraseWords / tokens.length) * 100) : 0,
     sources,
+    quotes,
+    searched,
     providers: [...stats.values()],
     excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },
     warnings,
