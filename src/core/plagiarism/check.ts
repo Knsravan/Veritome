@@ -1,4 +1,4 @@
-import { mapLimit } from "../infra/http.ts";
+import { mapLimit, RequestBudgetExceeded } from "../infra/http.ts";
 import { maskProtected } from "../text/protect.ts";
 import { blankQuotedText, splitReferences } from "../text/sections.ts";
 import { tokenize } from "../text/tokens.ts";
@@ -101,7 +101,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     const passages = selectPassages(working, maxPassages);
     const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
     let done = 0;
-    await mapLimit(jobs, options.concurrency ?? 4, async ({ p, provider }) => {
+    // Paced providers wait between requests, so more workers keep the others busy meanwhile.
+    await mapLimit(jobs, options.concurrency ?? 6, async ({ p, provider }) => {
       if (options.signal?.aborted) return;
       const s = stat(provider.name, provider.kind, provider.coverage);
       s.queries++;
@@ -112,6 +113,12 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
           addDoc(d);
         }
       } catch (err) {
+        if (err instanceof RequestBudgetExceeded) {
+          s.queries--;
+          s.skipped = (s.skipped ?? 0) + 1;
+          options.onProgress?.(++done, jobs.length);
+          return;
+        }
         s.failures++;
         if (s.failures === 1) warnings.push(`${provider.name} could not be reached for some queries: ${err instanceof Error ? err.message : "unknown error"}.`);
       }
@@ -120,6 +127,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
     for (const s of stats.values()) {
       if (s.queries > 0 && s.failures === s.queries) warnings.push(`${s.name} failed for every query, so it contributed nothing.`);
+      if (s.skipped) warnings.push(`${s.name} limits how often it can be searched, so only part of the text (${s.queries} of ${s.queries + s.skipped} passages) was checked against it.`);
     }
   } else if (providers.length === 0 && !options.library?.length) {
     warnings.push("No search providers or library documents were configured, so only repetition within the text was checked.");

@@ -7,7 +7,7 @@ import { createSemanticScholar } from "../core/citations/sources/semanticscholar
 import type { FinderDeps } from "../core/citations/finder.ts";
 import type { VerifierDeps } from "../core/citations/verify.ts";
 import type { LanguageToolOptions } from "../core/grammar/languagetool.ts";
-import { createHttp, type FetchLike, type Http } from "../core/infra/http.ts";
+import { createHttp, pacedHttp, type FetchLike, type Http } from "../core/infra/http.ts";
 import { createLlmClient, type LlmClient } from "../core/llm/client.ts";
 import { resolveLlmConfig, type ClientLlmOverride } from "../core/llm/config.ts";
 import {
@@ -26,23 +26,41 @@ import {
 import type { PublicStatus, ServerConfig } from "./config.ts";
 import { loadLibrary } from "./library.ts";
 
+const USER_AGENT = (cfg: ServerConfig) => `Veritome/0.1 (https://github.com/Knsravan/Veritome${cfg.contactEmail ? `; mailto:${cfg.contactEmail}` : ""})`;
+
 export function scholarlyHttp(cfg: ServerConfig, fetchImpl?: FetchLike): Http {
   return createHttp({
-    userAgent: `Veritome/0.1 (https://github.com/Knsravan/Veritome${cfg.contactEmail ? `; mailto:${cfg.contactEmail}` : ""})`,
+    userAgent: USER_AGENT(cfg),
     timeoutMs: 15_000,
     retries: 2,
     ...(fetchImpl ? { fetch: fetchImpl } : {}),
   });
 }
 
+const clientCache = new WeakMap<Http, ReturnType<typeof buildClients>>();
+
+/** One set of clients per check (per Http instance), so pacing is shared by every tool in a report. */
 export function scholarlyClients(cfg: ServerConfig, http: Http) {
+  let c = clientCache.get(http);
+  if (!c) clientCache.set(http, (c = buildClients(cfg, http)));
+  return c;
+}
+
+function buildClients(cfg: ServerConfig, http: Http) {
   const mailto = cfg.contactEmail ? { mailto: cfg.contactEmail } : {};
+  // arXiv asks for one request every 3 seconds and can be slow to answer.
+  const arxivHttp = pacedHttp(
+    createHttp({ userAgent: USER_AGENT(cfg), timeoutMs: 30_000, retries: 1, backoffMs: 3000 }),
+    { service: "arXiv", minIntervalMs: 3100, maxRequests: 25 },
+  );
   return {
     crossref: createCrossref(http, mailto),
     openalex: createOpenAlex(http, { ...mailto, ...(cfg.openAlexKey ? { apiKey: cfg.openAlexKey } : {}) }),
     semanticscholar: createSemanticScholar(http, cfg.semanticScholarKey ? { apiKey: cfg.semanticScholarKey } : {}),
-    arxiv: createArxiv(http),
+    arxiv: createArxiv(arxivHttp),
     datacite: createDataCite(http),
+    // CORE's free plan allows only a few requests a minute.
+    coreHttp: pacedHttp(http, { service: "CORE", minIntervalMs: 6500, maxRequests: 12 }),
   };
 }
 
@@ -66,7 +84,8 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
     europePmcProvider(http),
     wikipediaProvider(http),
   ];
-  if (cfg.coreApiKey) providers.push(coreProvider(http, cfg.coreApiKey));
+  // CORE's free plan allows only a few requests a minute.
+  if (cfg.coreApiKey) providers.push(coreProvider(c.coreHttp, cfg.coreApiKey));
   if (cfg.semanticScholarKey) providers.push(semanticScholarSnippetProvider(http, { apiKey: cfg.semanticScholarKey }));
   if (options.web && cfg.braveApiKey) providers.push(braveProvider(http, cfg.braveApiKey));
   if (options.web && cfg.serperApiKey) providers.push(serperProvider(http, cfg.serperApiKey));
