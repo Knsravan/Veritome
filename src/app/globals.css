@@ -33,6 +33,14 @@
   --danger: #9e1c25;
   --danger-soft: #fbe3e4;
   --focus: #1d4e89;
+  /* One colour per matched source, so a passage can be traced to its source at a glance. */
+  --src-1: #fbe38a; --src-1-line: #8a6d00;
+  --src-2: #c9e3fb; --src-2-line: #1d5c99;
+  --src-3: #f7cfd8; --src-3-line: #9b2443;
+  --src-4: #cdeccf; --src-4-line: #2c6b32;
+  --src-5: #e2d6f7; --src-5-line: #5a3aa6;
+  --src-6: #fbd9bf; --src-6-line: #9a4b10;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -62,6 +70,13 @@
     --danger: #f1868c;
     --danger-soft: #4a1d21;
     --focus: #8ab8f0;
+    --src-1: #5c4a05; --src-1-line: #e6c93a;
+    --src-2: #173a5c; --src-2-line: #7fb6ee;
+    --src-3: #5a1f2f; --src-3-line: #f29ab0;
+    --src-4: #1c4421; --src-4-line: #82cf8a;
+    --src-5: #352659; --src-5-line: #b9a3f2;
+    --src-6: #5a300f; --src-6-line: #f0a56a;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
   }
 }
 
@@ -131,6 +146,7 @@ body {
 
 /* Proof marks. Each kind differs by more than colour (underline style, border) for colour-blind readers. */
 .mark {
+  background: transparent;
   border-radius: 2px;
   cursor: pointer;
   color: inherit;
@@ -158,6 +174,41 @@ body {
 .mark-grammar.is-info {
   text-decoration-style: dashed;
 }
+.mark-para {
+  text-decoration: underline dotted var(--mark-match-line);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  background: color-mix(in srgb, var(--mark-match) 22%, transparent);
+}
+.mark-match[data-src] {
+  background: var(--src-bg);
+  box-shadow: inset 0 -2px 0 var(--src-line);
+}
+.mark-para[data-src] {
+  background: color-mix(in srgb, var(--src-bg) 45%, transparent);
+  text-decoration-color: var(--src-line);
+}
+[data-src="1"] { --src-bg: var(--src-1); --src-line: var(--src-1-line); }
+[data-src="2"] { --src-bg: var(--src-2); --src-line: var(--src-2-line); }
+[data-src="3"] { --src-bg: var(--src-3); --src-line: var(--src-3-line); }
+[data-src="4"] { --src-bg: var(--src-4); --src-line: var(--src-4-line); }
+[data-src="5"] { --src-bg: var(--src-5); --src-line: var(--src-5-line); }
+[data-src="6"] { --src-bg: var(--src-6); --src-line: var(--src-6-line); }
+.src-badge {
+  display: inline-flex;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.35rem;
+  background: var(--src-bg, var(--desk-deep));
+  box-shadow: inset 0 0 0 1.5px var(--src-line, var(--rule));
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
 .mark-cite {
   background: var(--mark-cite-soft);
   border-bottom: 2px dashed var(--mark-cite);
@@ -172,10 +223,52 @@ body {
   text-decoration: none;
 }
 .diff-del {
+  margin-right: 0.2em;
   background: var(--danger-soft);
   text-decoration: line-through;
   text-decoration-color: var(--danger);
 }
+}
+
+.card {
+  border: 1px solid var(--rule);
+  border-radius: 0.75rem;
+  background: var(--page);
+  box-shadow: var(--shadow-card);
+}
+
+/* Printing (and "Download PDF") gives a clean paper report: no chrome, every section shown. */
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 10.5pt;
+  }
+  .card {
+    box-shadow: none !important;
+  }
+  .print-break {
+    break-before: page;
+  }
+  .print-avoid {
+    break-inside: avoid;
+  }
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+  .mark {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -10,6 +10,8 @@ export interface TextMark {
   className: string;
   /** Short accessible description, e.g. "Grammar: repeated word". */
   label: string;
+  /** Colour group, e.g. the number of the matched source (1 to 6). */
+  group?: number;
 }
 
 /** Drops marks that overlap an earlier one so the text renders as flat segments. */
@@ -68,6 +70,7 @@ export function AnnotatedText({
             onClick={() => onSelect?.(p.mark!.id)}
             onKeyDown={(e) => onKey(e, p.mark!.id)}
             className={cx("mark", p.mark.className)}
+            data-src={p.mark.group}
           >
             {p.text}
           </mark>
