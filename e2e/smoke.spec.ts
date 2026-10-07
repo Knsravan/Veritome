@@ -117,6 +117,9 @@ test("plagiarism results explain each finding and update when filtered", async (
   await page.getByLabel("Hide matches under").selectOption("12");
   await expect(page.getByText("1 small match hidden")).toBeVisible();
   await axe(page);
+  const pdf = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PDF report" }).click();
+  expect((await pdf).suggestedFilename()).toMatch(/^veritome-similarity-report-.*\.pdf$/);
 });
 
 test("full report runs offline, shows tabs and offers downloads @mobile", async ({ page }) => {
@@ -137,6 +140,9 @@ test("full report runs offline, shows tabs and offers downloads @mobile", async 
     await page.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
     await expect(page.getByRole("tabpanel").getByText(text).first()).toBeVisible();
   }
+  const pdf = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PDF report" }).click();
+  expect((await pdf).suggestedFilename()).toMatch(/^veritome-report-.*\.pdf$/);
   await page.getByText("More formats").click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download Markdown" }).click();
