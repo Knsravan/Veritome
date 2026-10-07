@@ -75,8 +75,8 @@ All settings are environment variables and all are optional; see [.env.example](
 
 | Variable | Purpose |
 | --- | --- |
-| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Any OpenAI-compatible endpoint for the paraphraser, humaniser and optional detector opinion. Without one, rewriting falls back to light rule-based edits and says so. |
-| `LLM_REASONING_EFFORT` | Optional for models that think first (Gemini, OpenAI o-series): `low` makes rewrites faster and cheaper. |
+| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | Any OpenAI-compatible endpoint for the paraphraser, humaniser and optional detector opinion. Without one, rewriting falls back to light rule-based edits and says so. For Gemini use `https://generativelanguage.googleapis.com/v1beta/openai` with a Gemini API key. |
+| `LLM_REASONING_EFFORT` | Optional `reasoning_effort` for thinking models. Set `low` for Gemini so thinking does not use up the short detector reply. |
 | `ALLOW_CLIENT_LLM`, `ALLOW_PRIVATE_LLM` | Let visitors bring their own model from Settings (off by default). Their URLs pass an SSRF guard; cloud metadata addresses are always refused. |
 | `LANGUAGETOOL_URL` | A LanguageTool server for broader grammar and spelling checks. |
 | `CONTACT_EMAIL` | Sent to Crossref and OpenAlex for their polite pools. Recommended. |

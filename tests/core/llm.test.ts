@@ -41,6 +41,25 @@ test("json mode falls back when the server rejects response_format", async () =>
   assert.equal(JSON.parse(calls[1]?.body ?? "{}").response_format, undefined);
 });
 
+test("reasoning effort is sent when configured and dropped if the server rejects it", async () => {
+  let n = 0;
+  const { fetch, calls } = mockFetch(() => (++n === 1 ? jsonResponse({ error: {} }, 400) : ok("hi")));
+  const llm = createLlmClient({ baseUrl: "https://llm.example/v1", model: "m", reasoningEffort: "low" }, { fetch });
+  assert.equal(await llm.chat({ system: "s", user: "u" }), "hi");
+  assert.equal(calls.length, 2);
+  assert.equal(JSON.parse(calls[0]?.body ?? "{}").reasoning_effort, "low");
+  assert.equal(JSON.parse(calls[1]?.body ?? "{}").reasoning_effort, undefined);
+});
+
+test("resolveLlmConfig reads LLM_REASONING_EFFORT", async () => {
+  const cfg = await resolveLlmConfig({
+    env: { LLM_BASE_URL: "https://env.example/v1", LLM_MODEL: "m", LLM_REASONING_EFFORT: " low " },
+    allowClientConfig: false,
+    allowPrivate: false,
+  });
+  assert.equal(cfg?.reasoningEffort, "low");
+});
+
 test("errors are mapped to friendly messages and never leak the key", async () => {
   const { fetch } = mockFetch(() => jsonResponse({}, 401));
   const llm = createLlmClient({ baseUrl: "https://llm.example/v1", apiKey: "sk-SECRET", model: "m" }, { fetch });

@@ -5,7 +5,10 @@ export interface LlmConfig {
   baseUrl: string;
   apiKey?: string;
   model: string;
-  /** Sent as reasoning_effort ("none", "minimal", "low", "medium", "high") for models that think before answering. */
+  /**
+   * Sent as `reasoning_effort`. Thinking models (such as Gemini) count thinking
+   * against max_tokens, so a low value keeps short replies from coming back empty.
+   */
   reasoningEffort?: string;
 }
 
@@ -60,13 +63,13 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
   });
   const url = chatCompletionsUrl(config.baseUrl);
 
-  async function call(req: ChatRequest, json: boolean, limit = true): Promise<string> {
+  async function call(req: ChatRequest, json: boolean, reasoning: boolean, limit = true): Promise<string> {
     const body = JSON.stringify({
       model: config.model,
       temperature: req.temperature ?? 0.7,
       ...(req.maxTokens && limit ? { max_tokens: req.maxTokens } : {}),
-      ...(config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
       ...(json ? { response_format: { type: "json_object" } } : {}),
+      ...(reasoning && config.reasoningEffort ? { reasoning_effort: config.reasoningEffort } : {}),
       messages: [
         { role: "system", content: req.system },
         { role: "user", content: req.user },
@@ -84,7 +87,7 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
     const content = data.choices?.[0]?.message?.content;
     if ((typeof content !== "string" || content.trim() === "") && limit && req.maxTokens && data.choices?.[0]?.finish_reason === "length") {
       // Thinking models (Gemini, o-series) can spend the whole limit on reasoning; ask again without it.
-      return call(req, json, false);
+      return call(req, json, reasoning, false);
     }
     if (typeof content !== "string" || content.trim() === "") {
       throw new LlmError(data.error?.message ?? "The language model returned an empty response.");
@@ -96,12 +99,12 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
     model: config.model,
     async chat(req) {
       try {
-        return await call(req, req.json === true);
+        return await call(req, req.json === true, true);
       } catch (err) {
         if (err instanceof HttpError) {
-          if (req.json && err.status === 400) {
-            // Some servers do not support response_format.
-            return call(req, false).catch((e) => {
+          if ((req.json || config.reasoningEffort) && err.status === 400) {
+            // Some servers do not support response_format or reasoning_effort.
+            return call(req, false, false).catch((e) => {
               throw mapError(e);
             });
           }
