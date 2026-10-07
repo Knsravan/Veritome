@@ -64,6 +64,18 @@ export interface ReviewFilters {
   excludeSources?: ReadonlySet<string>;
 }
 
+/** A credited source, with the other services where the same work was found. */
+export type ReviewedSource = MatchedSource & { alsoAt: string[] };
+
+/** Titles that differ only in case, punctuation or an arXiv-style "[1512.03385]" prefix name the same work. */
+export function sameWorkKey(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/^\[[^\]]*\]\s*/, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
 export interface ReviewedReport {
   similarity: number;
   verdict: PlagiarismVerdict;
@@ -72,7 +84,7 @@ export interface ReviewedReport {
   paraphrases: ParaphraseSpan[];
   paraphrasePercent: number;
   /** Sources that are credited with at least one passage, best first. */
-  primary: MatchedSource[];
+  primary: ReviewedSource[];
   /** Sources that also contain matched passages but are not credited with any. */
   others: MatchedSource[];
   issues: Issue[];
@@ -125,7 +137,17 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
   const primary = withCredit
     .filter((s) => s.primaryWords > 0 || (rewordedOnly.has(s.id) && !spans.some((sp) => sp.sourceIds.includes(s.id))))
     .sort((a, b) => b.primaryWords - a.primaryWords || b.matchedWords - a.matchedWords);
-  const others = withCredit.filter((s) => !primary.includes(s));
+  // Copies of a credited work found through another service are folded into it.
+  const keyed = new Map(primary.map((s) => [sameWorkKey(s.title), s.id]));
+  const alsoAt = new Map<string, Set<string>>();
+  const others = withCredit.filter((s) => {
+    if (primary.includes(s)) return false;
+    const owner = keyed.get(sameWorkKey(s.title));
+    if (owner === undefined) return true;
+    if (!alsoAt.has(owner)) alsoAt.set(owner, new Set());
+    alsoAt.get(owner)!.add(s.provider);
+    return false;
+  });
 
   const issues: Issue[] = [
     ...spans.map((sp) => ({
@@ -162,7 +184,7 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
     spans,
     paraphrases,
     paraphrasePercent: report.words ? round1((paraphraseWords / report.words) * 100) : 0,
-    primary,
+    primary: primary.map((s) => ({ ...s, alsoAt: [...(alsoAt.get(s.id) ?? [])].filter((p) => p !== s.provider) })),
     others,
     issues,
     breakdown,
