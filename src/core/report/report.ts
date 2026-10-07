@@ -30,6 +30,8 @@ export interface ReportDeps {
   fullText?: PlagiarismOptions["fullText"];
   /** The author's own earlier papers, for the self-plagiarism check. */
   own?: PlagiarismOptions["own"];
+  /** Translates non-English papers into English for the plagiarism search. */
+  translate?: PlagiarismOptions["translate"];
   /** Notes for the plagiarism section, such as a failed lookup of the author's papers. */
   notes?: string[];
   library?: LibraryDoc[];
@@ -226,6 +228,7 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
       ...(deps.fullText ? { fullText: deps.fullText } : {}),
       ...(deps.own ? { own: deps.own } : {}),
       ...(deps.notes ? { notes: deps.notes } : {}),
+      ...(deps.translate ? { translate: deps.translate } : {}),
       excludeQuotes: options.excludeQuotes ?? true,
       excludeReferences: options.excludeReferences ?? true,
       ...(options.hiddenText?.length ? { hiddenText: options.hiddenText } : {}),

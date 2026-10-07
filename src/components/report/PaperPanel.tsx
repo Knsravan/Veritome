@@ -47,6 +47,7 @@ const KIND_CATEGORY: Record<IssueKind, Category> = {
   copied_uncited: "copied",
   copied_cited: "copied",
   own_work: "copied",
+  translated: "reworded",
   repeated: "copied",
   reworded_uncited: "reworded",
   reworded_cited: "reworded",
@@ -82,6 +83,10 @@ export function collectFindings(report: PaperReport, text: string): Finding[] {
       if (note) f.note = note;
       if (span?.sourceExcerpt) f.compare = { label: "The source says", text: span.sourceExcerpt.text };
       else if (para) f.compare = { label: "Closest source sentence", text: para.sourceText };
+      else if (i.kind === "translated") {
+        const tr = p.translated?.find((x) => x.start === i.start);
+        if (tr) f.compare = { label: "The English source says", text: tr.sourceText };
+      }
       out.push(f);
     }
   }

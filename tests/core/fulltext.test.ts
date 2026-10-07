@@ -75,3 +75,37 @@ test("own earlier papers are found by ORCID and reported as reused text", async 
   const r = reviewReport(report);
   assert.ok(r.issues.some((i) => i.kind === "own_work"), JSON.stringify(r.issues.map((i) => i.kind)));
 });
+
+test("a paper in Spanish is translated and matched against English sources", async () => {
+  const { detectLanguage } = await import("../../src/core/text/language.ts");
+  const spanish =
+    "Medimos la respiración del suelo en catorce sitios ribereños durante dos veranos. " +
+    "Los sedimentos anegados mantuvieron la actividad microbiana inusualmente elevada en toda la llanura aluvial hasta bien entrado octubre. " +
+    "Nuestros resultados propios muestran además un patrón nuevo que no se había descrito antes en la literatura de la región.";
+  assert.equal(detectLanguage(spanish).name, "Spanish");
+  const english: Record<string, string> = {
+    "Medimos la respiración del suelo en catorce sitios ribereños durante dos veranos.": "We measured soil respiration at fourteen riparian sites over two summers.",
+    "Los sedimentos anegados mantuvieron la actividad microbiana inusualmente elevada en toda la llanura aluvial hasta bien entrado octubre.":
+      "Waterlogged sediments kept microbial activity unusually elevated across the floodplain well into October.",
+    "Nuestros resultados propios muestran además un patrón nuevo que no se había descrito antes en la literatura de la región.": "Our own results also show a new pattern not described before in the regional literature.",
+  };
+  const provider: SourceProvider = {
+    name: "Test",
+    kind: "scholarly",
+    coverage: "",
+    search: async (p) =>
+      /waterlogged|microbial/i.test(`${p.text} ${p.phrase}`)
+        ? [{ id: "doi:10.1/en", title: "English paper", text: "Waterlogged sediments kept microbial activity unusually elevated across the floodplain well into October, long after upland plots cooled.", provider: "Test", kind: "scholarly" }]
+        : [],
+  };
+  const report = await checkPlagiarism(spanish, { providers: [provider], translate: async (s) => s.map((x) => english[x] ?? "") });
+  assert.equal(report.language?.name, "Spanish");
+  assert.equal(report.translated?.length, 1);
+  assert.match(report.translated![0]!.text, /^Los sedimentos anegados/);
+  const r = reviewReport(report);
+  assert.ok(r.issues.some((i) => i.kind === "translated" && i.sourceId === "doi:10.1/en"));
+  assert.ok(r.primary.some((s) => s.id === "doi:10.1/en"));
+
+  const noModel = await checkPlagiarism(spanish, { providers: [provider] });
+  assert.ok(noModel.warnings.some((w) => w.includes("needs a language model")));
+});
