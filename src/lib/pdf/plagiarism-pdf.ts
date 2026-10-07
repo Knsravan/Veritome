@@ -17,6 +17,8 @@ export interface PlagiarismPdfInput {
 
 const KIND_FILL: Record<IssueKind, string> = {
   copied_uncited: PDF_COLORS.tintCritical,
+  disguised: PDF_COLORS.tintCritical,
+  tortured: PDF_COLORS.tintCritical,
   copied_cited: PDF_COLORS.tintSerious,
   reworded_uncited: PDF_COLORS.tintWarning,
   quote_uncited: PDF_COLORS.tintNeutral,
@@ -26,6 +28,8 @@ const KIND_FILL: Record<IssueKind, string> = {
 
 const KIND_COLOR: Record<IssueKind, string> = {
   copied_uncited: PDF_COLORS.critical,
+  disguised: PDF_COLORS.critical,
+  tortured: PDF_COLORS.critical,
   copied_cited: PDF_COLORS.serious,
   reworded_uncited: PDF_COLORS.warning,
   quote_uncited: PDF_COLORS.neutral,
@@ -129,6 +133,7 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
         `${i.words} words`,
         src ? `source ${num ?? ""}: ${src.title}${src.year ? ` (${src.year})` : ""}` : "",
         i.citation ? `citation found: ${i.citation}` : "",
+        i.kind === "tortured" && i.note ? i.note : "",
       ].filter(Boolean);
       w.text(meta.join(" · "), { size: 8.5, color: PDF_COLORS.soft, indent: 10, gap: 1 });
       const sp = r.spans.find((s) => s.start === i.start);

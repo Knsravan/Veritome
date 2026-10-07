@@ -533,3 +533,13 @@ h3,
     animation: none !important;
   }
 }
+
+/* Integrity flags (disguised text, paraphrasing-tool phrases): a double underline, distinct from match highlights. */
+@layer components {
+  .mark-flag {
+    background: var(--mark-grammar-soft);
+    text-decoration: underline double var(--mark-grammar);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+  }
+}

@@ -7,10 +7,18 @@ export interface Token extends Span {
   word: string;
 }
 
-const WORD_RE = /[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu;
+import { unconfuseWord } from "../integrity/confusables.ts";
 
+// Invisible characters (zero-width spaces, soft hyphens) are kept inside a word, so a word split by one still
+// matches; normalizeWord removes them.
+const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}\u00AD\u200B-\u200D\u2060\uFEFF]*(?:['’\-][\p{L}\p{N}][\p{L}\p{N}\u00AD\u200B-\u200D\u2060\uFEFF]*)*/gu;
+const INVISIBLE_G = /[\u00AD\u200B-\u200D\u2060\uFEFF]/g;
+
+/** Lower-cased, apostrophes unified, invisible characters dropped and look-alike letters from other alphabets mapped to Latin. */
 export function normalizeWord(raw: string): string {
-  return raw.normalize("NFKC").toLowerCase().replace(/’/g, "'");
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7f]*$/.test(raw)) return raw.toLowerCase();
+  return unconfuseWord(raw.replace(INVISIBLE_G, "").normalize("NFKC")).toLowerCase().replace(/’/g, "'");
 }
 
 export function tokenize(text: string): Token[] {

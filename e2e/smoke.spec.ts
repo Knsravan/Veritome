@@ -109,6 +109,22 @@ test("offline plagiarism check against the user's own text runs without consent"
   await axe(page);
 });
 
+test("disguised letters and paraphrasing-tool phrases are flagged", async ({ page }) => {
+  await page.goto("/plagiarism");
+  await page
+    .getByLabel("Your text")
+    .fill("We trained a profound learning model on soil data from twelve sites. The rеsults shоw that respiration stayed high into October across every site we measured.");
+  await page.getByLabel("Scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check my paper" }).click();
+  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Phrase typical of a paraphrasing tool: “profound learning”/)).toBeVisible();
+  await page.getByRole("tab", { name: /^Similarity/ }).click();
+  const flags = page.getByLabel("Integrity flags");
+  await expect(flags).toContainText("Signs that copying was hidden");
+  await expect(flags).toContainText("1 disguised passage");
+  await axe(page);
+});
+
 test("plagiarism results explain each finding and update when filtered", async ({ page }) => {
   const report = {
     similarity: 30, verdict: "high", words: 100, matchedWords: 30,

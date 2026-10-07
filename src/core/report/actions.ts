@@ -43,11 +43,13 @@ export function buildActionList(report: PaperReport, limitPerKind = 5): ActionIt
       const t = ISSUE_TEXT[i.kind];
       add({
         id: `plag-${i.kind}-${i.start}`,
-        level: i.kind === "copied_uncited" ? "high" : i.kind === "copied_cited" ? (i.words >= 15 ? "high" : "medium") : "medium",
+        level: i.kind === "copied_uncited" || i.kind === "disguised" || i.kind === "tortured" ? "high" : i.kind === "copied_cited" ? (i.words >= 15 ? "high" : "medium") : "medium",
         tool: "plagiarism",
         title:
           i.kind === "quote_uncited"
             ? t.title
+            : i.kind === "disguised" || i.kind === "tortured"
+              ? `${t.title}${i.kind === "tortured" ? `: “${i.text}”. ${i.note ?? ""}` : ""}`
             : `${t.title}: ${i.kind.startsWith("copied") ? `${i.words} words match` : "closely follows"} ${from(i.sourceId)}`,
         detail: t.fix,
         quote: clip(i.text),

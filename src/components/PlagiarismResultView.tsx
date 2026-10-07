@@ -16,6 +16,8 @@ const VERDICT = { low: "Low similarity", moderate: "Some similarity to review", 
 
 const KIND_STYLE: Record<IssueKind, { bar: string; chip: string; dot: string }> = {
   copied_uncited: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
+  disguised: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
+  tortured: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
   copied_cited: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-serious)]" },
   reworded_uncited: { bar: "bg-ai", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   quote_uncited: { bar: "bg-cite", chip: "bg-cite-soft text-cite", dot: "bg-cite" },
@@ -26,6 +28,8 @@ const KIND_STYLE: Record<IssueKind, { bar: string; chip: string; dot: string }> 
 /** Severity colours (status palette); every segment is also named in the legend. */
 const KIND_COLOR: Record<IssueKind, string> = {
   copied_uncited: "var(--status-critical)",
+  disguised: "var(--status-critical)",
+  tortured: "var(--status-critical)",
   copied_cited: "var(--status-serious)",
   reworded_uncited: "var(--status-warning)",
   quote_uncited: "var(--chart-neutral)",
@@ -36,6 +40,8 @@ const KIND_COLOR: Record<IssueKind, string> = {
 const BREAKDOWN_ORDER: IssueKind[] = ["copied_uncited", "copied_cited", "reworded_uncited", "repeated"];
 const SHORT_LABEL: Record<IssueKind, string> = {
   copied_uncited: "Copied, not cited",
+  disguised: "Disguised text",
+  tortured: "Paraphrasing-tool phrase",
   copied_cited: "Cited, missing quotation marks",
   reworded_uncited: "Reworded, not cited",
   quote_uncited: "Quotation without citation",
@@ -122,7 +128,8 @@ function FindingDetail({
         </button>
       </div>
       <div className="space-y-3 px-4 py-3 text-sm">
-        <p className="text-ink-soft">{t.why}</p>
+        {issue.note && <p className="font-semibold">{issue.note}</p>}
+        {issue.kind !== "disguised" && <p className="text-ink-soft">{t.why}</p>}
         <p>
           <span className="font-semibold">How to fix: </span>
           {t.fix}
@@ -257,7 +264,7 @@ export function PlagiarismResultView({
       id: issueId(i),
       start: i.start,
       end: i.end,
-      className: i.kind.startsWith("reworded") ? "mark-para" : "mark-match",
+      className: i.kind === "disguised" || i.kind === "tortured" ? "mark-flag" : i.kind.startsWith("reworded") ? "mark-para" : "mark-match",
       label: `${ISSUE_TEXT[i.kind].title}${i.sourceId ? `, source ${number(i.sourceId) ?? ""}` : ""}`,
       ...(i.sourceId && colour.has(i.sourceId) ? { group: colour.get(i.sourceId)! } : {}),
     }));
@@ -315,6 +322,27 @@ export function PlagiarismResultView({
             <DownloadIcon /> {pdf === "busy" ? "Making the PDF" : "Download PDF report"}
           </Button>
         </div>
+      )}
+      {(r.breakdown.disguised > 0 || r.breakdown.tortured > 0) && (
+        <section aria-label="Integrity flags" className="animate-fade-up rounded-2xl border border-danger/30 bg-danger-soft p-4 sm:p-5">
+          <p className="flex items-center gap-2 font-semibold text-danger">
+            <AlertIcon size={18} strokeWidth={2.2} /> Signs that copying was hidden
+          </p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {r.issues.some((i) => i.kind === "disguised") && (
+              <li>
+                <span className="font-semibold">{r.issues.filter((i) => i.kind === "disguised").length} disguised passage{r.issues.filter((i) => i.kind === "disguised").length === 1 ? "" : "s"}</span>: look-alike
+                letters, invisible characters or hidden text. Veritome undid them before checking, so any copying underneath is still found.
+              </li>
+            )}
+            {r.issues.some((i) => i.kind === "tortured") && (
+              <li>
+                <span className="font-semibold">{r.issues.filter((i) => i.kind === "tortured").length} phrase{r.issues.filter((i) => i.kind === "tortured").length === 1 ? "" : "s"} typical of paraphrasing tools</span>,
+                such as “{r.issues.find((i) => i.kind === "tortured")!.text}”. These usually mean text was reworded by a tool to hide its source.
+              </li>
+            )}
+          </ul>
+        </section>
       )}
       <section aria-label="Similarity summary" style={{ ["--i" as string]: 0 }} className="animate-fade-up card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
         <div className="lg:min-w-48 lg:border-r lg:border-rule lg:pr-8">
