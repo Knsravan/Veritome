@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { DocModel, DocxModel, Paragraph, PdfModel, PdfPage, Run } from "@/lib/doc/model";
 import type { TextMark } from "./AnnotatedText";
+import { useImageReport } from "./DocumentContext";
 import { cx } from "./ui";
 
 /** A stretch of text and every mark covering it, most important first. */
@@ -145,8 +146,15 @@ function ParagraphView({ ctx, p }: { ctx: Ctx; p: Paragraph }) {
   );
 }
 
+const IMAGE_FLAG: Record<string, string> = {
+  duplicate: "The same picture appears elsewhere in the paper",
+  source_figure: "Matches a figure in a published source",
+  text_match: "Text in this picture matches a source",
+};
+
 function DocxView({ doc, ctx }: { doc: DocxModel; ctx: Ctx }) {
   const images = new Map(doc.images.map((i) => [i.id, i]));
+  const imageReport = useImageReport();
   const out: ReactNode[] = [];
   let figure = 0;
   for (let i = 0; i < doc.blocks.length; i++) {
@@ -199,13 +207,21 @@ function DocxView({ doc, ctx }: { doc: DocxModel; ctx: Ctx }) {
       figure++;
       if (img)
         out.push(
-          <figure key={`f${i}`} id={`doc-image-${img.id}`} className="my-4 flex flex-col items-center gap-1">
+          <figure key={`f${i}`} id={`doc-image-${img.id}`} className="my-4 flex flex-col items-center gap-1.5">
             {img.src ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={img.src} alt={`Image ${figure} in the document`} className="max-h-[28rem] max-w-full rounded border border-rule bg-white object-contain" />
             ) : (
               <span className="rounded border border-dashed border-rule px-4 py-6 text-sm text-ink-faint">Image {figure} ({img.mime.replace("image/", "").toUpperCase()}, cannot be shown in a browser)</span>
             )}
+            {imageReport?.findings
+              .filter((f) => f.imageId === img.id || f.otherId === img.id)
+              .slice(0, 2)
+              .map((f) => (
+                <figcaption key={f.id} className="font-sans text-sm font-semibold text-danger underline decoration-[var(--u-flag)] decoration-double underline-offset-4">
+                  {IMAGE_FLAG[f.kind]}
+                </figcaption>
+              ))}
           </figure>,
         );
     }

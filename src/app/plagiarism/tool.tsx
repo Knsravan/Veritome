@@ -14,6 +14,8 @@ import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
 import { ApiError, postNdjson } from "@/lib/api";
 import { SAMPLE_PAPER } from "@/lib/sample";
 import type { DocModel } from "@/lib/doc/model";
+import type { ImageReport } from "@/lib/images/analyze";
+import { reviewReport } from "@/core/plagiarism/review";
 import { useHasLlm, useSettings } from "@/lib/settings";
 
 type Phase = "compose" | "running" | "done";
@@ -62,6 +64,7 @@ export function PlagiarismTool() {
   const [text, setText] = useState("");
   const [checked, setChecked] = useState("");
   const [doc, setDoc] = useState<DocModel | null>(null);
+  const [images, setImages] = useState<ImageReport | null>(null);
   const [extras, setExtras] = useState<Record<Extra, boolean>>({ detector: true, citations: true, grammar: true, rewrites: true });
   const [external, setExternal] = useState(true);
   const [excludeQuotes, setExcludeQuotes] = useState(true);
@@ -101,7 +104,9 @@ export function PlagiarismTool() {
     const c = new AbortController();
     ctrl.current = c;
     const steps = Object.fromEntries(ORDER.map((id) => [id, tools[id] ? "waiting" : "off"])) as Record<ToolId, StepState>;
-    setProgress({ steps });
+    const checkImages = Boolean(doc && doc.text === text && (doc.kind === "pdf" || doc.images.length > 0));
+    setImages(null);
+    setProgress({ steps, ...(checkImages ? { extra: { label: "Pictures", state: "waiting" as StepState } } : {}) });
     setError(null);
     setChecked(text);
     setPhase("running");
@@ -138,7 +143,29 @@ export function PlagiarismTool() {
       );
       if (c.signal.aborted) return;
       if (!finished) throw new ApiError("The check stopped before the report was ready. Try again, or with fewer checks at once.", 0);
-      setReport(finished);
+      const done: PaperReport = finished;
+      if (checkImages && doc) {
+        setProgress((p) => (p ? { ...p, extra: { label: "Pictures", state: "running", text: "Finding the pictures" } } : p));
+        try {
+          const { analyzeImages } = await import("@/lib/images/analyze");
+          const sources =
+            done.plagiarism.status === "done"
+              ? reviewReport(done.plagiarism.result).primary.filter((s) => s.kind !== "self" && s.kind !== "library").map((s) => ({ id: s.id, title: s.title, ...(s.url ? { url: s.url } : {}), ...(s.doi ? { doi: s.doi } : {}) }))
+              : [];
+          const result = await analyzeImages(doc, {
+            sources,
+            external,
+            web: settings.webSearch,
+            signal: c.signal,
+            onStep: (t) => setProgress((p) => (p ? { ...p, extra: { label: "Pictures", state: "running", text: t } } : p)),
+          });
+          if (c.signal.aborted) return;
+          setImages(result.images.length ? result : null);
+        } catch {
+          // The text report still stands if the picture checks fail.
+        }
+      }
+      setReport(done);
       setPhase("done");
     } catch (err) {
       if (c.signal.aborted) return;
@@ -158,7 +185,7 @@ export function PlagiarismTool() {
 
   if (phase === "done" && report) {
     return (
-      <DocumentProvider doc={doc}>
+      <DocumentProvider doc={doc} images={images}>
         <ReportView report={report} text={checked} onNew={() => setPhase("compose")} />
       </DocumentProvider>
     );

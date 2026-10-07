@@ -135,3 +135,50 @@ function finish(name: string, data: Uint8Array, pages: PdfPage[], raw: string): 
   }
   return { kind: "pdf", name, text: text.replace(/\s+$/, ""), pages, images: [], hidden: [], warnings: [], data };
 }
+
+/**
+ * Reads a scanned PDF (pages that are pictures, with no text layer) by OCR in the browser. Each word keeps its
+ * position on the page, so findings are still drawn over the original pages.
+ */
+export async function ocrPdf(model: PdfModel, onProgress?: (done: number, total: number) => void, maxPages = 30): Promise<PdfModel> {
+  const { getDocumentProxy } = await import("unpdf");
+  const { recognize } = await import("../images/ocr");
+  const pdf = await getDocumentProxy(model.data.slice());
+  const total = Math.min(pdf.numPages, maxPages);
+  const tb = new TextBuilder();
+  const pages: PdfPage[] = [];
+  const scale = 2;
+  for (let n = 1; n <= total; n++) {
+    onProgress?.(n - 1, total);
+    const page = await pdf.getPage(n);
+    const vp1 = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.floor(vp.width);
+    canvas.height = Math.floor(vp.height);
+    await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp, canvas } as Parameters<typeof page.render>[0]).promise;
+    const result = await recognize(canvas);
+    const items: PdfItem[] = [];
+    for (const para of result.paragraphs) {
+      const lines = para.filter((l) => l.words.length);
+      if (!lines.length) continue;
+      lines.forEach((l, li) => {
+        if (li > 0) tb.add("\n");
+        l.words.forEach((w, wi) => {
+          if (wi > 0) tb.add(" ");
+          const r = tb.add(w.text);
+          items.push({ x: w.x0 / scale, y: w.y0 / scale, w: (w.x1 - w.x0) / scale, h: (w.y1 - w.y0) / scale, ...r, chars: w.text.length });
+        });
+      });
+      tb.breakBlock();
+    }
+    pages.push({ number: n, width: vp1.width, height: vp1.height, items });
+  }
+  onProgress?.(total, total);
+  const out = finish(model.name, model.data, pages, tb.toString());
+  out.warnings.push(
+    "This PDF is a scan, so its text was read by OCR. OCR can misread words, which can hide or invent matches; check anything important against the page.",
+    ...(pdf.numPages > maxPages ? [`Only the first ${maxPages} of ${pdf.numPages} pages were read.`] : []),
+  );
+  return out;
+}
