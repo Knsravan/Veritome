@@ -77,10 +77,12 @@ test("Wikipedia provider fetches the matching article text", async () => {
   assert.deepEqual(docs.map((d) => [d.title, d.url, d.kind]), [["Soil (Wikipedia)", "https://en.wikipedia.org/wiki/Soil", "web"]]);
 });
 
-test("CORE provider sends the key as a header and uses full text", async () => {
+test("CORE provider sends the key as a header, avoids quoted phrases and uses full text", async () => {
   const { fetch, calls } = mockFetch(() => jsonResponse({ results: [{ id: 5, title: "Paper", fullText: "Body text." }] }));
   const docs = await coreProvider(http(fetch), "core-key").search(passage);
   assert.equal(calls[0]?.headers.authorization, "Bearer core-key");
+  assert.match(decodeURIComponent(calls[0]!.url), /q=alpha AND beta AND gamma AND delta AND epsilon AND zeta&/);
+  assert.ok(!decodeURIComponent(calls[0]!.url).includes('"'));
   assert.match(docs[0]!.text, /Body text/);
 });
 
@@ -123,4 +125,10 @@ test("OpenAlex phrase search sends a quoted, cleaned phrase", async () => {
   await createOpenAlex(http(fetch), { apiKey: "k" }).searchPhrase?.("residual (learning) framework to ease");
   assert.match(decodeURIComponent(calls[0]!.url), /works\?search="residual learning framework to ease"&/);
   assert.equal(calls[0]?.headers.authorization, "Bearer k");
+});
+
+test("coreQuery keeps distinctive words joined with AND", async () => {
+  const { coreQuery } = await import("../../src/core/plagiarism/providers.ts");
+  assert.equal(coreQuery("a residual learning framework to ease the training"), "residual AND learning AND framework AND ease AND training");
+  assert.equal(coreQuery("to be or not"), "");
 });
