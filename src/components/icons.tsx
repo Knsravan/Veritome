@@ -120,16 +120,7 @@ export const SettingsIcon = (p: IconProps) => (
   </Icon>
 );
 
-/** The Veritome mark: a page with a proof tick. */
-export function LogoMark({ size = 26 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect x="5" y="3" width="22" height="26" rx="3" fill="var(--action)" />
-      <path d="M10 10h12M10 15h8" stroke="var(--action-ink)" strokeWidth="2" strokeLinecap="round" opacity="0.55" />
-      <path d="m11 21 3.2 3L22 16.5" stroke="var(--action-ink)" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+export { LogoMark } from "./Logo";
 
 export const CopyIcon = (p: IconProps) => (
   <Icon {...p}>

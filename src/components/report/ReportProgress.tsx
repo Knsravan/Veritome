@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ToolId } from "@/core/report/report";
 import { FileTypeIcon } from "../FileTypeIcon";
-import { CheckIcon, MinusIcon } from "../icons";
+import { CheckIcon, LogoMark, MinusIcon } from "../icons";
 import { Button, cx } from "../ui";
 import { TOOL_LABEL } from "./labels";
 
@@ -120,7 +120,10 @@ function Ring({ pct }: { pct: number }) {
           className="transition-[stroke-dashoffset] duration-700 ease-out"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-semibold tabular-nums">{pct}%</span>
+      <span className="absolute inset-0 flex flex-col items-center justify-center">
+        <LogoMark size={26} mode={pct >= 100 ? "static" : "idle"} />
+        <span className="font-display text-base leading-tight font-semibold tabular-nums">{pct}%</span>
+      </span>
     </div>
   );
 }
