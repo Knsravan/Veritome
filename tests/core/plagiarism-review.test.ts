@@ -60,3 +60,21 @@ test("hiding small matches and excluding a source recomputes the score and the c
   assert.equal(r.hidden.smallMatches, 1);
   assert.ok(!r.primary.some((s) => s.id === "a") && !r.others.some((s) => s.id === "a"));
 });
+
+test("copies of a credited work found through other services are folded into it", () => {
+  const dup = {
+    ...report,
+    sources: [
+      { ...source("a", 20), title: "Deep Residual Learning for Image Recognition", provider: "arXiv" },
+      { ...source("x", 0, 20), title: "[1512.03385] Deep Residual Learning for Image Recognition", provider: "Brave Search" },
+      { ...source("y", 0, 20), title: "Deep residual learning for image recognition.", provider: "OpenAlex" },
+      source("b", 6, 26),
+      source("c", 4),
+      source("d", 0),
+    ],
+    spans: [{ ...report.spans[0]!, sourceIds: ["a", "x", "y", "b"] }, ...report.spans.slice(1)],
+  };
+  const r = reviewReport(dup);
+  assert.deepEqual(r.primary[0]?.alsoAt.sort(), ["Brave Search", "OpenAlex"]);
+  assert.ok(!r.others.some((s) => s.id === "x" || s.id === "y"));
+});

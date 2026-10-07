@@ -392,6 +392,7 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
                           <p className="mt-1 text-ink-faint">
                             {[s.authors, s.provider].filter(Boolean).join(" · ")}
                             {s.primaryWords ? ` · ${s.primaryWords} words` : " · reworded only"}
+                            {s.alsoAt.length ? ` · also found via ${s.alsoAt.join(", ")}` : ""}
                           </p>
                           <div className="mt-1 flex gap-4 print:hidden">
                             <button
