@@ -8,7 +8,7 @@ import type { Work } from "../citations/types.ts";
 import type { Passage } from "./passages.ts";
 import { isStopword } from "../text/tokens.ts";
 
-export type SourceKind = "scholarly" | "web" | "library" | "self";
+export type SourceKind = "scholarly" | "web" | "library" | "self" | "own";
 
 /** Text that something else published, which the checked text is compared against. */
 export interface SourceDoc {
@@ -21,6 +21,8 @@ export interface SourceDoc {
   text: string;
   provider: string;
   kind: SourceKind;
+  /** Where the full text came from, when the whole paper (not just its abstract) was compared. */
+  fullText?: string;
 }
 
 export interface SourceProvider {

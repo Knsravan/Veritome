@@ -21,6 +21,7 @@ const KIND_STYLE: Record<IssueKind, { bar: string; chip: string; dot: string }> 
   disguised: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
   tortured: { bar: "bg-danger", chip: "bg-danger-soft text-danger", dot: "bg-[var(--status-critical)]" },
   copied_cited: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-serious)]" },
+  own_work: { bar: "bg-warn", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   reworded_uncited: { bar: "bg-ai", chip: "bg-warn-soft text-warn", dot: "bg-[var(--status-warning)]" },
   quote_uncited: { bar: "bg-cite", chip: "bg-cite-soft text-cite", dot: "bg-cite" },
   reworded_cited: { bar: "bg-ink-faint", chip: "bg-desk-deep text-ink-soft", dot: "bg-ink-faint" },
@@ -33,18 +34,20 @@ const KIND_COLOR: Record<IssueKind, string> = {
   disguised: "var(--status-critical)",
   tortured: "var(--status-critical)",
   copied_cited: "var(--status-serious)",
+  own_work: "var(--status-warning)",
   reworded_uncited: "var(--status-warning)",
   quote_uncited: "var(--chart-neutral)",
   reworded_cited: "var(--chart-neutral)",
   repeated: "var(--chart-neutral)",
 };
 
-const BREAKDOWN_ORDER: IssueKind[] = ["copied_uncited", "copied_cited", "reworded_uncited", "repeated"];
+const BREAKDOWN_ORDER: IssueKind[] = ["copied_uncited", "copied_cited", "own_work", "reworded_uncited", "repeated"];
 const SHORT_LABEL: Record<IssueKind, string> = {
   copied_uncited: "Copied, not cited",
   disguised: "Disguised text",
   tortured: "Paraphrasing-tool phrase",
   copied_cited: "Cited, missing quotation marks",
+  own_work: "Reused from your earlier paper",
   reworded_uncited: "Reworded, not cited",
   quote_uncited: "Quotation without citation",
   reworded_cited: "Reworded, cited",
@@ -364,7 +367,7 @@ export function PlagiarismResultView({
             <p className="mb-2 text-sm font-semibold">What the matches are</p>
             <StackedBar
               label="What the matches are, as a share of the text"
-              segments={BREAKDOWN_ORDER.filter((k) => k !== "repeated" || r.breakdown[k] > 0).map((k) => ({
+              segments={BREAKDOWN_ORDER.filter((k) => (k !== "repeated" && k !== "own_work") || r.breakdown[k] > 0).map((k) => ({
                 key: k,
                 label: SHORT_LABEL[k],
                 value: (r.breakdown[k] / total) * 100,
@@ -673,6 +676,8 @@ export function PlagiarismResultView({
                             {[s.authors, s.provider].filter(Boolean).join(" · ")}
                             {s.primaryWords ? ` · ${s.primaryWords} words` : " · reworded only"}
                             {s.alsoAt.length ? ` · also found via ${s.alsoAt.join(", ")}` : ""}
+                            {s.fullText ? ` · whole paper compared (${s.fullText})` : ""}
+                            {s.kind === "own" ? " · your own earlier paper" : ""}
                           </p>
                           <div className="mt-1 flex gap-4 print:hidden">
                             <button

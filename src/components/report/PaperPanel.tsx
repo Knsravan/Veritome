@@ -46,6 +46,7 @@ const KIND_CATEGORY: Record<IssueKind, Category> = {
   tortured: "flags",
   copied_uncited: "copied",
   copied_cited: "copied",
+  own_work: "copied",
   repeated: "copied",
   reworded_uncited: "reworded",
   reworded_cited: "reworded",

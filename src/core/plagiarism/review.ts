@@ -3,7 +3,7 @@ import { verdictFor } from "./check.ts";
 import type { MatchedSource, MatchedSpan, ParaphraseSpan, PlagiarismReport, PlagiarismVerdict, QuotedPassage } from "./types.ts";
 
 /** What kind of mistake a finding points to, from most to least serious. */
-export type IssueKind = "copied_uncited" | "disguised" | "tortured" | "copied_cited" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
+export type IssueKind = "copied_uncited" | "disguised" | "tortured" | "copied_cited" | "own_work" | "reworded_uncited" | "quote_uncited" | "reworded_cited" | "repeated";
 
 export interface Issue {
   kind: IssueKind;
@@ -43,6 +43,12 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
     fix: "Put the copied words in quotation marks, or rewrite them in your own words and keep the citation.",
     serious: true,
   },
+  own_work: {
+    title: "Reused from your own earlier paper",
+    why: "These words also appear in one of your published papers. Reusing your own published text without saying so is called text recycling or self-plagiarism; most journals ask you to cite the earlier paper, and some limit reused text even then.",
+    fix: "Cite your earlier paper where you reuse its wording, and rewrite background and methods text where you can.",
+    serious: false,
+  },
   reworded_uncited: {
     title: "Reworded from a source without a citation",
     why: "The sentence says the same thing as a source sentence in different words. Rewording does not remove the need to credit the idea.",
@@ -69,7 +75,7 @@ export const ISSUE_TEXT: Record<IssueKind, { title: string; why: string; fix: st
   },
 };
 
-const ORDER: IssueKind[] = ["copied_uncited", "disguised", "tortured", "copied_cited", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
+const ORDER: IssueKind[] = ["copied_uncited", "disguised", "tortured", "copied_cited", "own_work", "reworded_uncited", "quote_uncited", "reworded_cited", "repeated"];
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
 export interface ReviewFilters {
@@ -166,7 +172,7 @@ export function reviewReport(report: PlagiarismReport, filters: ReviewFilters = 
 
   const issues: Issue[] = [
     ...spans.map((sp) => ({
-        kind: (sp.sourceIds[0] === "self" ? "repeated" : sp.cited ? "copied_cited" : "copied_uncited") as IssueKind,
+        kind: (sp.sourceIds[0] === "self" ? "repeated" : sp.sourceIds[0]!.startsWith("own:") ? "own_work" : sp.cited ? "copied_cited" : "copied_uncited") as IssueKind,
         start: sp.start,
         end: sp.end,
         words: sp.words,

@@ -23,6 +23,11 @@ import {
   wikipediaProvider,
   type SourceProvider,
 } from "../core/plagiarism/providers.ts";
+import { assertSafeUrl } from "../core/infra/netguard.ts";
+import { fetchFullText } from "../core/plagiarism/fulltext.ts";
+import { findOwnWorks } from "../core/plagiarism/ownwork.ts";
+import type { SourceDoc } from "../core/plagiarism/providers.ts";
+import { cleanPdfText } from "../core/text/latex.ts";
 import type { PublicStatus, ServerConfig } from "./config.ts";
 import { loadLibrary } from "./library.ts";
 
@@ -131,4 +136,84 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
     plagiarismSources: plagiarismProviders(cfg, scholarlyHttp(cfg), { web: false }).map((p) => p.name),
     libraryDocuments: (await loadLibrary(cfg.libraryDir)).length,
   };
+}
+
+const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+/**
+ * Downloads a public PDF and returns its text. Every hop of a redirect is checked against the SSRF guard
+ * (no private, local or cloud-metadata addresses), the size is capped and the download times out.
+ */
+export async function publicPdfText(cfg: ServerConfig, url: string, signal?: AbortSignal): Promise<string> {
+  let target = url;
+  let res: Response | null = null;
+  for (let hop = 0; hop < 4; hop++) {
+    const safe = await assertSafeUrl(target, { allowPrivate: false });
+    res = await fetch(safe, {
+      redirect: "manual",
+      headers: { "user-agent": USER_AGENT(cfg), accept: "application/pdf,*/*;q=0.5" },
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),
+    });
+    const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+    if (!loc) break;
+    target = new URL(loc, target).toString();
+    res = null;
+  }
+  if (!res || !res.ok) throw new Error("The PDF could not be downloaded.");
+  if (Number(res.headers.get("content-length") ?? "0") > MAX_PDF_BYTES) throw new Error("The PDF is too large.");
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("Empty response.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_PDF_BYTES) {
+      await reader.cancel();
+      throw new Error("The PDF is too large.");
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.byteLength;
+  }
+  if (String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new Error("Not a PDF.");
+  const { extractText, getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(bytes);
+  const { text } = await extractText(pdf, { mergePages: false });
+  return cleanPdfText((text as string[]).join("\n\n"));
+}
+
+/** Fetches the free full text of matched papers for a closer comparison. */
+export function fullTextFetcher(cfg: ServerConfig, http: Http): (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null> {
+  return (doc, signal) =>
+    fetchFullText(
+      doc,
+      {
+        http,
+        pdfText: (url, sig) => publicPdfText(cfg, url, sig),
+        ...(cfg.openAlexKey ? { openAlexKey: cfg.openAlexKey } : {}),
+        ...(cfg.contactEmail ? { mailto: cfg.contactEmail } : {}),
+      },
+      signal,
+    );
+}
+
+/** The author's own earlier papers for the self-plagiarism check, or undefined when none were found. */
+export async function ownWorks(cfg: ServerConfig, http: Http, who: string | undefined, signal?: AbortSignal) {
+  if (!who) return undefined;
+  try {
+    const r = await findOwnWorks(
+      who,
+      { http, fullText: fullTextFetcher(cfg, http), ...(cfg.openAlexKey ? { openAlexKey: cfg.openAlexKey } : {}), ...(cfg.contactEmail ? { mailto: cfg.contactEmail } : {}) },
+      signal,
+    );
+    return r ?? undefined;
+  } catch {
+    return undefined;
+  }
 }

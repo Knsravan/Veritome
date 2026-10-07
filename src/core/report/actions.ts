@@ -50,7 +50,7 @@ export function buildActionList(report: PaperReport, limitPerKind = 5): ActionIt
             ? t.title
             : i.kind === "disguised" || i.kind === "tortured"
               ? `${t.title}${i.kind === "tortured" ? `: “${i.text}”. ${i.note ?? ""}` : ""}`
-            : `${t.title}: ${i.kind.startsWith("copied") ? `${i.words} words match` : "closely follows"} ${from(i.sourceId)}`,
+            : `${t.title}: ${i.kind.startsWith("copied") || i.kind === "own_work" ? `${i.words} words match` : "closely follows"} ${from(i.sourceId)}`,
         detail: t.fix,
         quote: clip(i.text),
       });
