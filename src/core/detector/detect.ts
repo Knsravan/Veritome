@@ -151,6 +151,44 @@ function localRegions(plain: string, windows: ReadonlyArray<{ start: number; end
 }
 
 /** Estimates how much a text shows patterns typical of language-model output. */
+/**
+ * Scores the text paragraph by paragraph, joining short paragraphs until each segment has at least 150 words, so
+ * a machine-written paragraph is judged on its own instead of averaged with its human neighbours. A paragraph
+ * longer than 450 words is split into the model's usual overlapping windows.
+ */
+export function scoreSegments(plain: string): Array<{ start: number; end: number; words: number; probability: number }> {
+  const count = (s: string) => (s.match(/\S+/g) ?? []).length;
+  const chunks: Array<{ start: number; end: number; words: number }> = [];
+  let open: { start: number; end: number; words: number } | null = null;
+  for (const p of splitParagraphs(plain)) {
+    const words = count(p.text);
+    if (!words) continue;
+    if (!open) open = { start: p.start, end: p.end, words };
+    else {
+      open.end = p.end;
+      open.words += words;
+    }
+    if (open.words >= 150) {
+      chunks.push(open);
+      open = null;
+    }
+  }
+  if (open) {
+    const prev = chunks[chunks.length - 1];
+    // A short tail joins the segment before it; one of 80 words or more stands alone (with the stricter short-text bar).
+    if (prev && open.words < MIN_WORDS) Object.assign(prev, { end: open.end, words: prev.words + open.words });
+    else chunks.push(open);
+  }
+  const out: Array<{ start: number; end: number; words: number; probability: number }> = [];
+  for (const c of chunks) {
+    const text = plain.slice(c.start, c.end);
+    if (c.words > 450) {
+      for (const w of scoreWindows(text)) out.push({ start: c.start + w.start, end: c.start + w.end, words: count(text.slice(w.start, w.end)), probability: w.probability });
+    } else out.push({ ...c, probability: modelProbability(text) });
+  }
+  return out;
+}
+
 export async function detectAiText(input: string, options: DetectOptions = {}): Promise<DetectorResult> {
   const analysis = analyse(input);
   const words = analysis.words.length;
@@ -208,6 +246,7 @@ export async function detectAiText(input: string, options: DetectOptions = {}): 
       version: MODEL_INFO.version,
       probability: round(probability, 3),
       windows: windows.map((w) => ({ ...w, probability: round(w.probability, 3) })),
+      segments: scoreSegments(plain).map((g) => ({ ...g, probability: round(g.probability, 3) })),
       topPhrases: topContributors(plain),
       thresholds: MODEL_INFO.thresholds,
     },

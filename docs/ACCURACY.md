@@ -71,6 +71,16 @@ AUROC of the raw score over all of these: **0.954** (the first rule-based versio
 data, that is, no better than chance). Raw-model AUROC on the full held-out sets: HAP-E 0.995, RAID 0.924, MAGE
 0.899, MAGE GPT-4 0.898, MAGE paraphrased 0.770.
 
+### Which parts of a paper read as AI-written
+
+The plagiarism page also reports an **AI writing percentage**: the share of the text in paragraphs that read as
+likely AI-written. Paragraphs are scored separately (short ones joined until a segment has at least 150 words, with
+the stricter short-text bar below 150), so one machine-written paragraph is not averaged away by its human
+neighbours. In a check of 764 such segments built from 790 Europe PMC abstracts published between 2005 and 2019
+(before AI writing tools), **2 (0.26%)** were wrongly marked as likely AI-written; 2 of 263 three-paragraph
+documents (0.8%) had any part marked. A machine-written paragraph that the whole-text score had averaged down to
+"inconclusive" scored 0.997 on its own.
+
 ### What this means in practice
 
 1. **False accusations are rare.** In these tests, about 1 human text in 500 was labelled AI, and none of the

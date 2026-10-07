@@ -79,6 +79,9 @@ test("offline plagiarism check against the user's own text runs without consent"
   await page.getByRole("button", { name: "Check for overlap" }).click();
   await expect(page.getByText(/words match a source word for word/)).toBeVisible();
   await expect(page.getByRole("heading", { name: /What to fix/ })).toBeVisible();
+  await expect(page.getByLabel("AI writing summary")).toContainText("How far to trust this");
+  await page.getByRole("radio", { name: /AI writing/ }).click();
+  await expect(page.getByText("Wavy underline")).toBeVisible();
   await expect(page.getByRole("dialog")).toBeHidden();
   await axe(page);
 });

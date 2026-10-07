@@ -42,6 +42,8 @@ export interface ModelEvidence {
   probability: number;
   /** Per-window estimates for long texts (offsets into the checked text). */
   windows: Array<{ start: number; end: number; probability: number }>;
+  /** Per-paragraph estimates (short paragraphs joined to at least 150 words), for showing which parts read as AI. */
+  segments?: Array<{ start: number; end: number; words: number; probability: number }>;
   /** Words and phrases that pushed the estimate towards model output. */
   topPhrases: Array<{ phrase: string; weight: number }>;
   thresholds: { likelyAi: number; likelyHuman: number };
