@@ -1,191 +1,247 @@
-/* Logo lab: entrance animations ("intro"), gentle loops ("idle" and after the intro), nothing for "static". */
-.ll-mark * {
+/* Logo lab, round 2. "intro" plays the entrance then loops; "idle" only loops; "static" never moves. */
+/* Only animated parts (those with a class) pivot on their own centre; plain groups keep their SVG transforms. */
+.ll-mark [class] {
   transform-box: fill-box;
   transform-origin: center;
+}
+.ll-mark {
+  overflow: visible;
 }
 .ll-mark .ll-draw {
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
 }
 .ll-intro .ll-draw {
-  animation: ll-draw 0.8s 0.45s cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation: ll-draw 0.9s 0.7s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 @keyframes ll-draw {
   from {
     stroke-dashoffset: 1;
   }
 }
-@keyframes ll-rise {
+
+/* 1. Prism */
+.ll-intro.ll-prism .ll-facet {
+  animation: ll-facet 0.8s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.ll-prism .ll-f0 { --fx: -18px; --fy: -10px; --fr: -25deg; animation-delay: 0s; }
+.ll-prism .ll-f1 { --fx: -8px; --fy: 14px; --fr: 20deg; animation-delay: 0.08s; }
+.ll-prism .ll-f2 { --fx: 8px; --fy: 14px; --fr: -20deg; animation-delay: 0.16s; }
+.ll-prism .ll-f3 { --fx: 18px; --fy: -10px; --fr: 25deg; animation-delay: 0.24s; }
+.ll-prism .ll-f4 { --fx: 0; --fy: 18px; --fr: 0deg; animation-delay: 0.32s; }
+@keyframes ll-facet {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.92);
+    transform: translate(var(--fx), var(--fy)) rotate(var(--fr)) scale(0.6);
   }
 }
-@keyframes ll-grow-x {
-  from {
-    transform: scaleX(0);
+.ll-prism:not(.ll-static) .ll-sheen {
+  animation: ll-sheen 3.4s 1.1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes ll-sheen {
+  0% {
+    transform: translateX(0) skewX(-22deg);
   }
-}
-
-/* 1. Proof Page */
-.ll-intro .ll-proof-page {
-  animation: ll-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.ll-intro .ll-proof-fold {
-  transform-origin: 100% 0;
-  animation: ll-fold 0.5s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@keyframes ll-fold {
-  from {
-    transform: scale(0);
-  }
-}
-.ll-intro .ll-proof .ll-line {
-  transform-origin: 0 50%;
-  animation: ll-grow-x 0.5s 0.3s ease-out both;
-}
-.ll-intro .ll-proof .ll-d1 {
-  animation-delay: 0.38s;
-}
-.ll-proof:not(.ll-static) .ll-draw {
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.15));
-}
-
-/* 2. Truth Lens */
-.ll-intro .ll-lens-body {
-  animation: ll-lens-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@keyframes ll-lens-in {
-  from {
-    opacity: 0;
-    transform: rotate(-35deg) scale(0.8);
-  }
-}
-.ll-lens:not(.ll-static) .ll-glint {
-  animation: ll-glint 3.6s 1s ease-in-out infinite;
-}
-@keyframes ll-glint {
-  0%,
-  60% {
-    transform: translateX(-10px) rotate(25deg);
-  }
+  45%,
   100% {
-    transform: translateX(70px) rotate(25deg);
+    transform: translateX(150px) skewX(-22deg);
+  }
+}
+.ll-prism:not(.ll-static) .ll-glow {
+  animation: ll-pulse 3.4s ease-in-out infinite;
+}
+@keyframes ll-pulse {
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+.ll-prism:not(.ll-static) .ll-spark {
+  animation: ll-spark 3.4s 1.5s ease-in-out infinite;
+}
+@keyframes ll-spark {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(0deg);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+}
+.ll-static.ll-prism .ll-spark,
+.ll-static.ll-prism .ll-sheen {
+  display: none;
+}
+
+/* 2. Aperture */
+.ll-aperture .ll-blade {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+}
+.ll-intro.ll-aperture .ll-blade {
+  animation: ll-iris 1.1s cubic-bezier(0.7, 0, 0.2, 1) both;
+  animation-delay: calc(var(--b) * 0.03s);
+}
+@keyframes ll-iris {
+  from {
+    transform: rotate(-48deg) scale(1.08);
+    opacity: 0.3;
+  }
+}
+.ll-aperture:not(.ll-static) .ll-ticks {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  animation: ll-turn 24s linear infinite;
+}
+@keyframes ll-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ll-aperture:not(.ll-static) .ll-core {
+  animation: ll-breathe 2.8s ease-in-out infinite;
+}
+@keyframes ll-breathe {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.85;
   }
 }
 
-/* 3. Underline V */
-.ll-uv .ll-ul {
-  stroke-dasharray: 1;
+/* 3. Orbit */
+.ll-orbit .ll-comet {
+  transform-box: view-box;
+  transform-origin: 0 0;
 }
-.ll-uv .ll-u3 {
-  stroke-dasharray: 0.12 0.06;
+.ll-orbit:not(.ll-static) .ll-comet {
+  animation: ll-orbit var(--dur) var(--delay) linear infinite;
 }
-.ll-intro .ll-uv .ll-u1,
-.ll-intro.ll-uv .ll-u1 {
-  animation: ll-draw 0.5s 1s ease-out both;
+@keyframes ll-orbit {
+  to {
+    transform: rotate(360deg);
+  }
 }
-.ll-intro.ll-uv .ll-u2 {
-  animation: ll-draw 0.5s 1.25s ease-out both;
+.ll-intro.ll-orbit .ll-sphere {
+  animation: ll-pop 0.8s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 }
-.ll-intro.ll-uv .ll-u3 {
-  animation: ll-fade 0.5s 1.5s ease-out both;
-}
-@keyframes ll-fade {
+@keyframes ll-pop {
   from {
     opacity: 0;
-    transform: translateX(-6px);
+    transform: scale(0.3);
   }
 }
-.ll-uv:not(.ll-static) .ll-u2 {
-  animation: ll-draw 0.5s 1.25s ease-out both, ll-wave 2.4s 2s ease-in-out infinite;
-}
-.ll-idle.ll-uv .ll-u2 {
-  animation: ll-wave 2.4s ease-in-out infinite;
-}
-@keyframes ll-wave {
-  50% {
-    transform: translateX(2.5px);
-  }
+.ll-orbit:not(.ll-static) .ll-halo {
+  animation: ll-breathe 3.2s ease-in-out infinite;
 }
 
-/* 4. Open Tome */
-.ll-intro .ll-tome-left {
-  transform-origin: 100% 50%;
-  animation: ll-open 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+/* 4. Ribbon */
+.ll-intro.ll-ribbon .ll-strand {
+  animation: ll-draw 1s 0.1s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
-.ll-intro .ll-tome-right {
-  transform-origin: 0 50%;
-  animation: ll-open 0.7s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.ll-intro.ll-ribbon .ll-s2 {
+  animation-delay: 0.3s;
 }
-@keyframes ll-open {
-  from {
-    transform: scaleX(0.1);
-    opacity: 0.4;
+.ll-ribbon .ll-run {
+  stroke-dasharray: 0.12 0.88;
+  stroke-dashoffset: 0.12;
+  opacity: 0;
+}
+.ll-ribbon:not(.ll-static) .ll-run {
+  animation: ll-run 3s 1.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.ll-ribbon:not(.ll-static) .ll-run2 {
+  animation-delay: 1.5s;
+}
+@keyframes ll-run {
+  0% {
+    stroke-dashoffset: 0.12;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  55% {
+    stroke-dashoffset: -0.88;
+    opacity: 0.9;
+  }
+  60%,
+  100% {
+    stroke-dashoffset: -0.88;
+    opacity: 0;
   }
 }
-.ll-intro .ll-ribbon {
-  transform-origin: 50% 0;
-  animation: ll-ribbon 0.55s 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
-}
-@keyframes ll-ribbon {
-  from {
-    transform: scaleY(0);
-  }
-}
-.ll-intro .ll-tome .ll-draw,
-.ll-intro.ll-tome .ll-draw {
-  animation-delay: 0.9s;
+.ll-intro.ll-ribbon .ll-knot {
+  animation: ll-pop 0.6s 1.1s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 }
 
-/* 5. Scan Tile */
-.ll-intro .ll-scan-tile {
-  animation: ll-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+/* 5. Liquid Glass */
+.ll-glass:not(.ll-static) .ll-blob {
+  animation: ll-drift 9s ease-in-out infinite alternate;
 }
-.ll-scan:not(.ll-static) .ll-beam {
-  animation: ll-beam 2.8s 0.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.ll-glass .ll-b1 { --dx: 22px; --dy: 16px; }
+.ll-glass .ll-b2 { --dx: -18px; --dy: 22px; animation-duration: 11s; }
+.ll-glass .ll-b3 { --dx: 16px; --dy: -24px; animation-duration: 13s; }
+.ll-glass .ll-b4 { --dx: -24px; --dy: -12px; animation-duration: 7s; }
+@keyframes ll-drift {
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(1.15);
+  }
 }
-@keyframes ll-beam {
+.ll-intro.ll-glass {
+  animation: ll-pop 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+/* 6. Fingerprint */
+.ll-intro.ll-print .ll-ridge {
+  animation: ll-ridge 1s cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc(var(--k) * 0.09s);
+}
+@keyframes ll-ridge {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(-6px);
+  }
+}
+.ll-print:not(.ll-static) .ll-scanbar {
+  animation: ll-scan 2.6s 1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes ll-scan {
   0% {
     transform: translateY(0);
   }
   70%,
   100% {
-    transform: translateY(90px);
+    transform: translateY(116px);
   }
+}
+.ll-print:not(.ll-static) .ll-dot {
+  animation: ll-breathe 2.6s ease-in-out infinite;
 }
 
-/* 6. Verity Seal */
-.ll-intro .ll-seal-body {
-  animation: ll-stamp 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+/* The stage: a spotlight on dark glass that tilts towards the pointer. */
+.ll-stage {
+  perspective: 700px;
 }
-@keyframes ll-stamp {
-  from {
-    opacity: 0;
-    transform: scale(1.5) rotate(-12deg);
-  }
-}
-.ll-seal:not(.ll-static) .ll-seal-ring {
-  animation: ll-spin 14s linear infinite;
-}
-@keyframes ll-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Hovering a lockup gives the mark a small lift. */
-.ll-lockup:hover .ll-mark {
-  transform: translateY(-1px) rotate(-4deg);
+.ll-stage > .ll-tilt {
+  transition: transform 0.25s ease-out;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  filter: drop-shadow(0 18px 30px rgb(30 27 75 / 0.45));
 }
 .ll-lockup .ll-mark {
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ll-lockup:hover .ll-mark {
+  transform: scale(1.08) rotate(-4deg);
 }
 
 .ll-static * {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
+  .ll-mark,
   .ll-mark * {
     animation: none !important;
   }
