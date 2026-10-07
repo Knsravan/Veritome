@@ -1,0 +1,192 @@
+/* Logo lab: entrance animations ("intro"), gentle loops ("idle" and after the intro), nothing for "static". */
+.ll-mark * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.ll-mark .ll-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.ll-intro .ll-draw {
+  animation: ll-draw 0.8s 0.45s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes ll-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes ll-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+}
+@keyframes ll-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* 1. Proof Page */
+.ll-intro .ll-proof-page {
+  animation: ll-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ll-intro .ll-proof-fold {
+  transform-origin: 100% 0;
+  animation: ll-fold 0.5s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes ll-fold {
+  from {
+    transform: scale(0);
+  }
+}
+.ll-intro .ll-proof .ll-line {
+  transform-origin: 0 50%;
+  animation: ll-grow-x 0.5s 0.3s ease-out both;
+}
+.ll-intro .ll-proof .ll-d1 {
+  animation-delay: 0.38s;
+}
+.ll-proof:not(.ll-static) .ll-draw {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.15));
+}
+
+/* 2. Truth Lens */
+.ll-intro .ll-lens-body {
+  animation: ll-lens-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes ll-lens-in {
+  from {
+    opacity: 0;
+    transform: rotate(-35deg) scale(0.8);
+  }
+}
+.ll-lens:not(.ll-static) .ll-glint {
+  animation: ll-glint 3.6s 1s ease-in-out infinite;
+}
+@keyframes ll-glint {
+  0%,
+  60% {
+    transform: translateX(-10px) rotate(25deg);
+  }
+  100% {
+    transform: translateX(70px) rotate(25deg);
+  }
+}
+
+/* 3. Underline V */
+.ll-uv .ll-ul {
+  stroke-dasharray: 1;
+}
+.ll-uv .ll-u3 {
+  stroke-dasharray: 0.12 0.06;
+}
+.ll-intro .ll-uv .ll-u1,
+.ll-intro.ll-uv .ll-u1 {
+  animation: ll-draw 0.5s 1s ease-out both;
+}
+.ll-intro.ll-uv .ll-u2 {
+  animation: ll-draw 0.5s 1.25s ease-out both;
+}
+.ll-intro.ll-uv .ll-u3 {
+  animation: ll-fade 0.5s 1.5s ease-out both;
+}
+@keyframes ll-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+.ll-uv:not(.ll-static) .ll-u2 {
+  animation: ll-draw 0.5s 1.25s ease-out both, ll-wave 2.4s 2s ease-in-out infinite;
+}
+.ll-idle.ll-uv .ll-u2 {
+  animation: ll-wave 2.4s ease-in-out infinite;
+}
+@keyframes ll-wave {
+  50% {
+    transform: translateX(2.5px);
+  }
+}
+
+/* 4. Open Tome */
+.ll-intro .ll-tome-left {
+  transform-origin: 100% 50%;
+  animation: ll-open 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ll-intro .ll-tome-right {
+  transform-origin: 0 50%;
+  animation: ll-open 0.7s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes ll-open {
+  from {
+    transform: scaleX(0.1);
+    opacity: 0.4;
+  }
+}
+.ll-intro .ll-ribbon {
+  transform-origin: 50% 0;
+  animation: ll-ribbon 0.55s 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes ll-ribbon {
+  from {
+    transform: scaleY(0);
+  }
+}
+.ll-intro .ll-tome .ll-draw,
+.ll-intro.ll-tome .ll-draw {
+  animation-delay: 0.9s;
+}
+
+/* 5. Scan Tile */
+.ll-intro .ll-scan-tile {
+  animation: ll-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ll-scan:not(.ll-static) .ll-beam {
+  animation: ll-beam 2.8s 0.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes ll-beam {
+  0% {
+    transform: translateY(0);
+  }
+  70%,
+  100% {
+    transform: translateY(90px);
+  }
+}
+
+/* 6. Verity Seal */
+.ll-intro .ll-seal-body {
+  animation: ll-stamp 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes ll-stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.5) rotate(-12deg);
+  }
+}
+.ll-seal:not(.ll-static) .ll-seal-ring {
+  animation: ll-spin 14s linear infinite;
+}
+@keyframes ll-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hovering a lockup gives the mark a small lift. */
+.ll-lockup:hover .ll-mark {
+  transform: translateY(-1px) rotate(-4deg);
+}
+.ll-lockup .ll-mark {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ll-static * {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ll-mark * {
+    animation: none !important;
+  }
+}
