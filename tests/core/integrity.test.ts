@@ -71,3 +71,15 @@ test("hidden text from the file is reported", async () => {
   const report = await checkPlagiarism(text, { hiddenText: [{ start, end: start + 17 }] });
   assert.deepEqual(report.disguises?.map((d) => [d.kind, d.text]), [["hidden_text", "HIDDEN WORDS HERE"]]);
 });
+
+test("figures are read from PubMed Central JATS with their image addresses", async () => {
+  const { figuresFromJats } = await import("../../src/core/images/figures.ts");
+  const xml =
+    '<fig id="F1"><label>Fig. 1</label><caption><p>Respiration <italic>by</italic> site &amp; month</p></caption><graphic xlink:href="380_Fig1_HTML.jpg"/></fig>' +
+    '<fig id="F2"><label>Figure 2</label><graphic xlink:href="nihms-12345-f0002"/></fig>' +
+    '<fig id="F3"><label>Bad</label><graphic xlink:href="../../etc/passwd"/></fig>';
+  assert.deepEqual(figuresFromJats(xml, "PMC6267405"), [
+    { label: "Fig. 1", caption: "Respiration by site & month", url: "https://pmc.ncbi.nlm.nih.gov/articles/instance/6267405/bin/380_Fig1_HTML.jpg" },
+    { label: "Figure 2", caption: "", url: "https://pmc.ncbi.nlm.nih.gov/articles/instance/6267405/bin/nihms-12345-f0002.jpg" },
+  ]);
+});

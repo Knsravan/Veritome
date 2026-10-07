@@ -12,6 +12,8 @@ export interface ProgressState {
   steps: Record<ToolId, StepState>;
   /** Passages searched so far for the plagiarism check. */
   plagiarism?: { done: number; total: number };
+  /** A browser-side step after the server checks, such as checking pictures. */
+  extra?: { label: string; state: StepState; text?: string };
 }
 
 const RUNNING_TEXT: Record<ToolId, string> = {
@@ -75,7 +77,10 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
     if (st === "running") return n + 0.15;
     return n;
   }, 0);
-  const pct = active.length ? Math.round((fraction / active.length) * 100) : 0;
+  const ex = state.extra;
+  const exFraction = ex ? (ex.state === "done" ? 1 : ex.state === "running" ? 0.4 : 0) : 0;
+  const parts = active.length + (ex ? 1 : 0);
+  const pct = parts ? Math.round(((fraction + exFraction) / parts) * 100) : 0;
 
   return (
     <section aria-labelledby="progress-h" className="card animate-fade-up mx-auto grid max-w-3xl gap-8 p-6 sm:grid-cols-[auto_1fr] sm:p-8">
@@ -149,6 +154,28 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
             </li>
           );
         })}
+        {ex && (
+          <li className={cx("animate-fade-up flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-300", ex.state === "running" && "bg-action-soft/60")} style={{ ["--i" as string]: order.length }}>
+            <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center" aria-hidden>
+              {ex.state === "done" ? (
+                <span className="animate-pop inline-flex size-6 items-center justify-center rounded-full bg-ok text-page">
+                  <CheckIcon size={15} strokeWidth={2.6} />
+                </span>
+              ) : ex.state === "running" ? (
+                <span className="inline-block size-5 animate-spin rounded-full border-2 border-action border-r-transparent" />
+              ) : (
+                <span className="inline-block size-5 rounded-full border-2 border-rule" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={cx("font-semibold", ex.state === "waiting" && "text-ink-soft")}>
+                {ex.label}
+                <span className="sr-only">: {ex.state === "done" ? "done" : ex.state === "running" ? "in progress" : "waiting"}</span>
+              </p>
+              {ex.state === "running" && ex.text && <p className="text-sm text-ink-soft">{ex.text}</p>}
+            </div>
+          </li>
+        )}
       </ol>
 
       <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-4">

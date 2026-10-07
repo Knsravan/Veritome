@@ -14,14 +14,17 @@ import { Button, Notice, cx } from "../ui";
 import { CountUp } from "../motion";
 import { GrammarDetail } from "./GrammarDetail";
 import { collectFindings, PaperPanel } from "./PaperPanel";
+import { ImagesPanel } from "./ImagesPanel";
+import { useImageReport } from "../DocumentContext";
 import { ORDER, STATUS, TONE_BAR, TONE_CLASS, TOOL_LABEL, type Tone } from "./labels";
 
-type TabId = "paper" | "overview" | "similarity" | "ai" | "citations" | "grammar" | "rewrites";
+type TabId = "paper" | "overview" | "images" | "similarity" | "ai" | "citations" | "grammar" | "rewrites";
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "paper", label: "Your paper" },
   { id: "overview", label: "What to fix" },
   { id: "similarity", label: "Similarity" },
+  { id: "images", label: "Images" },
   { id: "ai", label: "AI patterns" },
   { id: "citations", label: "Citations" },
   { id: "grammar", label: "Grammar" },
@@ -222,6 +225,7 @@ function ActionList({ items, onOpen }: { items: ActionItem[]; onOpen: (tab: TabI
 
 function Overview({ report, text, onOpen }: { report: PaperReport; text: string; onOpen: (tab: TabId) => void }) {
   const actions = buildActionList(report);
+  const images = useImageReport();
   const stats = documentStats(report, text);
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -229,6 +233,21 @@ function Overview({ report, text, onOpen }: { report: PaperReport; text: string;
         <h3 id="todo-h" className="font-display text-2xl font-semibold">
           What to fix first
         </h3>
+        {images && images.findings.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onOpen("images")}
+            className="card card-hover mt-3 flex w-full items-start gap-3 border-danger/30 p-4 text-left"
+          >
+            <span className="mt-0.5 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger">Fix</span>
+            <span>
+              <span className="font-semibold">
+                {images.findings.length} problem{images.findings.length === 1 ? "" : "s"} with the pictures
+              </span>
+              <span className="block text-sm text-ink-soft">A picture used twice, copied from a source, or holding copied text. See the Images tab.</span>
+            </span>
+          </button>
+        )}
         <div className="mt-3">
           <ActionList items={actions} onOpen={onOpen} />
         </div>
@@ -413,6 +432,8 @@ function ExportMenu({ report }: { report: PaperReport }) {
 /** The finished report: headline scores, a ranked to-do list and one tab per check. Printing shows every tab. */
 export function ReportView({ report, text, onNew }: { report: PaperReport; text: string; onNew: () => void }) {
   const [tab, setTab] = useState<TabId>("paper");
+  const imageReport = useImageReport();
+  const tabs = TABS.filter((t) => t.id !== "images" || imageReport);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const topRef = useRef<HTMLDivElement>(null);
@@ -442,17 +463,18 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
     topRef.current?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   };
   const onTabKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const n = TABS.length;
+    const n = tabs.length;
     const next = e.key === "ArrowRight" ? (i + 1) % n : e.key === "ArrowLeft" ? (i - 1 + n) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : -1;
     if (next < 0) return;
     e.preventDefault();
-    const t = TABS[next]!.id;
+    const t = tabs[next]!.id;
     setTab(t);
     tabRefs.current[t]?.focus();
   };
   const findings = useMemo(() => collectFindings(report, text).length, [report, text]);
   const badge = (t: TabId): number | null => {
     if (t === "paper") return findings;
+    if (t === "images") return imageReport?.findings.length || null;
     if (t === "similarity" && report.plagiarism.status === "done") return report.plagiarism.result.spans.length + report.plagiarism.result.paraphrases.length;
     if (t === "grammar" && report.grammar.status === "done") return report.grammar.result.summary.total;
     if (t === "citations" && report.citations.status === "done") return report.citations.result.references.length;
@@ -463,6 +485,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
   const panels: Record<TabId, ReactNode> = {
     paper: <PaperPanel report={report} text={text} onOpen={(t) => open(t as TabId)} />,
     overview: <Overview report={report} text={text} onOpen={open} />,
+    images: imageReport ? <ImagesPanel report={imageReport} /> : null,
     similarity: <SectionBody s={report.plagiarism}>{(r) => <PlagiarismResultView text={text} report={r} ai={report.detector.status === "done" ? report.detector.result : null} showDownload={false} />}</SectionBody>,
     ai: <SectionBody s={report.detector}>{(r) => <DetectorResultView text={text} result={r} />}</SectionBody>,
     citations: <CitationsPanel report={report} />,
@@ -510,7 +533,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
 
       <div ref={topRef} className="scroll-mt-20">
         <div role="tablist" aria-label="Report sections" className="-mx-4 flex gap-1 overflow-x-auto border-b border-rule px-4 sm:mx-0 sm:px-0 print:hidden">
-          {TABS.map((t, i) => {
+          {tabs.map((t, i) => {
             const n = badge(t.id);
             const selected = tab === t.id;
             return (
@@ -541,7 +564,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
           })}
         </div>
 
-        {TABS.map((t, i) => (
+        {tabs.map((t, i) => (
           <section
             key={t.id}
             role="tabpanel"

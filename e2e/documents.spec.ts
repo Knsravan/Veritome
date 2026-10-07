@@ -67,3 +67,64 @@ test("a PDF is shown as its original pages with findings drawn over them", async
   await expect(page.getByLabel("Selected finding")).toContainText("deep learning");
   await axe(page);
 });
+
+/** PNGs drawn in the browser: a picture, the same picture flipped, and a different picture. */
+async function pictures(page: Page): Promise<Buffer[]> {
+  const urls = await page.evaluate(() => {
+    const draw = (flip: boolean, other: boolean) => {
+      const c = document.createElement("canvas");
+      c.width = 240;
+      c.height = 160;
+      const g = c.getContext("2d")!;
+      if (flip) {
+        g.translate(240, 0);
+        g.scale(-1, 1);
+      }
+      g.fillStyle = "#fff";
+      g.fillRect(0, 0, 240, 160);
+      g.fillStyle = other ? "#1d4ed8" : "#b91c1c";
+      if (other) {
+        g.beginPath();
+        g.arc(120, 80, 60, 0, Math.PI * 2);
+        g.fill();
+      } else {
+        g.fillRect(10, 10, 80, 140);
+        g.fillStyle = "#16a34a";
+        g.fillRect(100, 60, 60, 30);
+        g.fillStyle = "#111";
+        g.fillRect(170, 100, 60, 50);
+      }
+      return c.toDataURL("image/png");
+    };
+    return [draw(false, false), draw(false, false), draw(true, false), draw(false, true)];
+  });
+  return urls.map((u) => Buffer.from(u.split(",")[1]!, "base64"));
+}
+
+async function docxWithPictures(images: Buffer[]): Promise<Buffer> {
+  const W =
+    'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
+  const zip = new JSZip();
+  zip.file("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/></Types>');
+  const rels = images.map((_, i) => `<Relationship Id="rImg${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${i}.png"/>`).join("");
+  zip.file("word/_rels/document.xml.rels", `<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}</Relationships>`);
+  images.forEach((b, i) => zip.file(`word/media/image${i}.png`, b));
+  const pics = images.map((_, i) => `<w:p><w:r><w:drawing><a:graphic><a:graphicData><a:blip r:embed="rImg${i}"/></a:graphicData></a:graphic></w:drawing></w:r></w:p>`).join("");
+  zip.file("word/document.xml", `<?xml version="1.0"?><w:document ${W}><w:body><w:p><w:r><w:t xml:space="preserve">${PARA}</w:t></w:r></w:p>${pics}</w:body></w:document>`);
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
+test("pictures used twice, including a flipped copy, are found", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/plagiarism");
+  const file = await docxWithPictures(await pictures(page));
+  await upload(page, "figures.docx", file, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  // The figures carry a note in the paper itself.
+  await expect(page.getByLabel("Your paper with every finding underlined").getByText("The same picture appears elsewhere in the paper").first()).toBeVisible();
+  await page.getByRole("tab", { name: /^Images/ }).click();
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByRole("heading", { name: /problems? in 4 pictures/ })).toBeVisible();
+  await expect(panel.getByText("The same picture is used twice")).toHaveCount(3);
+  await expect(panel.getByText(/One copy is flipped/).first()).toBeVisible();
+  await axe(page);
+});

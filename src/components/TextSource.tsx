@@ -46,6 +46,7 @@ export function TextSource({
   const [notes, setNotes] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [progressNote, setProgressNote] = useState<string | null>(null);
   const { status } = useSettings();
 
   async function upload(file: File) {
@@ -56,7 +57,7 @@ export function TextSource({
     if (file.size <= MAX_LOCAL_BYTES) {
       setBusy(true);
       try {
-        const doc = await readDocument(file);
+        const doc = await readDocument(file, setProgressNote);
         if (doc && doc.text.replace(/\s/g, "").length >= 50) {
           onChange(doc.text.slice(0, maxChars));
           onDocument?.(doc.text.length <= maxChars ? doc : null);
@@ -68,6 +69,7 @@ export function TextSource({
         // Fall back to the server below.
       } finally {
         setBusy(false);
+        setProgressNote(null);
         if (fileRef.current) fileRef.current.value = "";
       }
     }
@@ -200,7 +202,7 @@ export function TextSource({
             ) : (
               <UploadIcon size={26} />
             )}
-            <p className="font-semibold">{busy ? "Reading your file…" : "Drop to upload"}</p>
+            <p className="font-semibold">{busy ? (progressNote ?? "Reading your file…") : "Drop to upload"}</p>
           </div>
         )}
       </div>
