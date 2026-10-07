@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type DragEvent } from "react";
 import { ApiError, postForm } from "@/lib/api";
+import { MAX_LOCAL_BYTES, readDocument, type DocModel } from "@/lib/doc";
 import { SAMPLE_PAPER } from "@/lib/sample";
 import { useSettings } from "@/lib/settings";
 import { FileIcon, UploadIcon } from "./icons";
@@ -26,9 +27,12 @@ export function TextSource({
   rows = 14,
   maxChars = 400_000,
   sample = SAMPLE_PAPER,
+  onDocument,
 }: {
   value: string;
   onChange: (text: string) => void;
+  /** Receives the uploaded document with its layout (Word and PDF files), or null when the text came from elsewhere. */
+  onDocument?: (doc: DocModel | null) => void;
   label?: string;
   hint?: string;
   rows?: number;
@@ -47,6 +51,27 @@ export function TextSource({
   async function upload(file: File) {
     setError(null);
     setNotes([]);
+    // Word and PDF files are read here in the browser, which keeps their layout for the report; only the text
+    // is sent for checking. Anything else, or a file this cannot read, goes to the server.
+    if (file.size <= MAX_LOCAL_BYTES) {
+      setBusy(true);
+      try {
+        const doc = await readDocument(file);
+        if (doc && doc.text.replace(/\s/g, "").length >= 50) {
+          onChange(doc.text.slice(0, maxChars));
+          onDocument?.(doc.text.length <= maxChars ? doc : null);
+          setFileName(file.name);
+          setNotes(doc.warnings);
+          return;
+        }
+      } catch {
+        // Fall back to the server below.
+      } finally {
+        setBusy(false);
+        if (fileRef.current) fileRef.current.value = "";
+      }
+    }
+    onDocument?.(null);
     const limit = status?.maxUploadBytes;
     if (limit && file.size > limit) {
       setError(`${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB; files up to ${Math.floor((limit / 1024 / 1024) * 10) / 10} MB are supported here. Try saving it without images, or paste the text instead.`);
@@ -108,6 +133,7 @@ export function TextSource({
               variant="quiet"
               onClick={() => {
                 onChange("");
+                onDocument?.(null);
                 setFileName(null);
                 setNotes([]);
               }}

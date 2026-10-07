@@ -1,5 +1,5 @@
 import { checkPlagiarism } from "@/core/plagiarism/check";
-import { libraryDocs, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
+import { hiddenRanges, libraryDocs, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
 import { plagiarismProviders, scholarlyHttp } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
@@ -18,6 +18,7 @@ export const POST = route({ bucket: "plagiarism", weight: 0.25 }, async ({ cfg, 
     library,
     excludeQuotes: optionalBool(body, "excludeQuotes", true),
     excludeReferences: optionalBool(body, "excludeReferences", true),
+    hiddenText: hiddenRanges(body, input.length),
     signal: req.signal,
   };
   if (body.stream !== true) return checkPlagiarism(input, options);

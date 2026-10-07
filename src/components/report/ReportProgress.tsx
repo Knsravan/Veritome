@@ -34,6 +34,36 @@ function useElapsed() {
 
 const fmt = (s: number) => (s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`);
 
+const LINES = [92, 100, 86, 97, 74, 100, 95, 60, 100, 88, 96, 70];
+const UNDERLINES: Array<{ tool: ToolId; line: number; from: number; to: number; cls: string }> = [
+  { tool: "plagiarism", line: 1, from: 8, to: 70, cls: "scan-u-copied" },
+  { tool: "plagiarism", line: 6, from: 20, to: 90, cls: "scan-u-copied" },
+  { tool: "detector", line: 3, from: 0, to: 97, cls: "scan-u-ai" },
+  { tool: "detector", line: 4, from: 0, to: 74, cls: "scan-u-ai" },
+  { tool: "citations", line: 8, from: 40, to: 100, cls: "scan-u-cite" },
+  { tool: "grammar", line: 10, from: 30, to: 46, cls: "scan-u-grammar" },
+  { tool: "grammar", line: 2, from: 60, to: 72, cls: "scan-u-grammar" },
+];
+
+/** A page being read: a soft beam moves down it, and each check's underlines draw in as that check finishes. */
+function PaperScan({ state, done }: { state: ProgressState; done: boolean }) {
+  return (
+    <div aria-hidden className="relative mx-auto h-56 w-44 shrink-0 overflow-hidden rounded-lg border border-rule bg-page px-4 py-5 shadow-[var(--shadow-lift)]">
+      <div className="space-y-[0.7rem]">
+        {LINES.map((w, i) => (
+          <div key={i} className="relative h-1.5">
+            <div className="h-full rounded-full bg-desk-deep" style={{ width: `${w}%` }} />
+            {UNDERLINES.filter((u) => u.line === i && state.steps[u.tool] === "done").map((u) => (
+              <div key={`${u.tool}${u.from}`} className={cx("scan-u animate-grow-x absolute -bottom-1", u.cls)} style={{ left: `${u.from}%`, width: `${Math.min(w, u.to) - u.from}%` }} />
+            ))}
+          </div>
+        ))}
+      </div>
+      {!done && <div className="scan-beam" />}
+    </div>
+  );
+}
+
 export function ReportProgress({ order, state, words, onCancel }: { order: readonly ToolId[]; state: ProgressState; words: number; onCancel: () => void }) {
   const elapsed = useElapsed();
   const active = order.filter((id) => state.steps[id] !== "off");
@@ -48,7 +78,9 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
   const pct = active.length ? Math.round((fraction / active.length) * 100) : 0;
 
   return (
-    <section aria-labelledby="progress-h" className="card animate-fade-up mx-auto max-w-2xl p-6 sm:p-8">
+    <section aria-labelledby="progress-h" className="card animate-fade-up mx-auto grid max-w-3xl gap-8 p-6 sm:grid-cols-[auto_1fr] sm:p-8">
+      <PaperScan state={state} done={pct >= 100} />
+      <div className="min-w-0">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="progress-h" className="font-display text-2xl font-semibold">
           Checking your paper
@@ -124,6 +156,7 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
+      </div>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import { buildPaperReport, TOOL_IDS, type ReportDeps, type ReportEvent, type ToolId } from "@/core/report/report";
-import { libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
+import { hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
 import { finderDeps, languageToolOptions, llmClient, plagiarismProviders, scholarlyHttp, verifierDeps } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
@@ -29,7 +29,11 @@ export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }
     ...(llm ? { llm } : {}),
     ...(lt ? { languageTool: lt } : {}),
   };
-  const exclude = { excludeQuotes: optionalBool(body, "excludeQuotes", true), excludeReferences: optionalBool(body, "excludeReferences", true) };
+  const exclude = {
+    excludeQuotes: optionalBool(body, "excludeQuotes", true),
+    excludeReferences: optionalBool(body, "excludeReferences", true),
+    hiddenText: hiddenRanges(body, input.length),
+  };
   if (body.stream !== true) return buildPaperReport(input, deps, { tools, ...exclude, signal: req.signal });
 
   // Streamed as newline-delimited JSON so the page can show each check's progress while the report is built.
