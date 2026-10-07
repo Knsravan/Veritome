@@ -254,5 +254,6 @@ export async function readDocx(name: string, data: ArrayBuffer | Uint8Array): Pr
   const warnings: string[] = [];
   const unshown = ctx.images.filter((i) => !i.src).length;
   if (unshown) warnings.push(`${unshown} image${unshown === 1 ? " is" : "s are"} in a format browsers cannot show (such as EMF), so ${unshown === 1 ? "it is" : "they are"} listed but not displayed.`);
-  return { kind: "docx", name, text, blocks, images: ctx.images, hidden: ctx.hidden.filter((h) => h.start < text.length).map((h) => ({ start: h.start, end: Math.min(h.end, text.length) })), warnings };
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  return { kind: "docx", name, data: bytes, text, blocks, images: ctx.images, hidden: ctx.hidden.filter((h) => h.start < text.length).map((h) => ({ start: h.start, end: Math.min(h.end, text.length) })), warnings };
 }

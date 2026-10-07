@@ -5,6 +5,9 @@ import { paragraphStats } from "@/core/report/paragraphs";
 import type { PaperReport } from "@/core/report/report";
 import { writePlagiarismSection, writeTitle } from "./plagiarism-pdf";
 import { loadUnicodeFonts, PDF_COLORS, PdfWriter } from "./writer";
+import { annotatePdf, joinPdfs, wordPages, type LineStyle } from "./paper-pages";
+import { collectFindings } from "@/components/report/PaperPanel";
+import type { DocModel } from "../doc/model";
 
 const LEVEL: Record<ActionLevel, { text: string; color: string }> = {
   high: { text: "Fix", color: PDF_COLORS.critical },
@@ -21,7 +24,8 @@ const REF_STATUS: Record<string, string> = {
 };
 
 /** The full paper report as a PDF file, built in the browser from the report on screen. */
-export async function buildReportPdf(report: PaperReport, text: string): Promise<Blob> {
+export async function buildReportPdf(report: PaperReport, text: string, paper: DocModel | null = null): Promise<Blob> {
+  const original = paper && paper.text === text && (paper.kind === "pdf" || paper.data) ? paper : null;
   const { jsPDF } = await import("jspdf");
   const w = new PdfWriter(new jsPDF({ unit: "pt", format: "a4" }));
   await loadUnicodeFonts(w.doc);
@@ -80,6 +84,7 @@ export async function buildReportPdf(report: PaperReport, text: string): Promise
       ...(d ? { aiThreshold: d.model.thresholds.likelyAi } : {}),
       paragraphs: paragraphStats(text, { spans: reviewed.spans, paraphrases: reviewed.paraphrases }, ai),
       filters: { minWords: 0, excluded: [] },
+      skipMarkedText: Boolean(original),
     });
   }
 
@@ -162,6 +167,57 @@ export async function buildReportPdf(report: PaperReport, text: string): Promise
 
   w.heading("About this report", 12);
   w.text(report.disclaimer, { size: 9, color: PDF_COLORS.soft });
+  if (!original) {
+    w.footer("Veritome paper report · automated signals to review, not a verdict");
+    return doc.output("blob");
+  }
+
+  // The paper itself, in its own layout, with every finding underlined.
+  const marks = collectFindings(report, text).map((f) => ({ id: f.id, start: f.start, end: f.end, className: f.className, label: f.title, ...(f.group ? { group: f.group } : {}) }));
+  doc.addPage();
+  w.y = w.margin;
+  w.heading("Your paper, with every finding underlined", 16);
+  w.text(
+    `The following pages are your ${original.kind === "pdf" ? "PDF" : "Word file"} as it looks, with each finding underlined. The same underlines are on the “Your paper” tab of the report on screen, where selecting one explains it.`,
+    { size: 10, color: PDF_COLORS.soft, gap: 10 },
+  );
+  const legend: Array<[string, string, LineStyle]> = [
+    ["Copied word for word (colour shows the source)", "#e0a100", "solid"],
+    ["Reworded or translated from a source", "#3a8ee6", "dotted"],
+    ["Hidden copying (disguised text, paraphrasing-tool phrases)", "#dc2626", "double"],
+    ["Reads as AI-written", "#8b5cf6", "wavy"],
+    ["Citation needed or missing", "#0f9f8f", "dashed"],
+    ["Grammar and spelling", "#e5484d", "thin"],
+  ];
+  for (const [label, colour, style] of legend) {
+    w.ensure(18);
+    const y = w.y + 9;
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(colour.slice(i, i + 2), 16));
+    doc.setDrawColor(r!, g!, b!);
+    doc.setLineWidth(style === "thin" ? 0.8 : 1.4);
+    doc.setLineDashPattern(style === "dotted" ? [1, 2] : style === "dashed" ? [4, 2.5] : [], 0);
+    if (style === "wavy") for (let x = w.margin; x < w.margin + 40; x += 3) doc.line(x, y + (Math.round((x - w.margin) / 3) % 2 ? 1.2 : -1.2), x + 3, y + (Math.round((x - w.margin) / 3) % 2 ? -1.2 : 1.2));
+    else {
+      doc.line(w.margin, y, w.margin + 40, y);
+      if (style === "double") doc.line(w.margin, y + 2.4, w.margin + 40, y + 2.4);
+    }
+    doc.setLineDashPattern([], 0);
+    w.font(10);
+    w.color(PDF_COLORS.ink);
+    doc.text(label, w.margin + 52, y + 3);
+    w.y += 18;
+  }
   w.footer("Veritome paper report · automated signals to review, not a verdict");
-  return doc.output("blob");
+
+  if (original.kind === "docx") {
+    const pages = await wordPages(original, text, marks);
+    for (const pg of pages) {
+      doc.addPage([pg.width, pg.height], pg.width > pg.height ? "landscape" : "portrait");
+      doc.addImage(pg.url, "JPEG", 0, 0, pg.width, pg.height);
+    }
+    return doc.output("blob");
+  }
+  const annotated = await annotatePdf(original, marks);
+  const joined = await joinPdfs(doc.output("arraybuffer"), annotated);
+  return new Blob([joined as BlobPart], { type: "application/pdf" });
 }

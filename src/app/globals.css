@@ -720,3 +720,39 @@ h3,
     display: none;
   }
 }
+
+/* A Word file in its exact layout. Pages are white paper in both themes, so underlines use the light colours. */
+.docx-exact {
+  --u-src-1: #e0a100; --u-src-2: #3a8ee6; --u-src-3: #2fa36b; --u-src-4: #ee7a2f; --u-src-5: #d6539b; --u-src-6: #13a3b5;
+  --u-copied: #e0a100;
+  --u-ai: #8b5cf6;
+  --u-grammar: #e5484d;
+  --u-cite: #0f9f8f;
+  --u-flag: #dc2626;
+  --page: #ffffff;
+}
+.docx-exact .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  align-items: center;
+  gap: 1.25rem;
+}
+.docx-exact .docx-wrapper > section.docx {
+  margin: 0 auto !important;
+  box-shadow: var(--shadow-card) !important;
+  border-radius: 6px;
+  color: #111;
+}
+.docx-exact mark.mark {
+  color: inherit;
+}
+/* Papers use tight line spacing, so underlines are slimmer and closer to the words than in the plain view. */
+.docx-exact .mark-match { text-decoration-thickness: 2px; text-underline-offset: 2px; }
+.docx-exact .mark-para { text-decoration-thickness: 2px; text-underline-offset: 2px; }
+.docx-exact .mark-ai { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.docx-exact .mark-ai-medium { text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
+.docx-exact .mark-grammar { text-decoration-thickness: 1.5px; text-underline-offset: 1px; }
+.docx-exact .mark-cite { text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.docx-exact .mark-flag { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.docx-exact .mark:hover,
+.docx-exact .mark.is-active { text-decoration-thickness: 2.5px; }

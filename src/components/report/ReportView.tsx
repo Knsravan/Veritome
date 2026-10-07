@@ -15,7 +15,7 @@ import { CountUp } from "../motion";
 import { GrammarDetail } from "./GrammarDetail";
 import { collectFindings, PaperPanel } from "./PaperPanel";
 import { ImagesPanel } from "./ImagesPanel";
-import { useImageReport } from "../DocumentContext";
+import { useDocModel, useImageReport } from "../DocumentContext";
 import { ORDER, STATUS, TONE_BAR, TONE_CLASS, TOOL_LABEL, type Tone } from "./labels";
 
 type TabId = "paper" | "overview" | "images" | "similarity" | "ai" | "citations" | "grammar" | "rewrites";
@@ -433,6 +433,7 @@ function ExportMenu({ report }: { report: PaperReport }) {
 export function ReportView({ report, text, onNew }: { report: PaperReport; text: string; onNew: () => void }) {
   const [tab, setTab] = useState<TabId>("paper");
   const imageReport = useImageReport();
+  const paperDoc = useDocModel(text);
   const tabs = TABS.filter((t) => t.id !== "images" || imageReport);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -443,7 +444,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
     setPdf("busy");
     try {
       const { buildReportPdf } = await import("@/lib/pdf/report-pdf");
-      const url = URL.createObjectURL(await buildReportPdf(report, text));
+      const url = URL.createObjectURL(await buildReportPdf(report, text, paperDoc));
       const a = document.createElement("a");
       a.href = url;
       a.download = `veritome-report-${new Date().toISOString().slice(0, 10)}.pdf`;

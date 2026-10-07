@@ -13,6 +13,8 @@ export interface PlagiarismPdfInput {
   aiThreshold?: number;
   paragraphs: ParagraphStat[];
   filters: { minWords: number; excluded: string[] };
+  /** Leave out the plain-text copy of the paper (the original pages follow instead). */
+  skipMarkedText?: boolean;
 }
 
 const KIND_FILL: Record<IssueKind, string> = {
@@ -182,7 +184,8 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
     w.text(`Also containing the same wording (not the best match, often because they quote the original): ${r.others.map((s) => s.title).join("; ")}.`, { size: 8.5, color: PDF_COLORS.soft });
   }
 
-  // The marked-up text.
+  // The marked-up text, unless the paper's own pages follow.
+  if (!input.skipMarkedText) {
   doc.addPage();
   w.y = w.margin;
   w.heading("Your text with findings marked", 14);
@@ -197,6 +200,7 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
     ...(i.sourceId && number.has(i.sourceId) ? { tag: String(number.get(i.sourceId)), tagColor: KIND_COLOR[i.kind] === PDF_COLORS.neutral ? PDF_COLORS.faint : KIND_COLOR[i.kind] } : {}),
   }));
   w.markedText(text, marks, aiParts.map((x) => ({ start: x.start, end: x.end, color: PDF_COLORS.ai })));
+  }
 
   // What was searched and the limits.
   w.heading("What was searched", 12);
