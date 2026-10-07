@@ -45,6 +45,8 @@ export interface ReportOptions {
   maxReferences?: number;
   signal?: AbortSignal;
   onProgress?: (tool: ToolId, state: "start" | "done") => void;
+  /** Finer progress inside a tool, such as passages searched so far. */
+  onStep?: (tool: ToolId, done: number, total: number) => void;
 }
 
 export interface CitationsSection {
@@ -84,6 +86,13 @@ export interface PaperReport {
   humanise: Section<RewriteSuggestion[]>;
   disclaimer: string;
 }
+
+/** Events sent while a report is streamed to the browser. */
+export type ReportEvent =
+  | { type: "progress"; tool: ToolId; state: "start" | "done" }
+  | { type: "step"; tool: ToolId; done: number; total: number }
+  | { type: "result"; report: PaperReport }
+  | { type: "error"; error: string };
 
 export const REPORT_DISCLAIMER =
   "This report collects automated signals to help you review your manuscript. Every tool here can miss problems " +
@@ -193,7 +202,12 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
     detectAiText(text, { ...(deps.llm ? { llm: deps.llm } : {}), ...(signal ? { signal } : {}) }),
   ));
   const plagiarismP = progress("plagiarism", run<PlagiarismReport>(on("plagiarism"), "Not selected.", () =>
-    checkPlagiarism(text, { providers: deps.providers ?? [], library: deps.library ?? [], ...(signal ? { signal } : {}) }),
+    checkPlagiarism(text, {
+      providers: deps.providers ?? [],
+      library: deps.library ?? [],
+      ...(signal ? { signal } : {}),
+      ...(options.onStep ? { onProgress: (done: number, total: number) => options.onStep?.("plagiarism", done, total) } : {}),
+    }),
   ));
   const citationsP = progress("citations", run<CitationsSection>(on("citations"), "Not selected.", async () => {
     const references = split.references ? parseReferenceList(split.references) : [];

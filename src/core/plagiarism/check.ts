@@ -35,6 +35,16 @@ export function verdictFor(similarity: number): PlagiarismVerdict {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/** A plain-language reason for a failed search, without URLs or status codes. */
+export function failureReason(err: unknown): string {
+  const m = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  if (/\b429\b|rate.?limit|too many/i.test(m)) return "the service was busy and asked us to slow down";
+  if (/timeout|timed out|abort/i.test(m)) return "the service did not answer in time";
+  if (/\b5\d\d\b/.test(m)) return "the service had a server error";
+  if (/\b40[13]\b/.test(m)) return "the service refused the request; an API key may be needed";
+  return "the service could not be reached";
+}
+
 export async function checkPlagiarism(text: string, options: PlagiarismOptions = {}): Promise<PlagiarismReport> {
   const providers = options.providers ?? [];
   const excludeRefs = options.excludeReferences ?? true;
@@ -101,6 +111,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     const passages = selectPassages(working, maxPassages);
     const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
     let done = 0;
+    const firstError = new Map<string, unknown>();
     // Paced providers wait between requests, so more workers keep the others busy meanwhile.
     await mapLimit(jobs, options.concurrency ?? 6, async ({ p, provider }) => {
       if (options.signal?.aborted) return;
@@ -120,13 +131,20 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
           return;
         }
         s.failures++;
-        if (s.failures === 1) warnings.push(`${provider.name} could not be reached for some queries: ${err instanceof Error ? err.message : "unknown error"}.`);
+        if (!firstError.has(provider.name)) firstError.set(provider.name, err);
       }
       options.onProgress?.(++done, jobs.length);
     });
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
     for (const s of stats.values()) {
-      if (s.queries > 0 && s.failures === s.queries) warnings.push(`${s.name} failed for every query, so it contributed nothing.`);
+      if (s.failures > 0) {
+        const why = failureReason(firstError.get(s.name));
+        warnings.push(
+          s.failures === s.queries
+            ? `${s.name} could not be searched this time (${why}), so it contributed nothing.`
+            : `${s.name} could not be searched for ${s.failures} of ${s.queries} passages (${why}).`,
+        );
+      }
       if (s.skipped) warnings.push(`${s.name} limits how often it can be searched, so only part of the text (${s.queries} of ${s.queries + s.skipped} passages) was checked against it.`);
     }
   } else if (providers.length === 0 && !options.library?.length) {

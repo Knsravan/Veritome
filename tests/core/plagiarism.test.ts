@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkPlagiarism } from "../../src/core/plagiarism/check.ts";
+import { checkPlagiarism, failureReason } from "../../src/core/plagiarism/check.ts";
 import type { SourceProvider } from "../../src/core/plagiarism/providers.ts";
 import { selectPassages } from "../../src/core/plagiarism/passages.ts";
 
@@ -96,5 +96,21 @@ test("a provider that runs out of its request allowance is reported as partly se
   assert.equal(s?.queries, 1);
   assert.ok((s?.skipped ?? 0) >= 1);
   assert.ok(r.warnings.some((w) => /only part of the text/.test(w)));
-  assert.ok(!r.warnings.some((w) => /failed for every query/.test(w)));
+  assert.ok(!r.warnings.some((w) => /contributed nothing/.test(w)));
+});
+
+test("failed searches are explained without URLs or status codes", async () => {
+  const busy: SourceProvider = {
+    name: "Busy",
+    kind: "scholarly",
+    coverage: "test",
+    async search() {
+      throw new Error("HTTP 429 for https://api.example.org/search");
+    },
+  };
+  const r = await checkPlagiarism("Deeper networks are more difficult to train and we present a residual learning framework for very deep models.", { providers: [busy] });
+  const note = r.warnings.find((w) => w.startsWith("Busy"));
+  assert.equal(note, "Busy could not be searched this time (the service was busy and asked us to slow down), so it contributed nothing.");
+  assert.equal(failureReason(new Error("The operation timed out")), "the service did not answer in time");
+  assert.equal(failureReason(new Error("HTTP 503 for x")), "the service had a server error");
 });

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Work } from "../../src/core/citations/types.ts";
 import type { SourceProvider } from "../../src/core/plagiarism/providers.ts";
-import { buildPaperReport } from "../../src/core/report/index.ts";
+import { buildActionList, buildPaperReport, documentStats } from "../../src/core/report/index.ts";
 
 const SOURCE_SENTENCE =
   "Riparian alder stands sustain unusually high autumn soil respiration because nitrogen fixation keeps root activity elevated late into the season";
@@ -92,4 +92,39 @@ test("disabled tools are skipped and failures are contained", async () => {
   if (report.citations.status === "done") assert.equal(report.citations.result.verification?.checks[0]?.status, "unchecked");
   const pl = report.overview.find((o) => o.tool === "plagiarism");
   assert.match(pl?.headline ?? "", /no external search configured/);
+});
+
+test("buildActionList ranks a copied passage and a missing reference above style notes", async () => {
+  const notFound = PAPER.replace("References", "Ripley (2019) disagreed.\n\nReferences");
+  const steps: number[] = [];
+  const report = await buildPaperReport(
+    notFound,
+    {
+      providers: [provider],
+      verifier: { crossref: { getWork: async () => null, search: async () => [] } },
+    },
+    { tools: { paraphrase: false, humanise: false }, onStep: (tool, done) => tool === "plagiarism" && steps.push(done) },
+  );
+  assert.ok(steps.length > 0, "plagiarism reports passage progress");
+  const actions = buildActionList(report);
+  assert.ok(actions.length > 0);
+  assert.equal(actions[0]!.level, "high");
+  const copied = actions.find((a) => a.tool === "plagiarism");
+  assert.ok(copied && /match “Alder paper”/.test(copied.title));
+  assert.ok(actions.some((a) => a.tool === "citations" && /Ripley/.test(a.title)), "uncited in-text citation listed");
+  assert.ok(actions.some((a) => /Reference 1 was not found/.test(a.title)));
+  const levels = actions.map((a) => ["high", "medium", "low"].indexOf(a.level));
+  assert.deepEqual(levels, [...levels].sort((a, b) => a - b), "most important first");
+
+  const stats = documentStats(report, notFound);
+  assert.equal(stats.references, 1);
+  assert.ok(stats.words > 50 && stats.readingMinutes >= 1);
+});
+
+test("buildActionList has nothing urgent for a clean text", async () => {
+  const report = await buildPaperReport("A short note with nothing to flag in it at all.", {}, { tools: { citations: false, grammar: false } });
+  assert.deepEqual(
+    buildActionList(report).filter((a) => a.level === "high"),
+    [],
+  );
 });

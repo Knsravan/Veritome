@@ -81,20 +81,48 @@ test("offline plagiarism check against the user's own text runs without consent"
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("full report runs offline and offers downloads @mobile", async ({ page }) => {
+test("full report runs offline, shows tabs and offers downloads @mobile", async ({ page }) => {
   await page.goto("/report");
   await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByText("More options").click();
   await page.getByLabel("Search scholarly databases").uncheck();
-  await page.getByRole("button", { name: "Build the report" }).click();
-  await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("button", { name: "Download Markdown" })).toBeVisible();
-  for (const name of ["Plagiarism", "AI writing patterns", "Citations", "Grammar and style"]) {
-    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Check paper" }).click();
+  await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeAttached({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible();
+  for (const [tab, text] of [
+    ["Similarity", /words appear word for word/],
+    ["AI patterns", /patterns typical of model output|Inconclusive/],
+    ["Citations", /Sentences that may need a citation/],
+    ["Grammar", /Readability/],
+    ["Rewrites", /Revision suggestions/],
+  ] as const) {
+    await page.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
+    await expect(page.getByRole("tabpanel").getByText(text).first()).toBeVisible();
   }
+  await page.getByText("More formats").click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download Markdown" }).click();
   expect((await download).suggestedFilename()).toBe("veritome-report.md");
   await axe(page);
+  await page.getByRole("button", { name: "New check" }).click();
+  await expect(page.getByRole("heading", { name: "Check a paper" })).toBeVisible();
+});
+
+test("report shows live progress while checking", async ({ page }) => {
+  await page.route("**/api/report", async (route) => {
+    const lines = [
+      { type: "progress", tool: "plagiarism", state: "start" },
+      { type: "step", tool: "plagiarism", done: 3, total: 10 },
+    ];
+    await route.fulfill({ status: 200, contentType: "application/x-ndjson", body: lines.map((l) => JSON.stringify(l)).join("\n") + "\n" });
+  });
+  await page.goto("/report");
+  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByText("More options").click();
+  await page.getByLabel("Search scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check paper" }).click();
+  // The fake stream ends without a result, so the page reports that clearly instead of hanging.
+  await expect(page.getByText("The check did not finish")).toBeVisible();
 });
 
 test("dark theme keeps contrast on results", async ({ page }) => {

@@ -1,306 +1,190 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { CrossCheckView, StylePicker, VerifyView, WorkCitation } from "@/components/CitationViews";
+import { useEffect, useRef, useState } from "react";
 import { useConsent } from "@/components/Consent";
-import { DetectorResultView } from "@/components/DetectorResultView";
+import { ArrowRightIcon, ShieldIcon } from "@/components/icons";
 import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
-import { PlagiarismResultView } from "@/components/PlagiarismResultView";
-import { RewriteResultView } from "@/components/RewriteResultView";
+import { ORDER, TOOL_HINT, TOOL_LABEL } from "@/components/report/labels";
+import { ReportProgress, type ProgressState, type StepState } from "@/components/report/ReportProgress";
+import { ReportView } from "@/components/report/ReportView";
 import { TextSource } from "@/components/TextSource";
-import { Button, Checkbox, Notice, ToolHeader, cx } from "@/components/ui";
-import type { CitationStyle } from "@/core/citations/types";
-import type { OverviewStatus, PaperReport, Section, ToolId } from "@/core/report/report";
-import { postJson } from "@/lib/api";
-import { reportToMarkdown } from "@/lib/report-markdown";
+import { Button, Checkbox, Notice, cx } from "@/components/ui";
+import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
+import { ApiError, postNdjson } from "@/lib/api";
+import { SAMPLE_PAPER } from "@/lib/sample";
 import { useHasLlm, useSettings } from "@/lib/settings";
-import { useRun } from "@/lib/useRun";
 
-const TOOL_LABEL: Record<ToolId, string> = {
-  plagiarism: "Plagiarism",
-  detector: "AI writing patterns",
-  citations: "Citations",
-  grammar: "Grammar and style",
-  paraphrase: "Paraphrase suggestions",
-  humanise: "Revision suggestions",
-};
+type Phase = "compose" | "running" | "done";
 
-const TOOL_HINT: Record<ToolId, string> = {
-  plagiarism: "Overlap with scholarly abstracts, the web and your documents.",
-  detector: "Writing patterns common in model output, with a range.",
-  citations: "Reference lookup, in-text cross-check, uncited claims.",
-  grammar: "Built-in rules and readability, plus LanguageTool if connected.",
-  paraphrase: "Rewrites for the longest matched passages.",
-  humanise: "Revisions for the most formulaic paragraphs.",
-};
+const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 
-const STATUS: Record<OverviewStatus, { text: string; cls: string; icon: string }> = {
-  ok: { text: "Looks fine", cls: "bg-ok-soft text-ok", icon: "✓" },
-  review: { text: "Worth reviewing", cls: "bg-warn-soft text-warn", icon: "!" },
-  attention: { text: "Needs attention", cls: "bg-danger-soft text-danger", icon: "!!" },
-  skipped: { text: "Skipped", cls: "bg-desk text-ink-faint", icon: "–" },
-  error: { text: "Failed", cls: "bg-danger-soft text-danger", icon: "×" },
-};
-
-const ORDER: ToolId[] = ["plagiarism", "detector", "citations", "grammar", "paraphrase", "humanise"];
-
-function download(name: string, type: string, content: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function Elapsed() {
-  const [s, setS] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setS((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  return <span className="tabular-nums">{s}s</span>;
-}
-
-function SectionBody<T>({ s, children }: { s: Section<T>; children: (r: T) => ReactNode }) {
-  if (s.status === "skipped") return <p className="text-ink-soft">Skipped: {s.reason}</p>;
-  if (s.status === "error") return <Notice kind="error">This check failed: {s.message}</Notice>;
-  return <>{children(s.result)}</>;
+function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint: string }) {
+  return (
+    <label className={cx("flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors", checked ? "border-action/50 bg-action-soft/50" : "border-rule hover:bg-desk")}>
+      <input type="checkbox" className="mt-1 size-4 shrink-0 accent-[var(--action)]" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>
+        <span className="font-semibold">{label}</span>
+        <span className="block text-sm text-ink-soft">{hint}</span>
+      </span>
+    </label>
+  );
 }
 
 export function ReportTool() {
+  const [phase, setPhase] = useState<Phase>("compose");
   const [text, setText] = useState("");
   const [checked, setChecked] = useState("");
   const [tools, setTools] = useState<Record<ToolId, boolean>>({ plagiarism: true, detector: true, citations: true, grammar: true, paraphrase: true, humanise: true });
   const [external, setExternal] = useState(true);
   const [useLlm, setUseLlm] = useState(true);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
-  const [style, setStyle] = useState<CitationStyle>("apa");
+  const [report, setReport] = useState<PaperReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
+  const ctrl = useRef<AbortController | null>(null);
   const { settings, status, llmFields } = useSettings();
   const hasLlm = useHasLlm();
   const consent = useConsent();
-  const { result, error, busy, run, cancel } = useRun<PaperReport>();
+  const words = countWords(text);
+
+  useEffect(() => () => ctrl.current?.abort(), []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("sample") === "1") setText(SAMPLE_PAPER);
+  }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [phase]);
 
   const go = async () => {
     if (external && !(await consent("report"))) return;
-    await run(async (signal) => {
-      const r = await postJson<PaperReport>(
+    ctrl.current?.abort();
+    const c = new AbortController();
+    ctrl.current = c;
+    const steps = Object.fromEntries(ORDER.map((id) => [id, tools[id] ? "waiting" : "off"])) as Record<ToolId, StepState>;
+    setProgress({ steps });
+    setError(null);
+    setChecked(text);
+    setPhase("running");
+    let finished: PaperReport | null = null;
+    try {
+      await postNdjson<ReportEvent>(
         "/api/report",
-        { text, tools, external, consent: external, web: settings.webSearch, useLlm: useLlm && hasLlm, library, ...llmFields() },
-        signal,
+        { text, tools, external, consent: external, web: settings.webSearch, useLlm: useLlm && hasLlm, library, stream: true, ...llmFields() },
+        (ev) => {
+          if (ev.type === "progress") {
+            setProgress((p) => (p ? { ...p, steps: { ...p.steps, [ev.tool]: ev.state === "start" ? (p.steps[ev.tool] === "off" ? "off" : "running") : p.steps[ev.tool] === "off" ? "off" : "done" } } : p));
+          } else if (ev.type === "step" && ev.tool === "plagiarism") {
+            setProgress((p) => (p ? { ...p, plagiarism: { done: ev.done, total: ev.total } } : p));
+          } else if (ev.type === "result") {
+            finished = ev.report;
+          } else if (ev.type === "error") {
+            throw new ApiError(ev.error, 500);
+          }
+        },
+        c.signal,
       );
-      setChecked(text);
-      return r;
-    });
+      if (c.signal.aborted) return;
+      if (!finished) throw new ApiError("The check stopped before the report was ready. Try again, or with fewer checks at once.", 0);
+      setReport(finished);
+      setPhase("done");
+    } catch (err) {
+      if (c.signal.aborted) return;
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setPhase("compose");
+    }
   };
 
+  const cancel = () => {
+    ctrl.current?.abort();
+    setPhase("compose");
+  };
+
+  if (phase === "running" && progress) {
+    return <ReportProgress order={ORDER} state={progress} words={countWords(checked)} onCancel={cancel} />;
+  }
+
+  if (phase === "done" && report) {
+    return <ReportView report={report} text={checked} onNew={() => setPhase("compose")} />;
+  }
+
+  const selected = ORDER.filter((id) => tools[id]).length;
   return (
     <div className="space-y-8">
-      <ToolHeader
-        title="Full paper report"
-        intro="Runs every check on your manuscript and collects the findings in one place, each with its evidence and its limits."
-      />
-      <div className="grid gap-8 lg:grid-cols-[1fr_22rem]">
-        <TextSource value={text} onChange={setText} rows={16} />
-        <div className="space-y-6">
-          <fieldset className="space-y-3">
-            <legend className="font-semibold">Checks to run</legend>
-            {ORDER.map((id) => (
-              <Checkbox key={id} checked={tools[id]} onChange={(v) => setTools((t) => ({ ...t, [id]: v }))} label={TOOL_LABEL[id]} hint={TOOL_HINT[id]} />
-            ))}
-          </fieldset>
-          <fieldset className="space-y-3">
-            <legend className="font-semibold">Outside services</legend>
-            <Checkbox
-              checked={external}
-              onChange={setExternal}
-              label="Search scholarly databases"
-              hint="Needed for plagiarism search, reference checks and source suggestions. Asks before sending anything."
-            />
-            <Checkbox
-              checked={useLlm && hasLlm}
-              onChange={setUseLlm}
-              disabled={!hasLlm}
-              label={`Use the language model${status?.llmModel ? ` (${status.llmModel})` : ""}`}
-              hint={hasLlm ? "For rewrite suggestions and a second opinion on writing patterns." : "None configured; rewrites fall back to light rule-based edits."}
-            />
-          </fieldset>
-          <LibraryPicker items={library} onChange={setLibrary} serverCount={status?.libraryDocuments ?? 0} />
+      <header className="max-w-3xl">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">Check a paper</h1>
+        <p className="mt-2 text-lg text-ink-soft">
+          Upload your manuscript and get one report covering plagiarism, AI-writing patterns, references and grammar, with every finding shown in your text.
+        </p>
+      </header>
+
+      {error && (
+        <Notice kind="error" title="The check did not finish">
+          {error}
+        </Notice>
+      )}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <section aria-labelledby="step1" className="card p-4 sm:p-6">
+          <h2 id="step1" className="mb-4 flex items-center gap-2.5 font-semibold">
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-action text-xs text-action-ink">1</span>
+            Add your paper
+          </h2>
+          <TextSource value={text} onChange={setText} rows={18} label="Your text" />
+        </section>
+
+        <div className="space-y-4 lg:sticky lg:top-24">
+          <section aria-labelledby="step2" className="card p-4 sm:p-6">
+            <h2 id="step2" className="mb-4 flex items-center gap-2.5 font-semibold">
+              <span className="inline-flex size-6 items-center justify-center rounded-full bg-action text-xs text-action-ink">2</span>
+              Choose checks
+              <span className="ml-auto text-sm font-normal text-ink-faint">
+                {selected} of {ORDER.length}
+              </span>
+            </h2>
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Checks to run</legend>
+              {ORDER.map((id) => (
+                <Toggle key={id} checked={tools[id]} onChange={(v) => setTools((t) => ({ ...t, [id]: v }))} label={TOOL_LABEL[id]} hint={TOOL_HINT[id]} />
+              ))}
+            </fieldset>
+
+            <details className="mt-4 rounded-lg border border-rule">
+              <summary className="cursor-pointer px-3 py-2.5 font-semibold">More options</summary>
+              <div className="space-y-4 border-t border-rule px-3 py-3">
+                <fieldset className="space-y-3">
+                  <legend className="sr-only">Outside services</legend>
+                  <Checkbox
+                    checked={external}
+                    onChange={setExternal}
+                    label="Search scholarly databases"
+                    hint="Needed for plagiarism search, reference checks and source suggestions. Asks before sending anything."
+                  />
+                  <Checkbox
+                    checked={useLlm && hasLlm}
+                    onChange={setUseLlm}
+                    disabled={!hasLlm}
+                    label={`Use the language model${status?.llmModel ? ` (${status.llmModel})` : ""}`}
+                    hint={hasLlm ? "For rewrite suggestions and a second opinion on writing patterns." : "None configured; rewrites fall back to light rule-based edits."}
+                  />
+                </fieldset>
+                <LibraryPicker items={library} onChange={setLibrary} serverCount={status?.libraryDocuments ?? 0} />
+              </div>
+            </details>
+
+            <Button className="mt-5 h-12 w-full text-base" onClick={() => void go()} disabled={!text.trim() || selected === 0}>
+              Check paper <ArrowRightIcon />
+            </Button>
+            <p className="mt-2 text-center text-sm text-ink-faint">
+              {words ? `${words.toLocaleString("en")} words ready to check` : "Add your paper to start"}
+            </p>
+          </section>
+
+          <p className="flex items-start gap-2 px-1 text-sm text-ink-soft">
+            <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
+            Your paper is processed in memory and never stored. Only short passages are sent to search services, and only after you agree.
+          </p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => void go()} busy={busy} disabled={!text.trim() || !Object.values(tools).some(Boolean)}>
-          {busy ? "Building the report" : "Build the report"}
-        </Button>
-        {busy && (
-          <>
-            <p role="status" className="text-sm text-ink-soft">
-              Searching and checking; long papers can take a few minutes. <Elapsed />
-            </p>
-            <Button variant="quiet" onClick={cancel}>
-              Cancel
-            </Button>
-          </>
-        )}
-      </div>
-      {error && <Notice kind="error">{error}</Notice>}
-
-      {result && checked && (
-        <article aria-labelledby="report-h" className="space-y-12">
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 id="report-h" className="font-serif text-3xl font-semibold">
-                  Report
-                </h2>
-                <p className="text-sm text-ink-faint">
-                  {result.words.toLocaleString("en")} words, generated {new Date(result.generatedAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => download("veritome-report.md", "text/markdown", reportToMarkdown(result))}>
-                  Download Markdown
-                </Button>
-                <Button variant="secondary" onClick={() => download("veritome-report.json", "application/json", JSON.stringify(result, null, 2))}>
-                  Download JSON
-                </Button>
-              </div>
-            </div>
-            <ul className="divide-y divide-rule rounded-sm bg-page">
-              {ORDER.map((id) => {
-                const o = result.overview.find((x) => x.tool === id);
-                if (!o) return null;
-                const st = STATUS[o.status];
-                return (
-                  <li key={id} className="grid gap-1 px-4 py-3 sm:grid-cols-[14rem_10rem_1fr] sm:items-baseline sm:gap-4">
-                    <a href={`#sec-${id}`} className="font-semibold text-action underline-offset-4 hover:underline">
-                      {TOOL_LABEL[id]}
-                    </a>
-                    <span className={cx("w-fit rounded px-2 py-0.5 text-sm font-semibold", st.cls)}>
-                      <span aria-hidden>{st.icon} </span>
-                      {st.text}
-                    </span>
-                    <span className="text-ink-soft">{o.headline}</span>
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="text-sm text-ink-faint">{result.disclaimer}</p>
-          </section>
-
-          <section id="sec-plagiarism" aria-labelledby="h-plag" className="scroll-mt-6 space-y-4">
-            <h2 id="h-plag" className="font-serif text-2xl font-semibold">
-              Plagiarism
-            </h2>
-            <SectionBody s={result.plagiarism}>{(r) => <PlagiarismResultView text={checked} report={r} />}</SectionBody>
-          </section>
-
-          <section id="sec-detector" aria-labelledby="h-det" className="scroll-mt-6 space-y-4">
-            <h2 id="h-det" className="font-serif text-2xl font-semibold">
-              AI writing patterns
-            </h2>
-            <SectionBody s={result.detector}>{(r) => <DetectorResultView text={checked} result={r} />}</SectionBody>
-          </section>
-
-          <section id="sec-citations" aria-labelledby="h-cit" className="scroll-mt-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="h-cit" className="font-serif text-2xl font-semibold">
-                Citations
-              </h2>
-              <StylePicker value={style} onChange={setStyle} />
-            </div>
-            <SectionBody s={result.citations}>
-              {(c) => (
-                <div className="space-y-6">
-                  {c.verification ? (
-                    <VerifyView result={c.verification} crossCheck={c.crossCheck} />
-                  ) : (
-                    <>
-                      <Notice kind="info">{c.verificationSkipped}</Notice>
-                      <CrossCheckView check={c.crossCheck} />
-                    </>
-                  )}
-                  <div>
-                    <h3 className="font-semibold">Sentences that may need a citation ({c.claims.length})</h3>
-                    <ol className="mt-2 space-y-3">
-                      {c.claims.map((cl) => {
-                        const sug = c.suggestions.find((s) => s.claim.start === cl.start);
-                        return (
-                          <li key={cl.start} className="rounded bg-page px-4 py-3">
-                            <p className="font-serif">
-                              <span className="mark mark-cite">{cl.text}</span>
-                            </p>
-                            <p className="mt-1 text-sm text-ink-soft">Why: {cl.reasons.join("; ")}.</p>
-                            {sug && sug.suggestions.length > 0 && (
-                              <div className="mt-3 space-y-3">
-                                <p className="text-sm font-semibold">Papers to look at (check they support the claim)</p>
-                                {sug.suggestions.map((s) => (
-                                  <div key={s.work.doi ?? s.work.title} className="border-l-4 border-cite pl-3">
-                                    <WorkCitation work={s.work} style={style} />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  </div>
-                </div>
-              )}
-            </SectionBody>
-          </section>
-
-          <section id="sec-grammar" aria-labelledby="h-gram" className="scroll-mt-6 space-y-4">
-            <h2 id="h-gram" className="font-serif text-2xl font-semibold">
-              Grammar and style
-            </h2>
-            <SectionBody s={result.grammar}>
-              {(g) => (
-                <div className="space-y-3">
-                  <p className="text-ink-soft">
-                    {g.summary.total} issues ({g.summary.bySeverity.error} likely errors), {g.summary.issuesPer1000Words} per 1,000 words. Readability:{" "}
-                    {g.metrics.level}. Open the Grammar tool to fix them one by one.
-                  </p>
-                  <ul className="columns-1 gap-6 text-sm md:columns-2">
-                    {g.issues.slice(0, 40).map((i) => (
-                      <li key={i.id} className="mb-2 break-inside-avoid rounded border-l-4 border-grammar bg-page px-3 py-1.5">
-                        <span className="font-serif">“{i.text}”</span> {i.message}
-                        {i.suggestions[0] !== undefined && <span className="text-ok"> Try: “{i.suggestions[0] || "delete"}”.</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  {g.issues.length > 40 && <p className="text-sm text-ink-faint">and {g.issues.length - 40} more.</p>}
-                </div>
-              )}
-            </SectionBody>
-          </section>
-
-          {(["paraphrase", "humanise"] as const).map((key) => (
-            <section key={key} id={`sec-${key}`} aria-labelledby={`h-${key}`} className="scroll-mt-6 space-y-4">
-              <h2 id={`h-${key}`} className="font-serif text-2xl font-semibold">
-                {TOOL_LABEL[key]}
-              </h2>
-              <SectionBody s={result[key]}>
-                {(list) =>
-                  list.length === 0 ? (
-                    <p className="text-ink-soft">{key === "paraphrase" ? "No matched passages needed a rewrite." : "No paragraph was formulaic enough to suggest a revision."}</p>
-                  ) : (
-                    <div className="space-y-8">
-                      {list.map((sg) => (
-                        <div key={sg.start} className="space-y-2">
-                          <p className="font-semibold">{sg.reason}</p>
-                          <RewriteResultView result={sg.result} compact />
-                        </div>
-                      ))}
-                    </div>
-                  )
-                }
-              </SectionBody>
-            </section>
-          ))}
-        </article>
-      )}
     </div>
   );
 }

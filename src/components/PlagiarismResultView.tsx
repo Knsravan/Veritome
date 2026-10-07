@@ -27,15 +27,22 @@ export function PlagiarismSummary({ report }: { report: PlagiarismReport }) {
   );
 }
 
+/** Numbers sources 1 to 6 in report order so each gets its own highlight colour; later ones share the last colours. */
+export function sourceColours(report: PlagiarismReport): Map<string, number> {
+  return new Map(report.sources.map((s, i) => [s.id, (i % 6) + 1]));
+}
+
 export function PlagiarismResultView({ text, report }: { text: string; report: PlagiarismReport }) {
   const [active, setActive] = useState<number | null>(null);
   const byId = new Map(report.sources.map((s) => [s.id, s]));
+  const colour = sourceColours(report);
   const marks: TextMark[] = report.spans.map((s, i) => ({
     id: `m${i}`,
     start: s.start,
     end: s.end,
     className: "mark-match",
     label: `Matches ${byId.get(s.sourceIds[0] ?? "")?.title ?? "a source"}`,
+    ...(colour.has(s.sourceIds[0] ?? "") ? { group: colour.get(s.sourceIds[0] ?? "")! } : {}),
   }));
   marks.push(
     ...report.paraphrases.map((pm, i) => ({
@@ -44,6 +51,7 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
       end: pm.end,
       className: "mark-para",
       label: `Reworded from ${byId.get(pm.sourceId)?.title ?? "a source"}`,
+      ...(colour.has(pm.sourceId) ? { group: colour.get(pm.sourceId)! } : {}),
     })),
   );
   const [activePara, setActivePara] = useState<number | null>(null);
@@ -60,6 +68,7 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
             <>
               <p className="mb-4 text-sm text-ink-faint">
                 <span className="mark mark-match px-1">Highlighted</span>: word for word. <span className="mark mark-para px-1">Dotted</span>: reworded.
+                Colours match the numbered sources.
               </p>
               <AnnotatedText
                 text={text}
@@ -113,37 +122,44 @@ export function PlagiarismResultView({ text, report }: { text: string; report: P
               <p className="mt-1 text-sm text-ink-soft">None of the searched sources shared a run of words with your text.</p>
             ) : (
               <ol className="mt-2 space-y-2">
-                {report.sources.map((s) => (
-                  <li key={s.id} className="rounded bg-page px-3 py-2 text-sm">
-                    <div className="flex items-baseline justify-between gap-3">
-                      {s.url ? (
-                        <a href={s.url} target="_blank" rel="noreferrer" className="font-semibold text-action underline-offset-4 hover:underline">
-                          {s.title}
-                        </a>
-                      ) : (
-                        <span className="font-semibold">{s.title}</span>
-                      )}
-                      <span className="shrink-0 tabular-nums">{s.percent}%</span>
+                {report.sources.map((s, n) => (
+                  <li key={s.id} className="card px-3 py-2.5 text-sm" data-src={colour.get(s.id)}>
+                    <div className="flex items-start gap-3">
+                      <span className="src-badge mt-0.5 shrink-0" aria-label={`Source ${n + 1}`}>
+                        {n + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-3">
+                          {s.url ? (
+                            <a href={s.url} target="_blank" rel="noreferrer" className="font-semibold text-action underline-offset-4 hover:underline">
+                              {s.title}
+                            </a>
+                          ) : (
+                            <span className="font-semibold">{s.title}</span>
+                          )}
+                          <span className="shrink-0 tabular-nums">{s.percent}%</span>
+                        </div>
+                        <div aria-hidden className="mt-1 h-1.5 rounded-full bg-desk-deep">
+                          <div className="h-full rounded-full bg-[var(--src-line,var(--mark-match-line))]" style={{ width: `${Math.min(100, Math.max(2, s.percent))}%` }} />
+                        </div>
+                        <p className="mt-1 text-ink-faint">
+                          {[s.authors, s.year, s.provider].filter(Boolean).join(" · ")} · {s.matchedWords} words
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-1 text-action underline-offset-4 hover:underline print:hidden"
+                          onClick={() => {
+                            const i = report.spans.findIndex((sp) => sp.sourceIds.includes(s.id));
+                            if (i >= 0) {
+                              setActive(i);
+                              focusMark(`m${i}`);
+                            }
+                          }}
+                        >
+                          Show in text
+                        </button>
+                      </div>
                     </div>
-                    <div aria-hidden className="mt-1 h-1.5 rounded-full bg-desk-deep">
-                      <div className="h-full rounded-full bg-match-line" style={{ width: `${Math.min(100, Math.max(2, s.percent))}%` }} />
-                    </div>
-                    <p className="mt-1 text-ink-faint">
-                      {[s.authors, s.year, s.provider].filter(Boolean).join(", ")}, {s.matchedWords} words
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-1 text-action underline-offset-4 hover:underline"
-                      onClick={() => {
-                        const i = report.spans.findIndex((sp) => sp.sourceIds.includes(s.id));
-                        if (i >= 0) {
-                          setActive(i);
-                          focusMark(`m${i}`);
-                        }
-                      }}
-                    >
-                      Show in text
-                    </button>
                   </li>
                 ))}
               </ol>

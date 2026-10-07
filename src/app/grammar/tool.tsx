@@ -6,23 +6,12 @@ import { useConsent } from "@/components/Consent";
 import { TextSource } from "@/components/TextSource";
 import { Button, Checkbox, Limits, Notice, ProofLayout, Sheet, ToolHeader, Warnings, cx } from "@/components/ui";
 import type { GrammarCheckResult } from "@/core/grammar/check";
-import type { Issue, IssueCategory } from "@/core/grammar/types";
+import type { Issue } from "@/core/grammar/types";
 import { postJson } from "@/lib/api";
 import { applyIssueFix } from "@/lib/fixes";
+import { CATEGORY_LABEL, SEVERITY_LABEL } from "@/lib/grammar-labels";
 import { useSettings } from "@/lib/settings";
 import { useRun } from "@/lib/useRun";
-
-const CATEGORY_LABEL: Record<IssueCategory, string> = {
-  spelling: "Spelling",
-  grammar: "Grammar",
-  punctuation: "Punctuation",
-  style: "Style",
-  clarity: "Clarity",
-  academic: "Academic register",
-  consistency: "Consistency",
-};
-
-const SEVERITY_LABEL = { error: "Likely error", warning: "Worth a look", info: "Suggestion" } as const;
 
 export function GrammarTool() {
   const [text, setText] = useState("");
