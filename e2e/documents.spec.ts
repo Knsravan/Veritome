@@ -37,8 +37,9 @@ function pdf(): Buffer {
 
 async function upload(page: Page, name: string, buffer: Buffer, mimeType: string) {
   await page.goto("/plagiarism");
-  await page.getByLabel("Upload a file").setInputFiles({ name, mimeType, buffer });
-  await expect(page.getByRole("textbox", { name: "Your text" })).toHaveValue(/profound learning/);
+  await page.getByLabel("Upload your paper").setInputFiles({ name, mimeType, buffer });
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
+  await expect(page.getByText(name)).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible({ timeout: 30_000 });

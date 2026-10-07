@@ -8,12 +8,11 @@ import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
 import { ORDER } from "@/components/report/labels";
 import { ReportProgress, type ProgressState, type StepState } from "@/components/report/ReportProgress";
 import { ReportView } from "@/components/report/ReportView";
-import { TextSource } from "@/components/TextSource";
+import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
 import { Button, Checkbox, Notice, cx } from "@/components/ui";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
 import { ApiError, postNdjson } from "@/lib/api";
-import { SAMPLE_PAPER } from "@/lib/sample";
-import type { DocModel } from "@/lib/doc/model";
+import { sampleDocx } from "@/lib/sample-file";
 import type { ImageReport } from "@/lib/images/analyze";
 import { reviewReport } from "@/core/plagiarism/review";
 import { useHasLlm, useSettings } from "@/lib/settings";
@@ -61,9 +60,11 @@ function Toggle({ checked, onChange, label, hint, locked }: { checked: boolean; 
  */
 export function PlagiarismTool() {
   const [phase, setPhase] = useState<Phase>("compose");
-  const [text, setText] = useState("");
+  const [paper, setPaper] = useState<LoadedPaper | null>(null);
+  const text = paper?.text ?? "";
+  const doc = paper?.doc ?? null;
+  const [wantSample] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("sample") === "1");
   const [checked, setChecked] = useState("");
-  const [doc, setDoc] = useState<DocModel | null>(null);
   const [images, setImages] = useState<ImageReport | null>(null);
   const [extras, setExtras] = useState<Record<Extra, boolean>>({ detector: true, citations: true, grammar: true, rewrites: true });
   const [external, setExternal] = useState(true);
@@ -83,9 +84,6 @@ export function PlagiarismTool() {
   const web = status?.webSearch ?? [];
 
   useEffect(() => () => ctrl.current?.abort(), []);
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("sample") === "1") setText(SAMPLE_PAPER);
-  }, []);
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [phase]);
@@ -182,7 +180,15 @@ export function PlagiarismTool() {
   };
 
   if (phase === "running" && progress) {
-    return <ReportProgress order={ORDER} state={progress} words={countWords(checked)} onCancel={cancel} />;
+    return (
+      <ReportProgress
+        order={ORDER}
+        state={progress}
+        words={countWords(checked)}
+        onCancel={cancel}
+        {...(paper ? { fileName: paper.name, kind: paper.kind, preview: paper.thumb ?? null } : {})}
+      />
+    );
   }
 
   if (phase === "done" && report) {
@@ -214,7 +220,7 @@ export function PlagiarismTool() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <section aria-label="Your paper" className="card animate-fade-up p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
-          <TextSource value={text} onChange={setText} onDocument={setDoc} rows={18} />
+          <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} {...(wantSample ? { initialFile: sampleDocx } : {})} />
         </section>
 
         <div className="animate-fade-up space-y-4 lg:sticky lg:top-24" style={{ ["--i" as string]: 3 }}>

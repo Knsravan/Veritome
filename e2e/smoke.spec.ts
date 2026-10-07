@@ -27,7 +27,8 @@ test("the old full-report address opens the plagiarism check", async ({ page }) 
   await page.goto("/report?sample=1");
   await expect(page).toHaveURL(/\/plagiarism\?sample=1$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Plagiarism check");
-  await expect(page.getByRole("textbox", { name: "Your text" })).not.toHaveValue("");
+  await expect(page.getByText("Sample paper.docx")).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveCount(1); // only the optional author field, no paste box
 });
 
 test("theme switch flips between light and dark and is remembered", async ({ page }) => {
@@ -83,7 +84,8 @@ test("external checks ask for consent first, and cancelling sends nothing", asyn
     if (r.url().includes("/api/report") || r.url().includes("/api/plagiarism")) calls++;
   });
   await page.goto("/plagiarism");
-  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByRole("button", { name: "Try a sample paper" }).click();
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Check my paper" }).click();
   const dialog = page.getByRole("dialog", { name: "Send parts of your text to search services?" });
   await expect(dialog).toBeVisible();
@@ -95,7 +97,8 @@ test("external checks ask for consent first, and cancelling sends nothing", asyn
 
 test("offline plagiarism check against the user's own text runs without consent", async ({ page }) => {
   await page.goto("/plagiarism");
-  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByRole("button", { name: "Try a sample paper" }).click();
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible({ timeout: 30_000 });
@@ -113,9 +116,12 @@ test("offline plagiarism check against the user's own text runs without consent"
 
 test("disguised letters and paraphrasing-tool phrases are flagged", async ({ page }) => {
   await page.goto("/plagiarism");
-  await page
-    .getByLabel("Your text")
-    .fill("We trained a profound learning model on soil data from twelve sites. The rеsults shоw that respiration stayed high into October across every site we measured.");
+  await page.getByLabel("Upload your paper").setInputFiles({
+    name: "draft.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("We trained a profound learning model on soil data from twelve sites. The rеsults shоw that respiration stayed high into October across every site we measured."),
+  });
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible({ timeout: 30_000 });
@@ -154,7 +160,8 @@ test("plagiarism results explain each finding and update when filtered", async (
     route.fulfill({ status: 200, contentType: "application/x-ndjson", body: `${JSON.stringify({ type: "step", tool: "plagiarism", done: 1, total: 1 })}\n${JSON.stringify({ type: "result", report: paper })}\n` }),
   );
   await page.goto("/plagiarism");
-  await page.getByLabel("Your text").fill("x".repeat(60) + " " + "y".repeat(39));
+  await page.getByLabel("Upload your paper").setInputFiles({ name: "paper.txt", mimeType: "text/plain", buffer: Buffer.from("A short paper with a dozen words in it for this mocked check.") });
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await page.getByRole("tab", { name: /^Similarity/ }).click();
@@ -175,7 +182,8 @@ test("plagiarism results explain each finding and update when filtered", async (
 
 test("full report runs offline, shows tabs and offers downloads @mobile", async ({ page }) => {
   await page.goto("/plagiarism");
-  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByRole("button", { name: "Try a sample paper" }).click();
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeAttached({ timeout: 30_000 });
@@ -219,7 +227,8 @@ test("report shows live progress while checking", async ({ page }) => {
     await route.fulfill({ status: 200, contentType: "application/x-ndjson", body: lines.map((l) => JSON.stringify(l)).join("\n") + "\n" });
   });
   await page.goto("/plagiarism");
-  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByRole("button", { name: "Try a sample paper" }).click();
+  await expect(page.getByText("Ready to check", { exact: true })).toBeVisible();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   // The fake stream ends without a result, so the page reports that clearly instead of hanging.
