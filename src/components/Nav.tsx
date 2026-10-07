@@ -43,7 +43,7 @@ export function SiteHeader() {
       <div className={cx("mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6", scrolled ? "h-14" : "h-[4.5rem]")}>
         <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-lg" aria-label="Veritome home">
           <span className="transition-transform duration-300 group-hover:-rotate-6">
-            <LogoMark />
+            <LogoMark size={30} mode="intro" />
           </span>
           <span className="font-display text-[1.25rem] font-bold tracking-tight">Veritome</span>
         </Link>
