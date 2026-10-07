@@ -6,6 +6,7 @@ import { cleanPhrase, type OpenAlexClient } from "../citations/sources/openalex.
 import type { SemanticScholarClient } from "../citations/sources/semanticscholar.ts";
 import type { Work } from "../citations/types.ts";
 import type { Passage } from "./passages.ts";
+import { isStopword } from "../text/tokens.ts";
 
 export type SourceKind = "scholarly" | "web" | "library" | "self";
 
@@ -249,6 +250,15 @@ interface CoreWork {
   downloadUrl?: string;
 }
 
+/** CORE query for a phrase: its distinctive words joined with AND (CORE rejects quoted phrases). */
+export function coreQuery(phrase: string): string {
+  const words = cleanPhrase(phrase)
+    .split(" ")
+    .filter((w) => w.length >= 3 && !isStopword(w.toLowerCase()))
+    .slice(0, 10);
+  return words.length >= 3 ? words.join(" AND ") : "";
+}
+
 /** CORE aggregates the full text of open-access papers from thousands of repositories. Needs a free key. */
 export function coreProvider(http: Http, apiKey: string, options: { baseUrl?: string } = {}): SourceProvider {
   const base = (options.baseUrl ?? "https://api.core.ac.uk/v3").replace(/\/+$/, "");
@@ -258,7 +268,11 @@ export function coreProvider(http: Http, apiKey: string, options: { baseUrl?: st
     coverage: "Full text of over 30 million open-access papers from university and subject repositories.",
     async search(p) {
       for (const phrase of phrasesOf(p)) {
-        const data = await http.json<{ results?: CoreWork[] }>(`${base}/search/works?q=${encodeURIComponent(`"${cleanPhrase(phrase)}"`)}&limit=3`, {
+        // CORE answers HTTP 500 to quoted phrases, so the phrase's distinctive words are joined with AND;
+        // our own matcher then checks the full text for the exact wording.
+        const q = coreQuery(phrase);
+        if (!q) continue;
+        const data = await http.json<{ results?: CoreWork[] }>(`${base}/search/works?q=${encodeURIComponent(q)}&limit=3`, {
           headers: { authorization: `Bearer ${apiKey}` },
         });
         const results = (data.results ?? []).filter((r) => r.fullText || r.abstract);
