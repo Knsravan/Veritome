@@ -9,7 +9,7 @@ export type ConsentPurpose = "plagiarism" | "citations" | "report" | "grammar";
 const ConsentContext = createContext<Ask | null>(null);
 
 const WHAT_IS_SENT: Record<ConsentPurpose, string> = {
-  plagiarism: "Up to 24 short passages from your text (about 10 to 30 words each) are sent as search queries.",
+  plagiarism: "Short phrases and keywords from up to 40 parts of your text are sent as search queries.",
   citations: "Your reference entries, or the claim you selected, are sent as search queries.",
   report: "Short passages from your text, your reference entries and a few uncited claims are sent as search queries.",
   grammar: "Your whole text is sent to the public LanguageTool service (LanguageTool GmbH, Germany) for grammar and spelling checks.",

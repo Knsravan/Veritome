@@ -96,7 +96,7 @@ function scores(r: PaperReport): Score[] {
           value: `${p.result.similarity}`,
           unit: "%",
           meter: p.result.similarity,
-          note: `${p.result.sources.filter((s) => s.kind !== "self").length} matching sources${p.result.paraphrasePercent > 0 ? `, ${p.result.paraphrasePercent}% reworded` : ""}`,
+          note: `${p.result.sources.filter((s) => s.kind !== "self" && s.primaryWords > 0).length} matching sources${p.result.paraphrasePercent > 0 ? `, ${p.result.paraphrasePercent}% reworded` : ""}`,
         }
       : { tab: "similarity", tool: "plagiarism", label: "Similarity", value: "–", note: p.status === "skipped" ? "Not run" : "Check failed" },
   );
