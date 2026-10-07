@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { TOOLS } from "@/lib/tools";
-import { ArrowRightIcon, LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
+import { ThemeToggle } from "./ThemeToggle";
+import { LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
 import { cx } from "./ui";
 
 const LINKS = TOOLS.map((t) => ({ href: t.href, name: t.name }));
@@ -57,8 +58,8 @@ export function SiteHeader() {
                     href={l.href}
                     aria-current={active ? "page" : undefined}
                     className={cx(
-                      "block rounded-full px-3.5 py-1.5 text-[0.9rem] font-medium whitespace-nowrap transition-colors duration-200",
-                      active ? "bg-ink text-page" : "text-ink-soft hover:bg-desk-deep hover:text-ink",
+                      "block rounded-full px-3.5 py-1.5 text-[0.9rem] font-medium whitespace-nowrap transition-[background-color,color,transform] duration-300 active:scale-95",
+                      active ? "bg-ink text-page shadow-sm" : "text-ink-soft hover:bg-desk-deep hover:text-ink",
                     )}
                   >
                     {l.name}
@@ -79,14 +80,7 @@ export function SiteHeader() {
             <SettingsIcon />
             <span className="sr-only">Settings</span>
           </Link>
-          <Link
-            href="/report"
-            aria-current={path === "/report" ? "page" : undefined}
-            className="group inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-4 text-[0.9rem] font-semibold whitespace-nowrap text-action-ink shadow-[0_6px_16px_-6px_var(--action)] transition-transform duration-200 hover:-translate-y-px active:scale-[0.97]"
-          >
-            Check a paper
-            <ArrowRightIcon size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" />
-          </Link>
+          <ThemeToggle />
           <button
             type="button"
             className="inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-desk-deep lg:hidden"

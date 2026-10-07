@@ -2,161 +2,194 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useConsent } from "@/components/Consent";
-import { ArrowLeftIcon, ArrowRightIcon, ShieldIcon } from "@/components/icons";
+import { ArrowRightIcon, CheckIcon, ShieldIcon } from "@/components/icons";
 import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
-import { PlagiarismResultView } from "@/components/PlagiarismResultView";
+import { ORDER } from "@/components/report/labels";
+import { ReportProgress, type ProgressState, type StepState } from "@/components/report/ReportProgress";
+import { ReportView } from "@/components/report/ReportView";
 import { TextSource } from "@/components/TextSource";
-import { Button, Checkbox, Notice } from "@/components/ui";
-import type { DetectorResult } from "@/core/detector/types";
-import type { PlagiarismReport } from "@/core/plagiarism/types";
-import { ApiError, postJson, postNdjson } from "@/lib/api";
-import { useSettings } from "@/lib/settings";
+import { Button, Checkbox, Notice, cx } from "@/components/ui";
+import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
+import { ApiError, postNdjson } from "@/lib/api";
+import { SAMPLE_PAPER } from "@/lib/sample";
+import { useHasLlm, useSettings } from "@/lib/settings";
 
-type Event = { type: "step"; done: number; total: number } | { type: "result"; report: PlagiarismReport } | { type: "error"; error: string };
+type Phase = "compose" | "running" | "done";
+type Extra = "detector" | "citations" | "grammar" | "rewrites";
 
-function Progress({ done, total, onCancel }: { done: number; total: number; onCancel: () => void }) {
-  const [s, setS] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setS((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const pct = total ? Math.round((done / total) * 100) : 0;
+const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+
+const EXTRAS: Array<{ id: Extra; label: string; hint: string }> = [
+  { id: "detector", label: "AI writing", hint: "How much of the text reads as AI-written, paragraph by paragraph." },
+  { id: "citations", label: "References and citations", hint: "Looks up every reference, flags retractions and finds claims without a citation." },
+  { id: "grammar", label: "Grammar and spelling", hint: "Grammar, spelling, academic style and readability." },
+  { id: "rewrites", label: "Rewrite suggestions", hint: "Suggested rewrites for copied passages and formulaic paragraphs." },
+];
+
+function Toggle({ checked, onChange, label, hint, locked }: { checked: boolean; onChange?: (v: boolean) => void; label: string; hint: string; locked?: boolean }) {
   return (
-    <section aria-labelledby="pl-progress" className="card mx-auto max-w-xl p-6 sm:p-8">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 id="pl-progress" className="font-display text-2xl font-semibold">
-          Searching for matching text
-        </h2>
-        <span className="text-sm text-ink-faint tabular-nums">{s}s</span>
-      </div>
-      <p className="mt-1 text-sm text-ink-soft">
-        {total ? `${done} of ${total} searches done.` : "Choosing distinctive passages to search for…"} Every source found is then compared with all of your text.
-      </p>
-      <div role="progressbar" aria-label="Search progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-5 h-2 overflow-hidden rounded-full bg-desk-deep">
-        <div className="h-full rounded-full bg-action transition-[width] duration-500" style={{ width: `${Math.max(3, pct)}%` }} />
-      </div>
-      <div className="mt-6 flex items-center justify-between gap-4 border-t border-rule pt-4">
-        <p className="text-sm text-ink-faint">Usually under two minutes. Your text is not stored.</p>
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </section>
+    <label
+      className={cx(
+        "group flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-[background-color,border-color,transform] duration-200",
+        locked ? "cursor-default" : "cursor-pointer hover:-translate-y-px",
+        checked ? "border-action/50 bg-action-soft/60" : "border-rule hover:bg-desk",
+      )}
+    >
+      <input
+        type="checkbox"
+        className="mt-1 size-4 shrink-0 accent-[var(--action)]"
+        checked={checked}
+        disabled={locked}
+        onChange={(e) => onChange?.(e.target.checked)}
+      />
+      <span>
+        <span className="font-semibold">{label}</span>
+        {locked && <span className="ml-2 rounded-full bg-action px-2 py-px text-[0.7rem] font-semibold text-action-ink">Always on</span>}
+        <span className="block text-sm text-ink-soft">{hint}</span>
+      </span>
+    </label>
   );
 }
 
+/**
+ * The plagiarism check is the full paper check: matching passages are always searched, and the AI-writing,
+ * reference, grammar and rewrite checks run alongside by default, all in one report.
+ */
 export function PlagiarismTool() {
+  const [phase, setPhase] = useState<Phase>("compose");
   const [text, setText] = useState("");
   const [checked, setChecked] = useState("");
+  const [extras, setExtras] = useState<Record<Extra, boolean>>({ detector: true, citations: true, grammar: true, rewrites: true });
   const [external, setExternal] = useState(true);
   const [excludeQuotes, setExcludeQuotes] = useState(true);
   const [excludeReferences, setExcludeReferences] = useState(true);
+  const [useLlm, setUseLlm] = useState(true);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
-  const [result, setResult] = useState<PlagiarismReport | null>(null);
-  const [checkAi, setCheckAi] = useState(true);
-  const [ai, setAi] = useState<DetectorResult | null>(null);
+  const [report, setReport] = useState<PaperReport | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
   const ctrl = useRef<AbortController | null>(null);
-  const { settings, update, status } = useSettings();
+  const { settings, update, status, llmFields } = useSettings();
+  const hasLlm = useHasLlm();
   const consent = useConsent();
+  const words = countWords(text);
   const web = status?.webSearch ?? [];
 
   useEffect(() => () => ctrl.current?.abort(), []);
-  const phase = step ? "running" : result ? "done" : "compose";
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("sample") === "1") setText(SAMPLE_PAPER);
+  }, []);
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [phase]);
 
+  const tools: Record<ToolId, boolean> = {
+    plagiarism: true,
+    detector: extras.detector,
+    citations: extras.citations,
+    grammar: extras.grammar,
+    paraphrase: extras.rewrites,
+    humanise: extras.rewrites && extras.detector,
+  };
+
   const go = async () => {
-    if (external && !(await consent("plagiarism"))) return;
+    if (external && !(await consent("report"))) return;
     ctrl.current?.abort();
     const c = new AbortController();
     ctrl.current = c;
+    const steps = Object.fromEntries(ORDER.map((id) => [id, tools[id] ? "waiting" : "off"])) as Record<ToolId, StepState>;
+    setProgress({ steps });
     setError(null);
-    setResult(null);
-    setAi(null);
-    setStep({ done: 0, total: 0 });
-    // The AI check runs on this server only (no language model), alongside the search; it does not need consent.
-    const aiCheck = checkAi ? postJson<DetectorResult>("/api/detect", { text, useLlm: false }, c.signal).catch(() => null) : Promise.resolve(null);
     setChecked(text);
-    let report: PlagiarismReport | null = null;
+    setPhase("running");
+    let finished: PaperReport | null = null;
     try {
-      await postNdjson<Event>(
-        "/api/plagiarism",
-        { text, external, consent: external, web: settings.webSearch, excludeQuotes, excludeReferences, library, stream: true },
+      await postNdjson<ReportEvent>(
+        "/api/report",
+        {
+          text,
+          tools,
+          external,
+          consent: external,
+          web: settings.webSearch,
+          excludeQuotes,
+          excludeReferences,
+          useLlm: useLlm && hasLlm,
+          library,
+          stream: true,
+          ...llmFields(),
+        },
         (ev) => {
-          if (ev.type === "step") setStep({ done: ev.done, total: ev.total });
-          else if (ev.type === "result") report = ev.report;
-          else throw new ApiError(ev.error, 500);
+          if (ev.type === "progress") {
+            setProgress((p) => (p ? { ...p, steps: { ...p.steps, [ev.tool]: p.steps[ev.tool] === "off" ? "off" : ev.state === "start" ? "running" : "done" } } : p));
+          } else if (ev.type === "step" && ev.tool === "plagiarism") {
+            setProgress((p) => (p ? { ...p, plagiarism: { done: ev.done, total: ev.total } } : p));
+          } else if (ev.type === "result") {
+            finished = ev.report;
+          } else if (ev.type === "error") {
+            throw new ApiError(ev.error, 500);
+          }
         },
         c.signal,
       );
       if (c.signal.aborted) return;
-      if (!report) throw new ApiError("The check stopped before it finished. Try again.", 0);
-      setAi(await aiCheck);
-      setResult(report);
+      if (!finished) throw new ApiError("The check stopped before the report was ready. Try again, or with fewer checks at once.", 0);
+      setReport(finished);
+      setPhase("done");
     } catch (err) {
-      if (!c.signal.aborted) setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      if (ctrl.current === c) setStep(null);
+      if (c.signal.aborted) return;
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setPhase("compose");
     }
   };
 
-  if (step) {
-    return (
-      <Progress
-        done={step.done}
-        total={step.total}
-        onCancel={() => {
-          ctrl.current?.abort();
-          setStep(null);
-        }}
-      />
-    );
+  const cancel = () => {
+    ctrl.current?.abort();
+    setPhase("compose");
+  };
+
+  if (phase === "running" && progress) {
+    return <ReportProgress order={ORDER} state={progress} words={countWords(checked)} onCancel={cancel} />;
   }
 
-  if (result && checked) {
-    return (
-      <article aria-labelledby="pl-result" className="space-y-6">
-        <header className="flex flex-col gap-4 border-b border-rule pb-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <button type="button" onClick={() => setResult(null)} className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-action hover:underline print:hidden">
-              <ArrowLeftIcon size={16} /> New check
-            </button>
-            <p className="text-sm font-semibold tracking-wide text-ink-faint uppercase">Veritome plagiarism report</p>
-            <h1 id="pl-result" className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              Similarity report
-            </h1>
-            <p className="mt-1 text-sm text-ink-soft">
-              {result.words.toLocaleString("en")} words checked · {new Date().toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}
-            </p>
-          </div>
-        </header>
-        <PlagiarismResultView text={checked} report={result} ai={ai} />
-      </article>
-    );
+  if (phase === "done" && report) {
+    return <ReportView report={report} text={checked} onNew={() => setPhase("compose")} />;
   }
 
   return (
     <div className="space-y-8">
       <header className="max-w-3xl">
-        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Plagiarism check</h1>
-        <p className="mt-2 text-lg text-ink-soft">
-          Finds passages that match published papers, the web or your own documents, checks how much reads as AI-written, and shows you exactly what to fix.
+        <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">Complete paper check</p>
+        <h1 className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]" style={{ ["--i" as string]: 1 }}>
+          Plagiarism check
+        </h1>
+        <p className="animate-fade-up mt-3 text-lg text-ink-soft" style={{ ["--i" as string]: 2 }}>
+          One check covers everything: copied and reworded passages, AI-written paragraphs, references and grammar. Every finding is marked in your
+          text with what to do about it.
         </p>
       </header>
+
       {error && (
         <Notice kind="error" title="The check did not finish">
           {error}
         </Notice>
       )}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className="card p-4 sm:p-6" aria-label="Your paper">
-          <TextSource value={text} onChange={setText} rows={16} />
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        <section aria-label="Your paper" className="card animate-fade-up p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
+          <TextSource value={text} onChange={setText} rows={18} />
         </section>
-        <div className="space-y-4 lg:sticky lg:top-24">
-          <section className="card space-y-5 p-4 sm:p-6" aria-label="Options">
+
+        <div className="animate-fade-up space-y-4 lg:sticky lg:top-24" style={{ ["--i" as string]: 3 }}>
+          <section aria-label="Options" className="card space-y-5 p-4 sm:p-6">
+            <fieldset className="space-y-2">
+              <legend className="mb-2 font-semibold">What to check</legend>
+              <Toggle checked locked label="Plagiarism" hint="Copied and reworded passages in published papers, the web and your documents." />
+              {EXTRAS.map((x) => (
+                <Toggle key={x.id} checked={extras[x.id]} onChange={(v) => setExtras((e) => ({ ...e, [x.id]: v }))} label={x.label} hint={x.hint} />
+              ))}
+            </fieldset>
+
             <fieldset className="space-y-3">
               <legend className="font-semibold">Compare against</legend>
               <Checkbox
@@ -173,32 +206,52 @@ export function PlagiarismTool() {
                 hint={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
               />
             </fieldset>
-            <fieldset className="space-y-3">
-              <legend className="font-semibold">Also check</legend>
-              <Checkbox
-                checked={checkAi}
-                onChange={setCheckAi}
-                label="AI writing"
-                hint="Shows how much of the text reads as AI-written. Runs on this server; nothing extra is sent anywhere."
-              />
-            </fieldset>
-            <fieldset className="space-y-3">
-              <legend className="font-semibold">Leave out of the score</legend>
-              <Checkbox checked={excludeQuotes} onChange={setExcludeQuotes} label="Quotations" hint="Quoted passages of 40 characters or more. They are still checked for a citation." />
-              <Checkbox checked={excludeReferences} onChange={setExcludeReferences} label="Reference list" />
-            </fieldset>
-            <LibraryPicker items={library} onChange={setLibrary} serverCount={status?.libraryDocuments ?? 0} />
+
+            <details className="group rounded-xl border border-rule">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 font-semibold">
+                More options
+                <span aria-hidden className="text-ink-faint transition-transform duration-200 group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <div className="animate-fade-in space-y-4 border-t border-rule px-3 py-3">
+                <fieldset className="space-y-3">
+                  <legend className="font-semibold">Leave out of the score</legend>
+                  <Checkbox checked={excludeQuotes} onChange={setExcludeQuotes} label="Quotations" hint="Quoted passages of 40 characters or more. They are still checked for a citation." />
+                  <Checkbox checked={excludeReferences} onChange={setExcludeReferences} label="Reference list" />
+                </fieldset>
+                <Checkbox
+                  checked={useLlm && hasLlm}
+                  onChange={setUseLlm}
+                  disabled={!hasLlm}
+                  label={`Use the language model${status?.llmModel ? ` (${status.llmModel})` : ""}`}
+                  hint={hasLlm ? "For better rewrite suggestions and a second opinion on AI writing." : "None configured; rewrites fall back to light rule-based edits."}
+                />
+                <LibraryPicker items={library} onChange={setLibrary} serverCount={status?.libraryDocuments ?? 0} />
+              </div>
+            </details>
+
             <Button className="h-12 w-full text-base" onClick={() => void go()} disabled={!text.trim()}>
-              Check for overlap <ArrowRightIcon />
+              Check my paper <ArrowRightIcon />
             </Button>
+            <p className="-mt-2 text-center text-sm text-ink-faint">
+              {words ? `${words.toLocaleString("en")} words ready to check` : "Add your paper to start"}
+            </p>
             {!external && library.length === 0 && (status?.libraryDocuments ?? 0) === 0 && (
-              <Notice kind="warn">With no sources selected, only repetition inside your own text is checked.</Notice>
+              <Notice kind="warn">With no sources selected, only repetition inside your own text is checked for plagiarism.</Notice>
             )}
           </section>
-          <p className="flex items-start gap-2 px-1 text-sm text-ink-soft">
-            <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-            Only short passages are sent to search services, and only after you agree. Nothing is stored.
-          </p>
+
+          <ul className="space-y-1.5 px-1 text-sm text-ink-soft">
+            <li className="flex items-start gap-2">
+              <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
+              Your paper is processed in memory and never stored.
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckIcon size={18} className="mt-0.5 shrink-0 text-ok" />
+              Only short passages are sent to search services, and only after you agree.
+            </li>
+          </ul>
         </div>
       </div>
     </div>

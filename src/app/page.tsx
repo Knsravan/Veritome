@@ -142,13 +142,13 @@ export default function Home() {
           </p>
           <div className="animate-fade-up mt-9 flex flex-wrap gap-3" style={{ ["--i" as string]: 3 }}>
             <Link
-              href="/report"
+              href="/plagiarism"
               className="group inline-flex h-12 items-center gap-2 rounded-xl bg-action px-6 font-semibold text-action-ink shadow-[0_10px_24px_-10px_var(--action)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               Check your paper <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
-              href="/report?sample=1"
+              href="/plagiarism?sample=1"
               className="inline-flex h-12 items-center rounded-xl border border-rule bg-page px-6 font-semibold shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
             >
               Try it with a sample
@@ -212,7 +212,7 @@ export default function Home() {
           <p className="mt-4 text-lg text-ink-soft">
             Not just a percentage. Every finding is sorted by how serious it is, shown in your text and explained in plain words.
           </p>
-          <Link href="/report?sample=1" className="group mt-6 inline-flex items-center gap-1.5 font-semibold text-action">
+          <Link href="/plagiarism?sample=1" className="group mt-6 inline-flex items-center gap-1.5 font-semibold text-action">
             See a sample report <ArrowRightIcon size={16} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </Reveal>
@@ -296,7 +296,7 @@ export default function Home() {
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-lg text-ink-soft">It takes a minute or two, and your text is never stored.</p>
         <Link
-          href="/report"
+          href="/plagiarism"
           className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-action px-7 font-semibold text-action-ink shadow-[0_10px_24px_-10px_var(--action)] transition-transform duration-200 hover:-translate-y-0.5"
         >
           Check your paper <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-1" />

@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
-import { ReportTool } from "./tool";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Full paper report" };
-
-export default function Page() {
-  return <ReportTool />;
+/** The full paper check now lives in the plagiarism tool; old links keep working. */
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
+  redirect(sp.sample === "1" ? "/plagiarism?sample=1" : "/plagiarism");
 }

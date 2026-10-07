@@ -29,7 +29,8 @@ export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }
     ...(llm ? { llm } : {}),
     ...(lt ? { languageTool: lt } : {}),
   };
-  if (body.stream !== true) return buildPaperReport(input, deps, { tools, signal: req.signal });
+  const exclude = { excludeQuotes: optionalBool(body, "excludeQuotes", true), excludeReferences: optionalBool(body, "excludeReferences", true) };
+  if (body.stream !== true) return buildPaperReport(input, deps, { tools, ...exclude, signal: req.signal });
 
   // Streamed as newline-delimited JSON so the page can show each check's progress while the report is built.
   return ndjsonStream(
@@ -37,6 +38,7 @@ export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }
     (send) =>
       buildPaperReport(input, deps, {
         tools,
+        ...exclude,
         signal: req.signal,
         onProgress: (tool, state) => send({ type: "progress", tool, state } satisfies ReportEvent),
         onStep: (tool, done, total) => send({ type: "step", tool, done, total } satisfies ReportEvent),

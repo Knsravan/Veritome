@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, Checkbox, Notice, ToolHeader } from "@/components/ui";
+import { ThemeChoice } from "@/components/ThemeToggle";
 import { useSettings } from "@/lib/settings";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -22,6 +23,14 @@ export function SettingsForm() {
   return (
     <div className="max-w-3xl space-y-10">
       <ToolHeader title="Settings" intro="Choices here are saved in this browser only." />
+
+      <section aria-labelledby="look-h" className="space-y-3">
+        <h2 id="look-h" className="font-display text-2xl font-semibold">
+          Appearance
+        </h2>
+        <p className="text-ink-soft">Light, dark, or whatever your device is set to.</p>
+        <ThemeChoice />
+      </section>
 
       <section aria-labelledby="srv-h">
         <h2 id="srv-h" className="font-display text-2xl font-semibold">
