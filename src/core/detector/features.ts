@@ -1,3 +1,4 @@
+import { mixedWordLooksDisguised } from "../integrity/confusables.ts";
 import { STOPWORDS } from "../text/tokens.ts";
 
 /**
@@ -48,8 +49,10 @@ export function normaliseForDetection(input: string): Normalised {
   text = text.replace(/[\p{L}]+/gu, (word) => {
     if (!/[A-Za-z]/.test(word) || !HOMOGLYPH_RE.test(word)) return word;
     HOMOGLYPH_RE.lastIndex = 0;
+    // Maths and physics symbols (Qν, Eν) are mapped too, but are notation, not a disguise, so are not counted.
+    const counts = mixedWordLooksDisguised(word);
     return word.replace(HOMOGLYPH_RE, (c) => {
-      homoglyphs++;
+      if (counts) homoglyphs++;
       return HOMOGLYPHS[c] ?? c;
     });
   });

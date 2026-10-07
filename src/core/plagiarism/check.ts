@@ -1,7 +1,7 @@
 import { mapLimit, RequestBudgetExceeded } from "../infra/http.ts";
 import { maskProtected } from "../text/protect.ts";
 import { findInTextCitations } from "../citations/intext.ts";
-import { blankQuotedText, splitReferences } from "../text/sections.ts";
+import { blankQuotedText, frontMatter, splitReferences } from "../text/sections.ts";
 import { splitSentences } from "../text/sentences.ts";
 import { tokenize, type Token } from "../text/tokens.ts";
 import { buildBodyIndex, findRuns, findSelfRepeats, type Run } from "./match.ts";
@@ -142,6 +142,9 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   const split = excludeRefs ? splitReferences(text) : { body: text, references: "", referencesStart: -1 };
   const body = split.body;
   let working = maskProtected(body).masked;
+  // The author block (names, departments, emails) is left out: papers from one department all share it.
+  const front = frontMatter(body);
+  if (front) working = working.slice(0, front.start) + working.slice(front.start, front.end).replace(/\S/g, " ") + working.slice(front.end);
   if (excludeQuotes) working = blankQuotedText(working);
   const tokens = tokenize(working);
   const index = buildBodyIndex(tokens);
@@ -494,7 +497,12 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     ...(language ? { language } : {}),
     disguises,
     tortured,
-    excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },
+    excluded: {
+      references: excludeRefs && split.referencesStart >= 0,
+      quotes: excludeQuotes,
+      referenceWords: tokenize(split.references).length,
+      ...(front ? { authorBlockWords: tokenize(body.slice(front.start, front.end)).length } : {}),
+    },
     warnings,
     disclaimer: DISCLAIMER,
   };

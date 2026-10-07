@@ -4,7 +4,7 @@ import { buildActionList, documentStats, type ActionLevel } from "@/core/report/
 import { paragraphStats } from "@/core/report/paragraphs";
 import type { PaperReport } from "@/core/report/report";
 import { writePlagiarismSection, writeTitle } from "./plagiarism-pdf";
-import { PDF_COLORS, PdfWriter } from "./writer";
+import { loadUnicodeFonts, PDF_COLORS, PdfWriter } from "./writer";
 
 const LEVEL: Record<ActionLevel, { text: string; color: string }> = {
   high: { text: "Fix", color: PDF_COLORS.critical },
@@ -24,6 +24,7 @@ const REF_STATUS: Record<string, string> = {
 export async function buildReportPdf(report: PaperReport, text: string): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   const w = new PdfWriter(new jsPDF({ unit: "pt", format: "a4" }));
+  await loadUnicodeFonts(w.doc);
   const doc = w.doc;
   writeTitle(w, "VERITOME PAPER REPORT", text, `${report.words.toLocaleString("en")} words checked`);
 

@@ -83,3 +83,15 @@ test("figures are read from PubMed Central JATS with their image addresses", asy
     { label: "Figure 2", caption: "", url: "https://pmc.ncbi.nlm.nih.gov/articles/instance/6267405/bin/nihms-12345-f0002.jpg" },
   ]);
 });
+
+test("maths and physics symbols are not taken for disguised text", () => {
+  assert.deepEqual(findTricks("The gains Qν and Qμ, the yield Y0 and the error rates Eμ and Eν, with pν and Cμh."), []);
+});
+
+test("the author block between the title and the abstract is not counted as copied", async () => {
+  const affiliation = "Dept. of Information Technology, NRI Institute of Technology, Vijayawada, India";
+  const paper = `A study of key distribution\nAna Rao Ben Kumar\n${affiliation}\nana@example.org\nAbstract—We simulate photon splitting attacks over fibre links and report the results of ten trials.`;
+  const r = await checkPlagiarism(paper, { library: [{ id: "other", title: "Another paper from the same department", text: `Some other title\n${affiliation}\nAbstract: something else entirely.` }] });
+  assert.equal(r.spans.length, 0);
+  assert.ok((r.excluded.authorBlockWords ?? 0) > 5);
+});

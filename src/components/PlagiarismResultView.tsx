@@ -430,8 +430,11 @@ export function PlagiarismResultView({
               </span>
             ))}
             <span className="text-ink-faint">
-              {[report.excluded.quotes ? "Quotations" : "", report.excluded.references ? "reference list" : ""].filter(Boolean).join(" and ")}
-              {report.excluded.quotes || report.excluded.references ? " left out of the score." : ""}
+              {[report.excluded.quotes ? "Quotations" : "", report.excluded.references ? "reference list" : "", report.excluded.authorBlockWords ? "author names and affiliations" : ""]
+                .filter(Boolean)
+                .join(", ")
+                .replace(/^./, (c) => c.toUpperCase())}
+              {report.excluded.quotes || report.excluded.references || report.excluded.authorBlockWords ? " left out of the score." : ""}
             </span>
           </div>
         </div>

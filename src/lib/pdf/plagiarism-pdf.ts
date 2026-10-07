@@ -2,7 +2,7 @@ import type { AiBreakdown } from "@/core/detector/breakdown";
 import { ISSUE_TEXT, type IssueKind, type ReviewedReport } from "@/core/plagiarism/review";
 import type { PlagiarismReport } from "@/core/plagiarism/types";
 import type { ParagraphStat } from "@/core/report/paragraphs";
-import { PDF_COLORS, PdfWriter, type Mark } from "./writer";
+import { loadUnicodeFonts, PDF_COLORS, PdfWriter, type Mark } from "./writer";
 
 export interface PlagiarismPdfInput {
   text: string;
@@ -47,6 +47,7 @@ const pct = (n: number) => `${Math.round(n * 10) / 10}%`;
 export async function buildPlagiarismPdf(input: PlagiarismPdfInput): Promise<Blob> {
   const { jsPDF } = await import("jspdf");
   const w = new PdfWriter(new jsPDF({ unit: "pt", format: "a4" }));
+  await loadUnicodeFonts(w.doc);
   writeTitle(w, "VERITOME SIMILARITY REPORT", input.text, `${input.report.words.toLocaleString("en")} words checked`);
   writePlagiarismSection(w, input);
   w.footer("Veritome similarity report · automated signals to review, not a verdict");
