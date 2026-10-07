@@ -126,3 +126,28 @@ test("resolveLlmConfig rejects unsafe browser URLs and returns null when nothing
   const none = await resolveLlmConfig({ env: {}, allowClientConfig: true, allowPrivate: false, resolve });
   assert.equal(none, null);
 });
+
+test("reasoning effort is sent when configured", async () => {
+  const { fetch, calls } = mockFetch(() => ok("hi"));
+  await createLlmClient({ baseUrl: "https://x/v1", model: "m", reasoningEffort: "low" }, { fetch }).chat({ system: "s", user: "u" });
+  assert.equal(JSON.parse(calls[0]?.body ?? "{}").reasoning_effort, "low");
+  const plain = mockFetch(() => ok("hi"));
+  await createLlmClient({ baseUrl: "https://x/v1", model: "m" }, { fetch: plain.fetch }).chat({ system: "s", user: "u" });
+  assert.equal(JSON.parse(plain.calls[0]?.body ?? "{}").reasoning_effort, undefined);
+});
+
+test("an empty reply cut off by the token limit is retried without the limit (thinking models)", async () => {
+  const { fetch, calls } = mockFetch((c) =>
+    JSON.parse(c.body ?? "{}").max_tokens
+      ? jsonResponse({ choices: [{ message: { content: "" }, finish_reason: "length" }] })
+      : ok("full answer"),
+  );
+  const out = await createLlmClient({ baseUrl: "https://x/v1", model: "m" }, { fetch }).chat({ system: "s", user: "u", maxTokens: 50 });
+  assert.equal(out, "full answer");
+  assert.equal(calls.length, 2);
+});
+
+test("LLM_REASONING_EFFORT is read from the environment", async () => {
+  const c = await resolveLlmConfig({ env: { LLM_BASE_URL: "https://x/v1", LLM_MODEL: "m", LLM_REASONING_EFFORT: "low" }, allowClientConfig: false, allowPrivate: false });
+  assert.equal(c?.reasoningEffort, "low");
+});

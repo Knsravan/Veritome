@@ -36,6 +36,16 @@ describe("config", () => {
     expect(c.allowPrivateLlm).toBe(false);
     expect(c.llm.model).toBe("m");
   });
+  test("on Vercel the forwarded client address is trusted and uploads are capped below its body limit", () => {
+    const vercel = readConfig({ VERCEL: "1" });
+    expect(vercel.trustProxy).toBe(true);
+    expect(vercel.maxUploadBytes).toBeLessThan(4.5 * 1024 * 1024);
+    expect(readConfig({ VERCEL: "1", TRUST_PROXY: "false" }).trustProxy).toBe(false);
+    const self = readConfig({});
+    expect(self.trustProxy).toBe(false);
+    expect(self.maxUploadBytes).toBe(15 * 1024 * 1024);
+  });
+
   test("client key ignores forwarding headers unless the proxy is trusted", () => {
     const r = new Request("http://x", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } });
     expect(clientKey(r, false)).toBe("shared");
@@ -149,6 +159,13 @@ describe("routes", () => {
     expect(res.status).toBe(200);
     expect(data.kind).toBe("docx");
     expect(data.text).toContain("14 sites");
+    vi.stubEnv("VERCEL", "1");
+    const big = new FormData();
+    big.append("file", new File([new Uint8Array(5 * 1024 * 1024)], "big.txt"));
+    const r3 = await extract(new Request("http://x", { method: "POST", body: big }));
+    expect(r3.status).toBe(422);
+    expect((await r3.json()).error).toMatch(/up to 4\.\d MB/);
+    vi.stubEnv("VERCEL", "");
     const bad = new FormData();
     bad.append("file", new File(["x"], "sheet.xls"));
     const r2 = await extract(new Request("http://x", { method: "POST", body: bad }));

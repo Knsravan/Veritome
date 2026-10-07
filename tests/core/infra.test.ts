@@ -122,3 +122,25 @@ test("chunkBySentences never cuts a sentence and maps back to the source", () =>
   const single = chunkBySentences("A very long single sentence without any stop to split it on", 10);
   assert.equal(single.length, 1);
 });
+
+test("pacedHttp spaces requests out and stops at its allowance", async () => {
+  const { pacedHttp, RequestBudgetExceeded } = await import("../../src/core/infra/http.ts");
+  let clock = 0;
+  const starts: number[] = [];
+  const inner = {
+    json: async <T>() => (starts.push(clock), {} as T),
+    text: async () => (starts.push(clock), ""),
+  };
+  const paced = pacedHttp(inner, {
+    service: "Test",
+    minIntervalMs: 3000,
+    maxRequests: 3,
+    now: () => clock,
+    sleep: async (ms) => {
+      clock += ms;
+    },
+  });
+  await Promise.all([paced.json("a"), paced.text("b"), paced.json("c")]);
+  assert.deepEqual(starts, [0, 3000, 6000]);
+  await assert.rejects(paced.json("d"), RequestBudgetExceeded);
+});

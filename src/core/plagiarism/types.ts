@@ -39,6 +39,8 @@ export interface ProviderStat {
   coverage: string;
   queries: number;
   failures: number;
+  /** Queries not sent because the service's rate limit allowance for this check was used up. */
+  skipped?: number;
   documents: number;
 }
 

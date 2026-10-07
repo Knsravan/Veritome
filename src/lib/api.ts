@@ -37,7 +37,13 @@ export async function postForm<T>(path: string, form: FormData, signal?: AbortSi
 async function readReply<T>(res: Response): Promise<T> {
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    const message = data && typeof data === "object" && "error" in data ? String((data as { error: unknown }).error) : `The server replied with HTTP ${res.status}.`;
+    const fallback =
+      res.status === 413
+        ? "That is too large for this server. Try a smaller file, or paste the text instead."
+        : res.status === 504
+          ? "The check took too long and was stopped. Try a shorter text, or fewer checks at once."
+          : `The server replied with HTTP ${res.status}.`;
+    const message = data && typeof data === "object" && "error" in data ? String((data as { error: unknown }).error) : fallback;
     throw new ApiError(message, res.status);
   }
   return data as T;

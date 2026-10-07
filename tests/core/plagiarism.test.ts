@@ -75,3 +75,26 @@ test("passage selection samples across the document", () => {
   assert.ok(ps.length >= 4);
   assert.ok((ps[ps.length - 1]?.start ?? 0) > text.length / 2);
 });
+
+test("a provider that runs out of its request allowance is reported as partly searched, not failed", async () => {
+  const { RequestBudgetExceeded } = await import("../../src/core/infra/http.ts");
+  const { checkPlagiarism } = await import("../../src/core/plagiarism/check.ts");
+  let calls = 0;
+  const limited = {
+    name: "Limited",
+    kind: "scholarly" as const,
+    coverage: "test",
+    async search() {
+      if (++calls > 1) throw new RequestBudgetExceeded("Limited");
+      return [];
+    },
+  };
+  const text = Array.from({ length: 6 }, (_, i) => `Paragraph ${i} discusses riparian alder respiration, mycorrhizal nitrogen fixation and autumn carbon efflux in floodplain soils near station ${i}.`).join("\n\n");
+  const r = await checkPlagiarism(text, { providers: [limited], maxPassages: 4 });
+  const s = r.providers.find((p) => p.name === "Limited");
+  assert.equal(s?.failures, 0);
+  assert.equal(s?.queries, 1);
+  assert.ok((s?.skipped ?? 0) >= 1);
+  assert.ok(r.warnings.some((w) => /only part of the text/.test(w)));
+  assert.ok(!r.warnings.some((w) => /failed for every query/.test(w)));
+});

@@ -151,3 +151,55 @@ export async function mapLimit<T, R>(
   await Promise.all(workers);
   return results;
 }
+
+/** Thrown when a paced client has used its request allowance for this check. */
+export class RequestBudgetExceeded extends Error {
+  constructor(service: string) {
+    super(`${service} request allowance for this check is used up`);
+    this.name = "RequestBudgetExceeded";
+  }
+}
+
+export interface PaceOptions {
+  /** Name used in messages. */
+  service: string;
+  /** Minimum time between the starts of two requests. */
+  minIntervalMs: number;
+  /** Most requests allowed through this client. */
+  maxRequests: number;
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+}
+
+/**
+ * Wraps a client so requests to a strict service go one at a time, spaced out,
+ * up to a fixed number. Services such as arXiv and CORE refuse bursts.
+ */
+export function pacedHttp(http: Http, options: PaceOptions): Http {
+  const sleep = options.sleep ?? defaultSleep;
+  const now = options.now ?? Date.now;
+  let chain: Promise<void> = Promise.resolve();
+  let last = -Infinity;
+  let used = 0;
+  const slot = (): Promise<void> => {
+    if (used >= options.maxRequests) return Promise.reject(new RequestBudgetExceeded(options.service));
+    used++;
+    const turn = chain.then(async () => {
+      const wait = last + options.minIntervalMs - now();
+      if (wait > 0) await sleep(wait);
+      last = now();
+    });
+    chain = turn.catch(() => undefined);
+    return turn;
+  };
+  return {
+    async json<T>(url: string, req?: RequestOptions) {
+      await slot();
+      return http.json<T>(url, req);
+    },
+    async text(url: string, req?: RequestOptions) {
+      await slot();
+      return http.text(url, req);
+    },
+  };
+}

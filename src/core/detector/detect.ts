@@ -115,7 +115,7 @@ export async function askLlmJudge(text: string, llm: LlmClient, signal?: AbortSi
     system: JUDGE_SYSTEM,
     user: `Passage:\n"""\n${sample}\n"""`,
     temperature: 0,
-    maxTokens: 400,
+    maxTokens: 2000,
     json: true,
     ...(signal ? { signal } : {}),
   });

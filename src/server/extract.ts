@@ -6,6 +6,11 @@ export const MAX_TEXT_CHARS = 400_000;
 
 export type DocumentKind = "txt" | "md" | "tex" | "docx" | "pdf";
 
+export function tooLargeMessage(maxBytes: number): string {
+  const mb = Math.floor((maxBytes / 1024 / 1024) * 10) / 10;
+  return `Files up to ${mb} MB are supported here. Try saving the document without images, or paste the text instead.`;
+}
+
 export class ExtractionError extends Error {
   constructor(message: string) {
     super(message);
@@ -45,10 +50,10 @@ function decodeText(bytes: Uint8Array): string {
 }
 
 /** Extracts plain text from an uploaded document. The file is processed in memory and never stored. */
-export async function extractDocument(name: string, data: ArrayBuffer | Uint8Array): Promise<ExtractedDocument> {
+export async function extractDocument(name: string, data: ArrayBuffer | Uint8Array, maxBytes = MAX_UPLOAD_BYTES): Promise<ExtractedDocument> {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   if (bytes.byteLength === 0) throw new ExtractionError("The file is empty.");
-  if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new ExtractionError(`Files up to ${MAX_UPLOAD_BYTES / 1024 / 1024} MB are supported.`);
+  if (bytes.byteLength > maxBytes) throw new ExtractionError(tooLargeMessage(maxBytes));
   const kind = detectKind(name, bytes);
   const warnings: string[] = [];
   let text: string;
