@@ -48,3 +48,44 @@ async function readReply<T>(res: Response): Promise<T> {
   }
   return data as T;
 }
+
+/**
+ * Posts JSON and reads a newline-delimited JSON reply, passing each event to `onEvent` as it arrives.
+ * Errors before the stream starts come back as ordinary JSON and are thrown as ApiErrors.
+ */
+export async function postNdjson<E>(path: string, body: unknown, onEvent: (event: E) => void, signal?: AbortSignal): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/x-ndjson" },
+      body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError("Could not reach the Veritome server. Check your connection and try again.", 0);
+  }
+  if (!res.ok) await readReply<never>(res);
+  if (!res.body || !(res.headers.get("content-type") ?? "").includes("ndjson")) throw new ApiError("The server sent an unexpected reply.", res.status);
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    let chunk: ReadableStreamReadResult<string>;
+    try {
+      chunk = await reader.read();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") throw err;
+      throw new ApiError("The connection dropped before the check finished. Try again, or with fewer checks at once.", 0);
+    }
+    if (chunk.done) break;
+    buffer += chunk.value;
+    let nl: number;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (line) onEvent(JSON.parse(line) as E);
+    }
+  }
+  if (buffer.trim()) onEvent(JSON.parse(buffer) as E);
+}

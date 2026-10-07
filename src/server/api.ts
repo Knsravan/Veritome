@@ -71,7 +71,8 @@ export function route(options: HandlerOptions, fn: (ctx: HandlerContext) => Prom
       );
     }
     try {
-      return json(await fn({ cfg, req }));
+      const out = await fn({ cfg, req });
+      return out instanceof Response ? out : json(out);
     } catch (err) {
       if (err instanceof BadRequest) return json({ error: err.message }, err.status);
       if (err instanceof ExtractionError) return json({ error: err.message }, 422);

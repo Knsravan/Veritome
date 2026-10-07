@@ -1,4 +1,5 @@
 import { formatReferenceText } from "@/core/citations/format";
+import { buildActionList } from "@/core/report/actions";
 import type { PaperReport, Section, ToolId } from "@/core/report/report";
 
 const TOOL_NAMES: Record<ToolId, string> = {
@@ -27,6 +28,14 @@ export function reportToMarkdown(r: PaperReport): string {
   out.push("## Overview", "");
   for (const o of r.overview) out.push(`- **${TOOL_NAMES[o.tool]}** (${STATUS_WORDS[o.status]}): ${o.headline}`);
   out.push("");
+
+  const actions = buildActionList(r);
+  if (actions.length) {
+    out.push("## What to fix first", "");
+    const word = { high: "Fix", medium: "Check", low: "Consider" } as const;
+    for (const a of actions) out.push(`- **${word[a.level]}:** ${a.title}. ${a.detail}${a.quote ? ` “${a.quote}”` : ""}`);
+    out.push("");
+  }
 
   out.push("## Plagiarism", "");
   const p = r.plagiarism;
