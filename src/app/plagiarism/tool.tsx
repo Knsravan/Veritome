@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useConsent } from "@/components/Consent";
+import { DocumentProvider } from "@/components/DocumentContext";
 import { ArrowRightIcon, CheckIcon, ShieldIcon } from "@/components/icons";
 import { LibraryPicker, type LibraryItem } from "@/components/LibraryPicker";
 import { ORDER } from "@/components/report/labels";
@@ -12,6 +13,7 @@ import { Button, Checkbox, Notice, cx } from "@/components/ui";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
 import { ApiError, postNdjson } from "@/lib/api";
 import { SAMPLE_PAPER } from "@/lib/sample";
+import type { DocModel } from "@/lib/doc/model";
 import { useHasLlm, useSettings } from "@/lib/settings";
 
 type Phase = "compose" | "running" | "done";
@@ -59,6 +61,7 @@ export function PlagiarismTool() {
   const [phase, setPhase] = useState<Phase>("compose");
   const [text, setText] = useState("");
   const [checked, setChecked] = useState("");
+  const [doc, setDoc] = useState<DocModel | null>(null);
   const [extras, setExtras] = useState<Record<Extra, boolean>>({ detector: true, citations: true, grammar: true, rewrites: true });
   const [external, setExternal] = useState(true);
   const [excludeQuotes, setExcludeQuotes] = useState(true);
@@ -114,6 +117,7 @@ export function PlagiarismTool() {
           web: settings.webSearch,
           excludeQuotes,
           excludeReferences,
+          ...(doc && doc.text === text && doc.hidden.length ? { hiddenText: doc.hidden } : {}),
           useLlm: useLlm && hasLlm,
           library,
           stream: true,
@@ -153,7 +157,11 @@ export function PlagiarismTool() {
   }
 
   if (phase === "done" && report) {
-    return <ReportView report={report} text={checked} onNew={() => setPhase("compose")} />;
+    return (
+      <DocumentProvider doc={doc}>
+        <ReportView report={report} text={checked} onNew={() => setPhase("compose")} />
+      </DocumentProvider>
+    );
   }
 
   return (
@@ -177,7 +185,7 @@ export function PlagiarismTool() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <section aria-label="Your paper" className="card animate-fade-up p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
-          <TextSource value={text} onChange={setText} rows={18} />
+          <TextSource value={text} onChange={setText} onDocument={setDoc} rows={18} />
         </section>
 
         <div className="animate-fade-up space-y-4 lg:sticky lg:top-24" style={{ ["--i" as string]: 3 }}>

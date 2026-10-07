@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { buildActionList, documentStats, type ActionItem, type ActionLevel } from "@/core/report/actions";
 import type { CitationStyle } from "@/core/citations/types";
 import type { OverviewStatus, PaperReport, Section, ToolId } from "@/core/report/report";
@@ -13,12 +13,14 @@ import { RewriteResultView } from "../RewriteResultView";
 import { Button, Notice, cx } from "../ui";
 import { CountUp } from "../motion";
 import { GrammarDetail } from "./GrammarDetail";
+import { collectFindings, PaperPanel } from "./PaperPanel";
 import { ORDER, STATUS, TONE_BAR, TONE_CLASS, TOOL_LABEL, type Tone } from "./labels";
 
-type TabId = "overview" | "similarity" | "ai" | "citations" | "grammar" | "rewrites";
+type TabId = "paper" | "overview" | "similarity" | "ai" | "citations" | "grammar" | "rewrites";
 
 const TABS: Array<{ id: TabId; label: string }> = [
-  { id: "overview", label: "Overview" },
+  { id: "paper", label: "Your paper" },
+  { id: "overview", label: "What to fix" },
   { id: "similarity", label: "Similarity" },
   { id: "ai", label: "AI patterns" },
   { id: "citations", label: "Citations" },
@@ -410,7 +412,7 @@ function ExportMenu({ report }: { report: PaperReport }) {
 
 /** The finished report: headline scores, a ranked to-do list and one tab per check. Printing shows every tab. */
 export function ReportView({ report, text, onNew }: { report: PaperReport; text: string; onNew: () => void }) {
-  const [tab, setTab] = useState<TabId>("overview");
+  const [tab, setTab] = useState<TabId>("paper");
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const topRef = useRef<HTMLDivElement>(null);
@@ -448,7 +450,9 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
     setTab(t);
     tabRefs.current[t]?.focus();
   };
+  const findings = useMemo(() => collectFindings(report, text).length, [report, text]);
   const badge = (t: TabId): number | null => {
+    if (t === "paper") return findings;
     if (t === "similarity" && report.plagiarism.status === "done") return report.plagiarism.result.spans.length + report.plagiarism.result.paraphrases.length;
     if (t === "grammar" && report.grammar.status === "done") return report.grammar.result.summary.total;
     if (t === "citations" && report.citations.status === "done") return report.citations.result.references.length;
@@ -457,6 +461,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
   };
 
   const panels: Record<TabId, ReactNode> = {
+    paper: <PaperPanel report={report} text={text} onOpen={(t) => open(t as TabId)} />,
     overview: <Overview report={report} text={text} onOpen={open} />,
     similarity: <SectionBody s={report.plagiarism}>{(r) => <PlagiarismResultView text={text} report={r} ai={report.detector.status === "done" ? report.detector.result : null} showDownload={false} />}</SectionBody>,
     ai: <SectionBody s={report.detector}>{(r) => <DetectorResultView text={text} result={r} />}</SectionBody>,

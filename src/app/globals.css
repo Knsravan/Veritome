@@ -35,6 +35,13 @@
   --danger-soft: #fbe3e4;
   --focus: #4f46e5;
   --glow: rgb(79 70 229 / 0.16);
+  /* Underline colours for findings: soft, distinct hues; style (solid, dotted, wavy, dashed, double) also differs by kind. */
+  --u-src-1: #e0a100; --u-src-2: #3a8ee6; --u-src-3: #2fa36b; --u-src-4: #ee7a2f; --u-src-5: #d6539b; --u-src-6: #13a3b5;
+  --u-copied: #e0a100;
+  --u-ai: #8b5cf6;
+  --u-grammar: #e5484d;
+  --u-cite: #0f9f8f;
+  --u-flag: #dc2626;
   /* One colour per matched source, so a passage can be traced to its source at a glance. */
   --src-1: #fbe38a; --src-1-line: #8a6d00;
   --src-2: #c9e3fb; --src-2-line: #1d5c99;
@@ -84,6 +91,12 @@
     --danger-soft: #4a1d21;
     --focus: #9a9bff;
     --glow: rgb(154 155 255 / 0.14);
+    --u-src-1: #f5c044; --u-src-2: #6aaef5; --u-src-3: #4cc68a; --u-src-4: #f79a5a; --u-src-5: #ec7cb8; --u-src-6: #3cc4d4;
+    --u-copied: #f5c044;
+    --u-ai: #a78bfa;
+    --u-grammar: #ff6b70;
+    --u-cite: #34d1bf;
+    --u-flag: #f87171;
     --src-1: #5c4a05; --src-1-line: #e6c93a;
     --src-2: #173a5c; --src-2-line: #7fb6ee;
     --src-3: #5a1f2f; --src-3-line: #f29ab0;
@@ -101,6 +114,12 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --u-src-1: #f5c044; --u-src-2: #6aaef5; --u-src-3: #4cc68a; --u-src-4: #f79a5a; --u-src-5: #ec7cb8; --u-src-6: #3cc4d4;
+  --u-copied: #f5c044;
+  --u-ai: #a78bfa;
+  --u-grammar: #ff6b70;
+  --u-cite: #34d1bf;
+  --u-flag: #f87171;
   --desk: #0a0c11;
   --desk-deep: #161a23;
   --page: #11141b;
@@ -218,56 +237,59 @@ h3,
   overflow-wrap: anywhere;
 }
 
-/* Proof marks. Each kind differs by more than colour (underline style, border) for colour-blind readers. */
+/* Proof marks: underlines only, never a background, so the paper reads cleanly. Each kind has its own colour and
+   its own line style (solid, dotted, wavy, dashed, double) for colour-blind readers; offsets differ so stacked
+   marks stay visible. */
 .mark {
   background: transparent;
   border-radius: 2px;
   cursor: pointer;
   color: inherit;
+  text-decoration-skip-ink: none;
+  transition:
+    text-decoration-thickness 0.15s ease,
+    text-underline-offset 0.15s ease;
 }
 .mark-match {
-  background: color-mix(in srgb, var(--mark-match) 70%, transparent);
-  box-shadow: inset 0 -2px 0 var(--mark-match-line);
+  text-decoration: underline solid var(--src-line, var(--u-copied));
+  text-decoration-thickness: 2.5px;
+  text-underline-offset: 3px;
+}
+.mark-para {
+  text-decoration: underline dotted var(--src-line, var(--u-copied));
+  text-decoration-thickness: 2.5px;
+  text-underline-offset: 4px;
 }
 .mark-ai {
-  background: var(--mark-ai-soft);
-  text-decoration: underline wavy var(--mark-ai);
+  text-decoration: underline wavy var(--u-ai);
   text-decoration-thickness: 1.5px;
-  text-underline-offset: 4px;
+  text-underline-offset: 6px;
 }
 .mark-ai-medium {
-  text-decoration: underline dotted var(--mark-ai);
+  text-decoration: underline dotted color-mix(in srgb, var(--u-ai) 65%, transparent);
   text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
+  text-underline-offset: 6px;
 }
 .mark-grammar {
-  text-decoration: underline solid var(--mark-grammar);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+  text-decoration: underline solid var(--u-grammar);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
 }
 .mark-grammar.is-info {
   text-decoration-style: dashed;
 }
-.mark-para {
-  text-decoration: underline dotted var(--mark-match-line);
+.mark-cite {
+  text-decoration: underline dashed var(--u-cite);
   text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
-  background: color-mix(in srgb, var(--mark-match) 22%, transparent);
+  text-underline-offset: 5px;
 }
-.mark-match[data-src] {
-  background: var(--src-bg);
-  box-shadow: inset 0 -2px 0 var(--src-line);
-}
-.mark-para[data-src] {
-  background: color-mix(in srgb, var(--src-bg) 45%, transparent);
-  text-decoration-color: var(--src-line);
-}
-[data-src="1"] { --src-bg: var(--src-1); --src-line: var(--src-1-line); }
-[data-src="2"] { --src-bg: var(--src-2); --src-line: var(--src-2-line); }
-[data-src="3"] { --src-bg: var(--src-3); --src-line: var(--src-3-line); }
-[data-src="4"] { --src-bg: var(--src-4); --src-line: var(--src-4-line); }
-[data-src="5"] { --src-bg: var(--src-5); --src-line: var(--src-5-line); }
-[data-src="6"] { --src-bg: var(--src-6); --src-line: var(--src-6-line); }
+[data-src="1"] { --src-line: var(--u-src-1); }
+[data-src="2"] { --src-line: var(--u-src-2); }
+[data-src="3"] { --src-line: var(--u-src-3); }
+[data-src="4"] { --src-line: var(--u-src-4); }
+[data-src="5"] { --src-line: var(--u-src-5); }
+[data-src="6"] { --src-line: var(--u-src-6); }
+[data-src] { --src-bg: color-mix(in srgb, var(--src-line) 16%, var(--page)); }
 .src-badge {
   display: inline-flex;
   min-width: 1.6rem;
@@ -282,14 +304,15 @@ h3,
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
-
-.mark-cite {
-  background: var(--mark-cite-soft);
-  border-bottom: 2px dashed var(--mark-cite);
-}
+.mark:hover,
+.mark.is-active,
 .mark[aria-current="true"] {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  text-decoration-thickness: 3.5px;
+}
+.mark.is-active,
+.mark[aria-current="true"] {
+  outline: 1.5px dashed color-mix(in srgb, var(--focus) 70%, transparent);
+  outline-offset: 2px;
 }
 
 .diff-add {
@@ -362,10 +385,10 @@ h3,
 }
 @keyframes draw-mark {
   from {
-    background-size: 0% 100%;
+    background-size: 0% 2.5px;
   }
   to {
-    background-size: 100% 100%;
+    background-size: 100% 2.5px;
   }
 }
 @keyframes pulse-ring {
@@ -397,10 +420,12 @@ h3,
 .animate-pulse-ring {
   animation: pulse-ring 1.8s ease-out infinite;
 }
-/* Highlights that draw across the words, left to right. */
+/* Underlines that draw across the words, left to right. */
 .draw-mark {
   background-repeat: no-repeat;
-  background-image: linear-gradient(var(--draw-color, var(--mark-match)), var(--draw-color, var(--mark-match)));
+  background-position: 0 100%;
+  padding-bottom: 1px;
+  background-image: linear-gradient(var(--draw-color, var(--u-copied)), var(--draw-color, var(--u-copied)));
   animation: draw-mark 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 450ms + 400ms);
 }
@@ -534,12 +559,99 @@ h3,
   }
 }
 
-/* Integrity flags (disguised text, paraphrasing-tool phrases): a double underline, distinct from match highlights. */
+/* Integrity flags (disguised text, paraphrasing-tool phrases): a double red underline. */
 @layer components {
   .mark-flag {
-    background: var(--mark-grammar-soft);
-    text-decoration: underline double var(--mark-grammar);
-    text-decoration-thickness: 1.5px;
+    text-decoration: underline double var(--u-flag);
+    text-decoration-thickness: 3px;
     text-underline-offset: 4px;
+  }
+}
+
+/* Original-layout document view (DocumentView). */
+@layer components {
+  .doc-hidden {
+    outline: 1.5px dashed var(--danger);
+    outline-offset: 1px;
+    border-radius: 2px;
+    opacity: 0.75;
+  }
+  .doc-docx p:first-child {
+    margin-top: 0;
+  }
+}
+
+/* Underlines drawn over PDF pages, which are always white paper, so they use the light colours. Stacked marks
+   sit a little lower each (see --depth). */
+.pdf-hl {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(calc(var(--depth, 0) * 4px));
+}
+.pdf-hl::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 0;
+  border-bottom: 2.5px solid var(--pdf-line, #e0a100);
+  transition: border-width 0.15s ease;
+}
+.pdf-hl[data-src="1"] { --pdf-line: #e0a100; }
+.pdf-hl[data-src="2"] { --pdf-line: #3a8ee6; }
+.pdf-hl[data-src="3"] { --pdf-line: #2fa36b; }
+.pdf-hl[data-src="4"] { --pdf-line: #ee7a2f; }
+.pdf-hl[data-src="5"] { --pdf-line: #d6539b; }
+.pdf-hl[data-src="6"] { --pdf-line: #13a3b5; }
+.pdf-hl.mark-para::after { border-bottom-style: dotted; }
+.pdf-hl.mark-grammar::after { border-bottom: 1.5px solid #e5484d; }
+.pdf-hl.mark-grammar.is-info::after { border-bottom-style: dashed; }
+.pdf-hl.mark-cite::after { border-bottom: 2px dashed #0f9f8f; }
+.pdf-hl.mark-flag::after { border-bottom: 3.5px double #dc2626; }
+.pdf-hl.mark-ai::after,
+.pdf-hl.mark-ai-medium::after {
+  height: 4px;
+  bottom: -3px;
+  border: 0;
+  background: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' viewBox='0 0 8 4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='%238b5cf6' stroke-width='1.3'/%3E%3C/svg%3E\") repeat-x;
+}
+.pdf-hl.mark-ai-medium::after { opacity: 0.6; }
+.pdf-hl.is-under { pointer-events: none; }
+.pdf-hl:hover::after,
+.pdf-hl.is-active::after { border-bottom-width: 4px; }
+.pdf-hl.is-active { outline: 1.5px dashed #4f46e5; outline-offset: 2px; }
+.pdf-hl:focus-visible { outline: 3px solid #4f46e5; outline-offset: 2px; }
+
+/* Waiting screen: a beam reads down the page; underlines draw in as checks finish. */
+@keyframes scan {
+  0% {
+    transform: translateY(-30%);
+  }
+  100% {
+    transform: translateY(260%);
+  }
+}
+.scan-beam {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 40%;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--action) 16%, transparent) 70%, color-mix(in srgb, var(--action) 45%, transparent) 98%, transparent);
+  animation: scan 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+.scan-u {
+  height: 2.5px;
+  border-radius: 2px;
+}
+.scan-u-copied { background: var(--u-src-1); }
+.scan-u-grammar { background: var(--u-grammar); height: 1.5px; }
+.scan-u-cite { background: repeating-linear-gradient(90deg, var(--u-cite) 0 5px, transparent 5px 8px); }
+.scan-u-ai { background: var(--u-ai); height: 2px; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x; height: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .scan-beam {
+    display: none;
   }
 }

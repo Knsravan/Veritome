@@ -155,6 +155,19 @@ export interface LibraryInput {
 }
 
 /** Documents the user attached in the browser for this request only. */
+/** Hidden-text ranges reported by the browser for an uploaded file: at most 2,000, each a valid range. */
+export function hiddenRanges(body: Record<string, unknown>, length: number): Array<{ start: number; end: number }> {
+  const raw = body.hiddenText;
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ start: number; end: number }> = [];
+  for (const r of raw.slice(0, 2000)) {
+    if (!r || typeof r !== "object") continue;
+    const { start, end } = r as { start?: unknown; end?: unknown };
+    if (Number.isInteger(start) && Number.isInteger(end) && (start as number) >= 0 && (end as number) > (start as number) && (end as number) <= length) out.push({ start: start as number, end: end as number });
+  }
+  return out;
+}
+
 export function libraryDocs(body: Record<string, unknown>): LibraryInput[] {
   const v = body.library;
   if (!Array.isArray(v)) return [];

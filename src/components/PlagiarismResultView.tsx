@@ -6,7 +6,9 @@ import type { DetectorResult } from "@/core/detector/types";
 import { ISSUE_TEXT, reviewReport, type Issue, type IssueKind } from "@/core/plagiarism/review";
 import type { MatchedSource, PlagiarismReport, SourceExcerpt } from "@/core/plagiarism/types";
 import { paragraphStats } from "@/core/report/paragraphs";
-import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";
+import { focusMark, focusNote, type TextMark } from "./AnnotatedText";
+import { useDocModel } from "./DocumentContext";
+import { DocumentView, LayoutToggle } from "./DocumentView";
 import { ColumnStrip, StackedBar } from "./charts";
 import { CountUp } from "./motion";
 import { AlertIcon, CheckIcon, DownloadIcon, InfoIcon, XIcon } from "./icons";
@@ -246,6 +248,8 @@ export function PlagiarismResultView({
   const [active, setActive] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
   const [view, setView] = useState<"matches" | "ai">("matches");
+  const doc = useDocModel(text);
+  const [layout, setLayout] = useState<"original" | "plain">("original");
   const [pdf, setPdf] = useState<"idle" | "busy" | "error">("idle");
   const aiB = useMemo(() => (ai ? aiBreakdown(ai, text) : null), [ai, text]);
   const aiRegions = aiB?.regions.filter((x) => x.kind !== "human") ?? [];
@@ -476,6 +480,7 @@ export function PlagiarismResultView({
       <ProofLayout
         sheet={
           <Sheet label="Your text with matched passages">
+            {doc && <LayoutToggle value={layout} onChange={setLayout} kind={doc.kind} />}
             {aiB?.judged && (
               <div role="radiogroup" aria-label="Highlight in the text" className="mb-4 inline-flex rounded-lg border border-rule p-0.5 text-sm print:hidden">
                 {(
@@ -503,10 +508,12 @@ export function PlagiarismResultView({
             {view === "ai" && aiB ? (
               <>
                 <p className="mb-4 text-sm text-ink-faint">
-                  <span className="mark mark-ai px-1">Wavy underline</span>: likely AI-written. <span className="mark mark-ai-medium px-1">Dotted</span>: unclear.
+                  <span className="mark mark-ai">Wavy underline</span>: likely AI-written. <span className="mark mark-ai-medium">Dotted</span>: unclear.
                   Each paragraph is judged on its own; short paragraphs are grouped until there are at least 150 words to judge.
                 </p>
-                <AnnotatedText
+                <DocumentView
+                  doc={doc}
+                  layout={layout}
                   text={text}
                   marks={aiRegions.map((x, i) => ({
                     id: `ai${i}`,
@@ -522,13 +529,13 @@ export function PlagiarismResultView({
             ) : (
               <>
                 <p className="mb-4 text-sm text-ink-faint">
-                  <span className="mark mark-match px-1" data-src="1">
-                    Highlighted
+                  <span className="mark mark-match" data-src="1">
+                    Solid underline
                   </span>
-                  : word for word. <span className="mark mark-para px-1">Dotted</span>: reworded. Colours match the numbered sources. Select a passage to
-                  compare it with its source.
+                  : word for word. <span className="mark mark-para" data-src="1">Dotted</span>: reworded. <span className="mark mark-flag">Double</span>: hidden
+                  copying. Colours match the numbered sources. Select a passage to compare it with its source.
                 </p>
-                <AnnotatedText text={text} marks={marks} activeId={active} onSelect={(id) => select(id, "text")} />
+                <DocumentView doc={doc} layout={layout} text={text} marks={marks} activeId={active} onSelect={(id) => select(id, "text")} />
               </>
             )}
             {report.searched.length > 0 && (

@@ -98,7 +98,9 @@ test("offline plagiarism check against the user's own text runs without consent"
   await page.getByRole("button", { name: "Try a sample" }).click();
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
-  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("tab", { name: /^What to fix/ }).click();
+  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible();
   await page.getByRole("tab", { name: /^Similarity/ }).click();
   await expect(page.getByText(/words match a source word for word/)).toBeVisible();
   await expect(page.getByRole("heading", { name: /What to fix/ })).toBeVisible();
@@ -116,7 +118,9 @@ test("disguised letters and paraphrasing-tool phrases are flagged", async ({ pag
     .fill("We trained a profound learning model on soil data from twelve sites. The rеsults shоw that respiration stayed high into October across every site we measured.");
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
-  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("tab", { name: /^What to fix/ }).click();
+  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible();
   await expect(page.getByText(/Phrase typical of a paraphrasing tool: “profound learning”/)).toBeVisible();
   await page.getByRole("tab", { name: /^Similarity/ }).click();
   const flags = page.getByLabel("Integrity flags");
@@ -175,6 +179,11 @@ test("full report runs offline, shows tabs and offers downloads @mobile", async 
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeAttached({ timeout: 30_000 });
+  await expect(page.getByLabel("Your paper with every finding underlined")).toBeVisible();
+  await expect(page.getByRole("tabpanel").getByText(/findings? in your paper/)).toBeVisible();
+  await page.getByRole("tabpanel").getByRole("button", { name: "Next" }).click();
+  await expect(page.getByLabel("Selected finding")).toBeVisible();
+  await page.getByRole("tab", { name: /^What to fix/ }).click();
   await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible();
   for (const [tab, text] of [
     ["Similarity", /words match a source word for word/],

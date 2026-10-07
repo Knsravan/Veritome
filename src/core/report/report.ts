@@ -49,6 +49,8 @@ export interface ReportOptions {
   excludeQuotes?: boolean;
   /** Leave the reference list out of the similarity score. Default true. */
   excludeReferences?: boolean;
+  /** Hidden text found in the original file (white, tiny or hidden), as offsets into the text. */
+  hiddenText?: Array<{ start: number; end: number }>;
   /** Finer progress inside a tool, such as passages searched so far. */
   onStep?: (tool: ToolId, done: number, total: number) => void;
 }
@@ -217,6 +219,7 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
       library: deps.library ?? [],
       excludeQuotes: options.excludeQuotes ?? true,
       excludeReferences: options.excludeReferences ?? true,
+      ...(options.hiddenText?.length ? { hiddenText: options.hiddenText } : {}),
       ...(signal ? { signal } : {}),
       ...(options.onStep ? { onProgress: (done: number, total: number) => options.onStep?.("plagiarism", done, total) } : {}),
     }),

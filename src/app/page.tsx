@@ -67,18 +67,18 @@ function ExampleReport() {
         <div className="px-5 py-5 sm:px-6">
           <p className="sheet-text text-[0.98rem]">
             Late-season respiration stayed high in alder stands near the river.{" "}
-            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 0, ["--draw-color" as string]: "var(--src-1)" }}>
+            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 0, ["--draw-color" as string]: "var(--u-src-1)" }}>
               Riparian zones account for a large share of soil carbon efflux in temperate catchments
             </span>{" "}
-            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 1, ["--draw-color" as string]: "var(--mark-cite-soft)" }}>
+            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 1, ["--draw-color" as string]: "var(--u-cite)" }}>
               (Smith &amp; Lee, 2021)
             </span>
             .{" "}
-            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 2, ["--draw-color" as string]: "var(--mark-ai-soft)" }}>
+            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 2, ["--draw-color" as string]: "var(--u-ai)" }}>
               Moreover, it is important to note that this plays a pivotal role
             </span>{" "}
             in regional budgets. The{" "}
-            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 3, ["--draw-color" as string]: "var(--mark-grammar-soft)" }}>
+            <span className="draw-mark rounded-sm" style={{ ["--i" as string]: 3, ["--draw-color" as string]: "var(--u-grammar)" }}>
               the
             </span>{" "}
             litter-bag data were meant to close the gap.
