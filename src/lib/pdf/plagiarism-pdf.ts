@@ -20,6 +20,7 @@ const KIND_FILL: Record<IssueKind, string> = {
   disguised: PDF_COLORS.tintCritical,
   tortured: PDF_COLORS.tintCritical,
   copied_cited: PDF_COLORS.tintSerious,
+  own_work: PDF_COLORS.tintWarning,
   reworded_uncited: PDF_COLORS.tintWarning,
   quote_uncited: PDF_COLORS.tintNeutral,
   reworded_cited: PDF_COLORS.tintNeutral,
@@ -31,6 +32,7 @@ const KIND_COLOR: Record<IssueKind, string> = {
   disguised: PDF_COLORS.critical,
   tortured: PDF_COLORS.critical,
   copied_cited: PDF_COLORS.serious,
+  own_work: PDF_COLORS.warning,
   reworded_uncited: PDF_COLORS.warning,
   quote_uncited: PDF_COLORS.neutral,
   reworded_cited: PDF_COLORS.neutral,
@@ -89,7 +91,7 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
   w.y += 90;
 
   w.heading("What the matches are", 12);
-  const kinds: IssueKind[] = ["copied_uncited", "copied_cited", "reworded_uncited", "repeated"];
+  const kinds: IssueKind[] = ["copied_uncited", "copied_cited", "own_work", "reworded_uncited", "repeated"];
   w.stackedBar(kinds.filter((k) => k !== "repeated" || r.breakdown[k] > 0).map((k) => ({ label: ISSUE_TEXT[k].title, value: (r.breakdown[k] / total) * 100, color: KIND_COLOR[k] })));
   if (r.breakdown.quote_uncited) w.text(`Quotations without a citation: ${r.breakdown.quote_uncited}.`, { size: 9 });
 

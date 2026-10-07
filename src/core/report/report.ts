@@ -9,7 +9,7 @@ import { checkGrammar, type GrammarCheckResult } from "../grammar/check.ts";
 import type { LanguageToolOptions } from "../grammar/languagetool.ts";
 import type { SpellChecker } from "../grammar/types.ts";
 import type { LlmClient } from "../llm/client.ts";
-import { checkPlagiarism } from "../plagiarism/check.ts";
+import { checkPlagiarism, type PlagiarismOptions } from "../plagiarism/check.ts";
 import type { SourceProvider } from "../plagiarism/providers.ts";
 import type { LibraryDoc, PlagiarismReport } from "../plagiarism/types.ts";
 import { rewriteText } from "../rewrite/rewrite.ts";
@@ -26,6 +26,12 @@ export type Section<T> = { status: "done"; result: T } | { status: "skipped"; re
 
 export interface ReportDeps {
   providers?: SourceProvider[];
+  /** Fetches the free full text of a matched paper. */
+  fullText?: PlagiarismOptions["fullText"];
+  /** The author's own earlier papers, for the self-plagiarism check. */
+  own?: PlagiarismOptions["own"];
+  /** Notes for the plagiarism section, such as a failed lookup of the author's papers. */
+  notes?: string[];
   library?: LibraryDoc[];
   verifier?: VerifierDeps;
   finder?: FinderDeps;
@@ -217,6 +223,9 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
     checkPlagiarism(text, {
       providers: deps.providers ?? [],
       library: deps.library ?? [],
+      ...(deps.fullText ? { fullText: deps.fullText } : {}),
+      ...(deps.own ? { own: deps.own } : {}),
+      ...(deps.notes ? { notes: deps.notes } : {}),
       excludeQuotes: options.excludeQuotes ?? true,
       excludeReferences: options.excludeReferences ?? true,
       ...(options.hiddenText?.length ? { hiddenText: options.hiddenText } : {}),

@@ -19,6 +19,8 @@ export interface MatchedSource {
   doi?: string;
   year?: number;
   authors?: string;
+  /** Where the full text came from, when the whole paper (not only its abstract) was compared. */
+  fullText?: string;
   /** Words of the checked text that this source shares. */
   matchedWords: number;
   /** Share of the checked text, 0 to 100. */
@@ -62,7 +64,7 @@ export interface QuotedPassage {
 
 export interface ProviderStat {
   name: string;
-  kind: "scholarly" | "web" | "library" | "self";
+  kind: "scholarly" | "web" | "library" | "self" | "own";
   coverage: string;
   queries: number;
   failures: number;
@@ -103,6 +105,8 @@ export interface PlagiarismReport {
   /** The parts of the text used as search queries, so readers can see what was checked online. */
   searched: Array<{ start: number; end: number }>;
   providers: ProviderStat[];
+  /** The author whose earlier papers were compared, for the self-plagiarism check. */
+  ownAuthor?: import("./ownwork.ts").OwnAuthor;
   /** Disguised text: look-alike letters, invisible characters, odd spaces, hidden text. */
   disguises?: TrickFlag[];
   /** Phrases typical of synonym-swapping paraphrasing tools, such as "counterfeit consciousness". */

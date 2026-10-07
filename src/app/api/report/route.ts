@@ -1,10 +1,12 @@
 import { buildPaperReport, TOOL_IDS, type ReportDeps, type ReportEvent, type ToolId } from "@/core/report/report";
-import { hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
-import { finderDeps, languageToolOptions, llmClient, plagiarismProviders, scholarlyHttp, verifierDeps } from "@/server/deps";
+import { ownAuthor, hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
+import { finderDeps, fullTextFetcher, ownWorks, languageToolOptions, llmClient, plagiarismProviders, scholarlyHttp, verifierDeps } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+const OWN_MISSING = "Your earlier papers could not be found (check the ORCID iD or name, or try again later), so the self-plagiarism check did not run.";
 
 export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }) => {
   const body = await readJson(req);
@@ -21,10 +23,12 @@ export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }
   const http = scholarlyHttp(cfg);
   const llm = optionalBool(body, "useLlm", true) ? await llmClient(cfg, llmOverride(body)) : undefined;
   const lt = languageToolOptions(cfg);
+  const own = external && tools.plagiarism !== false ? await ownWorks(cfg, http, ownAuthor(body), req.signal) : undefined;
   const deps: ReportDeps = {
+    ...(own ? { own } : ownAuthor(body) && external ? { notes: [OWN_MISSING] } : {}),
     library: [...(await loadLibrary(cfg.libraryDir)), ...libraryDocs(body)],
     ...(external
-      ? { providers: plagiarismProviders(cfg, http, { web: optionalBool(body, "web", true) }), verifier: verifierDeps(cfg, http), finder: finderDeps(cfg, http) }
+      ? { providers: plagiarismProviders(cfg, http, { web: optionalBool(body, "web", true) }), fullText: fullTextFetcher(cfg, http), verifier: verifierDeps(cfg, http), finder: finderDeps(cfg, http) }
       : {}),
     ...(llm ? { llm } : {}),
     ...(lt ? { languageTool: lt } : {}),

@@ -34,6 +34,14 @@ export interface PlagiarismOptions {
   checkSelf?: boolean;
   /** Also look for reworded sentences. Default true. */
   paraphrases?: boolean;
+  /** The author's own earlier papers, for the self-plagiarism check. */
+  own?: { author: import("./ownwork.ts").OwnAuthor; docs: SourceDoc[] };
+  /** Notes to pass on to the reader, such as a lookup that failed before the check. */
+  notes?: string[];
+  /** Fetches the free full text of a matched paper that was found only by its abstract. */
+  fullText?: (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null>;
+  /** How many matched papers get their full text fetched. Default 5. */
+  maxFullTexts?: number;
   /** Hidden text found in the original file (white or tiny text), with offsets into the checked text. */
   hiddenText?: Array<{ start: number; end: number }>;
   signal?: AbortSignal;
@@ -120,7 +128,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   const providers = options.providers ?? [];
   const excludeRefs = options.excludeReferences ?? true;
   const excludeQuotes = options.excludeQuotes ?? true;
-  const warnings: string[] = [];
+  const warnings: string[] = [...(options.notes ?? [])];
 
   const split = excludeRefs ? splitReferences(text) : { body: text, references: "", referencesStart: -1 };
   const body = split.body;
@@ -193,6 +201,15 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     }
   }
 
+  // The author's own earlier papers.
+  if (options.own?.docs.length) {
+    const s = stat("Your earlier papers", "own", `${options.own.docs.length} papers by ${options.own.author.name} (OpenAlex), ${options.own.author.fullTexts} of them in full text.`);
+    for (const d of options.own.docs) {
+      s.documents++;
+      addDoc(d);
+    }
+  }
+
   // Repetition inside the manuscript itself.
   if (options.checkSelf ?? true) {
     const repeats = findSelfRepeats(tokens, 12);
@@ -245,6 +262,27 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       options.onProgress?.(++done, jobs.length);
     });
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
+
+    // Papers found only by their abstract are compared again with their full text, when a free copy exists.
+    if (options.fullText && !options.signal?.aborted) {
+      const short = [...found.values()]
+        .filter((e) => e.doc.kind === "scholarly" && e.doc.text.length < 8000 && !e.doc.fullText)
+        .sort((a, b) => b.runs.reduce((n, r) => n + r.end - r.start, 0) - a.runs.reduce((n, r) => n + r.end - r.start, 0))
+        .slice(0, options.maxFullTexts ?? 5);
+      await mapLimit(short, 3, async (e) => {
+        try {
+          const full = await options.fullText!(e.doc, options.signal);
+          if (!full || full.text.length <= e.doc.text.length) return;
+          const doc: SourceDoc = { ...e.doc, text: full.text, fullText: full.via };
+          found.delete(doc.id);
+          seen.delete(doc.id);
+          addDoc(doc);
+          if (!found.has(doc.id)) found.set(doc.id, e);
+        } catch {
+          // Keep the abstract-only comparison.
+        }
+      });
+    }
     for (const s of stats.values()) {
       if (s.failures > 0) {
         const why = failureReason(firstError.get(s.name));
@@ -342,6 +380,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
         ...(doc.doi ? { doi: doc.doi } : {}),
         ...(doc.year ? { year: doc.year } : {}),
         ...(doc.authors ? { authors: doc.authors } : {}),
+        ...(doc.fullText ? { fullText: doc.fullText } : {}),
       };
     })
     .sort((a, b) => b.primaryWords - a.primaryWords || b.matchedWords - a.matchedWords);
@@ -400,6 +439,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     quotes,
     searched,
     providers: [...stats.values()],
+    ...(options.own ? { ownAuthor: options.own.author } : {}),
     disguises,
     tortured,
     excluded: { references: excludeRefs && split.referencesStart >= 0, quotes: excludeQuotes, referenceWords: tokenize(split.references).length },

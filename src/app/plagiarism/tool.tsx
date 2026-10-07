@@ -70,6 +70,7 @@ export function PlagiarismTool() {
   const [excludeQuotes, setExcludeQuotes] = useState(true);
   const [excludeReferences, setExcludeReferences] = useState(true);
   const [useLlm, setUseLlm] = useState(true);
+  const [author, setAuthor] = useState("");
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [report, setReport] = useState<PaperReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +123,7 @@ export function PlagiarismTool() {
           web: settings.webSearch,
           excludeQuotes,
           excludeReferences,
+          ...(external && author.trim() ? { author: author.trim() } : {}),
           ...(doc && doc.text === text && doc.hidden.length ? { hiddenText: doc.hidden } : {}),
           useLlm: useLlm && hasLlm,
           library,
@@ -240,6 +242,19 @@ export function PlagiarismTool() {
                 label="The open web"
                 hint={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
               />
+              <label className={cx("block", !external && "opacity-60")}>
+                <span className="font-medium">Your earlier papers</span>
+                <span className="block text-sm text-ink-faint">Optional. Checks for text reused from your own published work (self-plagiarism).</span>
+                <input
+                  type="text"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  disabled={!external}
+                  placeholder="ORCID iD or your full name"
+                  autoComplete="name"
+                  className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm transition-colors focus:border-action"
+                />
+              </label>
             </fieldset>
 
             <details className="group rounded-xl border border-rule">

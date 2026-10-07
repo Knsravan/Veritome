@@ -155,6 +155,14 @@ export interface LibraryInput {
 }
 
 /** Documents the user attached in the browser for this request only. */
+/** The ORCID iD or name given for the self-plagiarism check, if any. */
+export function ownAuthor(body: Record<string, unknown>): string | undefined {
+  const v = body.author;
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  return t.length >= 3 && t.length <= 200 ? t : undefined;
+}
+
 /** Hidden-text ranges reported by the browser for an uploaded file: at most 2,000, each a valid range. */
 export function hiddenRanges(body: Record<string, unknown>, length: number): Array<{ start: number; end: number }> {
   const raw = body.hiddenText;
