@@ -164,6 +164,8 @@ export function buildOverview(r: Omit<PaperReport, "overview" | "generatedAt" | 
       if (v) parts.push(`${v.verified + v.likely} found online`, `${v.not_found} not found`, `${v.mismatch} mismatched`, `${v.flagged} flagged`);
       if (c.crossCheck.citedButMissing.length) parts.push(`${c.crossCheck.citedButMissing.length} in-text citations without an entry`);
       parts.push(`${c.claims.length} claim${c.claims.length === 1 ? "" : "s"} that may need a citation`);
+      // A full paper with no reference list is worth a look; a short excerpt is not.
+      if (!c.references.length && r.words >= 1000) return { status: "review", headline: `No reference list was found in ${r.words.toLocaleString("en")} words. Add one under a "References" heading so citations can be checked.` };
       return { status: v && (v.mismatch > 0 || v.flagged > 0) ? "attention" : problems > 0 || c.claims.length > 0 ? "review" : "ok", headline: `${parts.join(", ")}.` };
     }),
     item("grammar", r.grammar, (g) => ({

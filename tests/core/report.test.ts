@@ -128,3 +128,11 @@ test("buildActionList has nothing urgent for a clean text", async () => {
     [],
   );
 });
+
+test("a long paper without a reference list is flagged for review", async () => {
+  const long = Array.from({ length: 120 }, (_, i) => `Sentence ${i} describes the river sites and their soil in plain words.`).join(" ");
+  const report = await buildPaperReport(long, {}, { tools: { plagiarism: false, detector: false, grammar: false, paraphrase: false, humanise: false } });
+  const c = report.overview.find((o) => o.tool === "citations");
+  assert.equal(c?.status, "review");
+  assert.match(c?.headline ?? "", /No reference list/);
+});

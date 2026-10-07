@@ -242,7 +242,7 @@ function Overview({ report, text, onOpen }: { report: PaperReport; text: string;
               return (
                 <li key={id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <button type="button" onClick={() => onOpen(TOOL_TAB[id])} className="font-semibold text-action hover:underline">
+                    <button type="button" onClick={() => onOpen(TOOL_TAB[id])} className="text-left font-semibold text-action hover:underline">
                       {TOOL_LABEL[id]}
                     </button>
                     <StatusPill status={o.status} />
