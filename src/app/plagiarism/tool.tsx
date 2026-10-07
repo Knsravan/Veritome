@@ -61,7 +61,9 @@ export function PlagiarismTool() {
 
   useEffect(() => () => ctrl.current?.abort(), []);
   const phase = step ? "running" : result ? "done" : "compose";
-  useEffect(() => window.scrollTo({ top: 0 }), [phase]);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [phase]);
 
   const go = async () => {
     if (external && !(await consent("plagiarism"))) return;
