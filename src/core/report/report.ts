@@ -45,6 +45,10 @@ export interface ReportOptions {
   maxReferences?: number;
   signal?: AbortSignal;
   onProgress?: (tool: ToolId, state: "start" | "done") => void;
+  /** Leave quoted passages out of the similarity score. Default true. */
+  excludeQuotes?: boolean;
+  /** Leave the reference list out of the similarity score. Default true. */
+  excludeReferences?: boolean;
   /** Finer progress inside a tool, such as passages searched so far. */
   onStep?: (tool: ToolId, done: number, total: number) => void;
 }
@@ -210,6 +214,8 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
     checkPlagiarism(text, {
       providers: deps.providers ?? [],
       library: deps.library ?? [],
+      excludeQuotes: options.excludeQuotes ?? true,
+      excludeReferences: options.excludeReferences ?? true,
       ...(signal ? { signal } : {}),
       ...(options.onStep ? { onProgress: (done: number, total: number) => options.onStep?.("plagiarism", done, total) } : {}),
     }),

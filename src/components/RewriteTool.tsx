@@ -43,7 +43,7 @@ export function RewriteTool({ kind }: { kind: "humanise" | "paraphrase" }) {
         />
       )}
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="card min-w-0 space-y-4 p-4 sm:p-6">
+        <div className="card animate-fade-up min-w-0 space-y-4 p-4 sm:p-6 [--i:2]">
           <TextSource value={text} onChange={setText} maxChars={MAX} rows={12} hint={`Up to ${MAX.toLocaleString("en")} characters. Nothing is stored.`} />
           {kind === "paraphrase" && (
             <fieldset>
@@ -89,7 +89,9 @@ export function RewriteTool({ kind }: { kind: "humanise" | "paraphrase" }) {
         </div>
         <div className="min-w-0">
           {result ? (
-            <RewriteResultView result={result} />
+            <div className="animate-fade-up">
+              <RewriteResultView result={result} />
+            </div>
           ) : (
             <p className="rounded border border-dashed border-rule px-4 py-10 text-center text-ink-faint">The rewritten text will appear here, with every change marked.</p>
           )}

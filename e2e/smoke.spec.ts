@@ -16,11 +16,32 @@ test("home page shows all tools and passes axe @mobile", async ({ page }) => {
 });
 
 test("every tool page loads and passes axe", async ({ page }) => {
-  for (const path of ["/report", "/plagiarism", "/detector", "/humaniser", "/paraphraser", "/citations", "/grammar", "/settings", "/about"]) {
+  for (const path of ["/plagiarism", "/detector", "/humaniser", "/paraphraser", "/citations", "/grammar", "/settings", "/about"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await axe(page);
   }
+});
+
+test("the old full-report address opens the plagiarism check", async ({ page }) => {
+  await page.goto("/report?sample=1");
+  await expect(page).toHaveURL(/\/plagiarism\?sample=1$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Plagiarism check");
+  await expect(page.getByRole("textbox", { name: "Your text" })).not.toHaveValue("");
+});
+
+test("theme switch flips between light and dark and is remembered", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("button", { name: "Switch to light mode" })).toBeVisible();
+  await axe(page);
+  await page.goto("/settings");
+  await page.getByRole("radio", { name: "Match my device" }).click();
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /.+/);
 });
 
 test("AI-pattern check on the sample shows a range, signals and flagged sentences", async ({ page }) => {
@@ -59,11 +80,11 @@ test("humaniser without a model makes rule-based edits and shows the disclosure"
 test("external checks ask for consent first, and cancelling sends nothing", async ({ page }) => {
   let calls = 0;
   page.on("request", (r) => {
-    if (r.url().includes("/api/plagiarism")) calls++;
+    if (r.url().includes("/api/report") || r.url().includes("/api/plagiarism")) calls++;
   });
   await page.goto("/plagiarism");
   await page.getByRole("button", { name: "Try a sample" }).click();
-  await page.getByRole("button", { name: "Check for overlap" }).click();
+  await page.getByRole("button", { name: "Check my paper" }).click();
   const dialog = page.getByRole("dialog", { name: "Send parts of your text to search services?" });
   await expect(dialog).toBeVisible();
   await axe(page);
@@ -76,12 +97,14 @@ test("offline plagiarism check against the user's own text runs without consent"
   await page.goto("/plagiarism");
   await page.getByRole("button", { name: "Try a sample" }).click();
   await page.getByLabel("Scholarly databases").uncheck();
-  await page.getByRole("button", { name: "Check for overlap" }).click();
+  await page.getByRole("button", { name: "Check my paper" }).click();
+  await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("tab", { name: /^Similarity/ }).click();
   await expect(page.getByText(/words match a source word for word/)).toBeVisible();
   await expect(page.getByRole("heading", { name: /What to fix/ })).toBeVisible();
   await expect(page.getByLabel("AI writing summary")).toContainText("How far to trust this");
   await page.getByRole("radio", { name: /AI writing/ }).click();
-  await expect(page.getByText("Wavy underline")).toBeVisible();
+  await expect(page.getByRole("tabpanel").getByText("Wavy underline")).toBeVisible();
   await expect(page.getByRole("dialog")).toBeHidden();
   await axe(page);
 });
@@ -100,15 +123,23 @@ test("plagiarism results explain each finding and update when filtered", async (
     ],
     quotes: [], searched: [{ start: 0, end: 60 }], providers: [], excluded: { references: true, quotes: true, referenceWords: 0 }, warnings: [], disclaimer: "d",
   };
-  await page.route("**/api/plagiarism", (route) =>
-    route.fulfill({ status: 200, contentType: "application/x-ndjson", body: `${JSON.stringify({ type: "step", done: 1, total: 1 })}\n${JSON.stringify({ type: "result", report })}\n` }),
+  const skipped = { status: "skipped", reason: "Not selected." };
+  const paper = {
+    generatedAt: new Date().toISOString(), words: 100, hasReferenceList: false,
+    overview: [{ tool: "plagiarism", status: "attention", headline: "30% of words match 2 sources." }],
+    plagiarism: { status: "done", result: report },
+    detector: skipped, citations: skipped, grammar: skipped, paraphrase: skipped, humanise: skipped, disclaimer: "d",
+  };
+  await page.route("**/api/report", (route) =>
+    route.fulfill({ status: 200, contentType: "application/x-ndjson", body: `${JSON.stringify({ type: "step", tool: "plagiarism", done: 1, total: 1 })}\n${JSON.stringify({ type: "result", report: paper })}\n` }),
   );
   await page.goto("/plagiarism");
   await page.getByLabel("Your text").fill("x".repeat(60) + " " + "y".repeat(39));
   await page.getByLabel("Scholarly databases").uncheck();
-  await page.getByRole("button", { name: "Check for overlap" }).click();
+  await page.getByRole("button", { name: "Check my paper" }).click();
+  await page.getByRole("tab", { name: /^Similarity/ }).click();
   await expect(page.getByLabel("Similarity summary")).toContainText("30");
-  await expect(page.getByText("Copied without a citation").first()).toBeVisible();
+  await expect(page.getByRole("tabpanel").getByText("Copied without a citation").first()).toBeVisible();
   await page.getByRole("button", { name: /“SPAN_A”/ }).click();
   await expect(page.getByLabel("Selected finding")).toContainText("SOURCE WORDS");
   await page.getByLabel("Selected finding").getByRole("button", { name: "Exclude this source" }).click();
@@ -119,15 +150,14 @@ test("plagiarism results explain each finding and update when filtered", async (
   await axe(page);
   const pdf = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download PDF report" }).click();
-  expect((await pdf).suggestedFilename()).toMatch(/^veritome-similarity-report-.*\.pdf$/);
+  expect((await pdf).suggestedFilename()).toMatch(/^veritome-report-.*\.pdf$/);
 });
 
 test("full report runs offline, shows tabs and offers downloads @mobile", async ({ page }) => {
-  await page.goto("/report");
+  await page.goto("/plagiarism");
   await page.getByRole("button", { name: "Try a sample" }).click();
-  await page.getByText("More options").click();
-  await page.getByLabel("Search scholarly databases").uncheck();
-  await page.getByRole("button", { name: "Check paper" }).click();
+  await page.getByLabel("Scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check my paper" }).click();
   await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeAttached({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "What to fix first" })).toBeVisible();
   for (const [tab, text] of [
@@ -149,7 +179,7 @@ test("full report runs offline, shows tabs and offers downloads @mobile", async 
   expect((await download).suggestedFilename()).toBe("veritome-report.md");
   await axe(page);
   await page.getByRole("button", { name: "New check" }).click();
-  await expect(page.getByRole("heading", { name: "Check a paper" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Plagiarism check" })).toBeVisible();
 });
 
 test("report shows live progress while checking", async ({ page }) => {
@@ -160,11 +190,10 @@ test("report shows live progress while checking", async ({ page }) => {
     ];
     await route.fulfill({ status: 200, contentType: "application/x-ndjson", body: lines.map((l) => JSON.stringify(l)).join("\n") + "\n" });
   });
-  await page.goto("/report");
+  await page.goto("/plagiarism");
   await page.getByRole("button", { name: "Try a sample" }).click();
-  await page.getByText("More options").click();
-  await page.getByLabel("Search scholarly databases").uncheck();
-  await page.getByRole("button", { name: "Check paper" }).click();
+  await page.getByLabel("Scholarly databases").uncheck();
+  await page.getByRole("button", { name: "Check my paper" }).click();
   // The fake stream ends without a result, so the page reports that clearly instead of hanging.
   await expect(page.getByText("The check did not finish")).toBeVisible();
 });

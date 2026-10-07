@@ -8,6 +8,7 @@
  * Colours are tokens so light and dark themes share every component.
  */
 :root {
+  color-scheme: light;
   --desk: #f4f5f8;
   --desk-deep: #e8ebf0;
   --page: #ffffff;
@@ -53,8 +54,10 @@
   --status-warning: #fab219;
 }
 
+/* Dark theme: follows the system unless the visitor picks light or dark (stored as data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --desk: #0a0c11;
     --desk-deep: #161a23;
     --page: #11141b;
@@ -94,6 +97,48 @@
     --chart-ai: #d55181;
     --chart-neutral: #4a5361;
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --desk: #0a0c11;
+  --desk-deep: #161a23;
+  --page: #11141b;
+  --ink: #eceef3;
+  --ink-soft: #b0b7c3;
+  --ink-faint: #8f98a6;
+  --rule: #262b36;
+  --action: #9a9bff;
+  --action-ink: #0a0c11;
+  --action-soft: #1d1f3d;
+  --mark-match: #6b5a00;
+  --mark-match-line: #e6c93a;
+  --mark-ai: #b3a3f5;
+  --mark-ai-soft: #2d2652;
+  --mark-grammar: #f08a80;
+  --mark-grammar-soft: #4a2321;
+  --mark-cite: #5fd3c4;
+  --mark-cite-soft: #12403b;
+  --ok: #74c995;
+  --ok-soft: #173b26;
+  --warn: #e7b65a;
+  --warn-soft: #3e2f10;
+  --danger: #f1868c;
+  --danger-soft: #4a1d21;
+  --focus: #9a9bff;
+  --glow: rgb(154 155 255 / 0.14);
+  --src-1: #5c4a05; --src-1-line: #e6c93a;
+  --src-2: #173a5c; --src-2-line: #7fb6ee;
+  --src-3: #5a1f2f; --src-3-line: #f29ab0;
+  --src-4: #1c4421; --src-4-line: #82cf8a;
+  --src-5: #352659; --src-5-line: #b9a3f2;
+  --src-6: #5a300f; --src-6-line: #f0a56a;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
+  --chart-seq: #3987e5;
+  --chart-human: #3987e5;
+  --chart-ai: #d55181;
+  --chart-neutral: #4a5361;
 }
 
 @theme inline {
@@ -425,5 +470,66 @@ h3,
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Theme switching: a spreading circle where view transitions exist (see lib/theme.ts), a cross-fade elsewhere. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.theme-fade,
+.theme-fade *,
+.theme-fade *::before,
+.theme-fade *::after {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease,
+    fill 0.35s ease,
+    box-shadow 0.35s ease !important;
+}
+
+/* A done tick pops in; a running progress bar carries a moving sheen. */
+@keyframes pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+.animate-pop {
+  animation: pop 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  animation: sheen 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-shimmer::after,
+  .animate-pulse-ring {
+    animation: none !important;
   }
 }

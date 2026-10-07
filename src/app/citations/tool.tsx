@@ -25,7 +25,7 @@ function CheckReferences() {
   };
   return (
     <div className="space-y-6">
-      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
+      <div className="card animate-fade-up max-w-4xl space-y-4 p-4 sm:p-6 [--i:2]">
         <TextSource
           value={text}
           onChange={setText}
@@ -37,7 +37,11 @@ function CheckReferences() {
         </Button>
         {error && <Notice kind="error">{error}</Notice>}
       </div>
-      {result && <VerifyView result={result} crossCheck={result.crossCheck} />}
+      {result && (
+        <div className="animate-fade-up">
+          <VerifyView result={result} crossCheck={result.crossCheck} />
+        </div>
+      )}
       <Limits>
         <p>
           Entries are looked up by DOI, then by title, in Crossref, OpenAlex, DataCite and arXiv. “Not found” does not mean made up: books, reports,
@@ -103,7 +107,7 @@ function FindSources() {
   return (
     <div className="space-y-6">
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="card space-y-4 p-4 sm:p-6">
+        <div className="card animate-fade-up space-y-4 p-4 sm:p-6 [--i:2]">
           <TextSource value={text} onChange={setText} label="Scan a text for uncited claims" rows={10} hint="Finding the claims happens on the server without any outside service." />
           <Button onClick={() => void scanText()} busy={scan.busy} disabled={!text.trim()}>
             Find claims that may need a citation

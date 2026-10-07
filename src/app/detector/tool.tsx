@@ -30,7 +30,7 @@ export function DetectorTool() {
         title="AI writing patterns"
         intro="Measures how strongly a text shows patterns common in language-model output. It reports a range, not a verdict about who wrote it."
       />
-      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
+      <div className="card animate-fade-up max-w-4xl space-y-4 p-4 sm:p-6 [--i:2]">
         <TextSource value={text} onChange={setText} />
         <Checkbox
           checked={useLlm && hasLlm}
@@ -44,7 +44,11 @@ export function DetectorTool() {
         </Button>
         {error && <Notice kind="error">{error}</Notice>}
       </div>
-      {result && checked && <DetectorResultView text={checked} result={result} />}
+      {result && checked && (
+        <div key={checked} className="animate-fade-up">
+          <DetectorResultView text={checked} result={result} />
+        </div>
+      )}
     </div>
   );
 }

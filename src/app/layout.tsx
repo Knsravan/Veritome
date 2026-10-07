@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { ConsentProvider } from "@/components/Consent";
 import { SiteHeader } from "@/components/Nav";
 import { SettingsProvider } from "@/lib/settings";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-dvh flex-col">
         <a href="#main" className="sr-only z-50 rounded bg-page px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
           Skip to content
@@ -46,8 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <div>
                   <p className="font-semibold">Tools</p>
                   <ul className="mt-3 space-y-2 text-ink-soft">
-                    <li><Link href="/report" className="hover:text-ink hover:underline">Full paper check</Link></li>
-                    <li><Link href="/plagiarism" className="hover:text-ink hover:underline">Plagiarism</Link></li>
+                    <li><Link href="/plagiarism" className="hover:text-ink hover:underline">Plagiarism (full check)</Link></li>
                     <li><Link href="/detector" className="hover:text-ink hover:underline">AI patterns</Link></li>
                     <li><Link href="/citations" className="hover:text-ink hover:underline">Citations</Link></li>
                     <li><Link href="/grammar" className="hover:text-ink hover:underline">Grammar</Link></li>

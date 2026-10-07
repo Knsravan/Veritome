@@ -48,7 +48,7 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
   const pct = active.length ? Math.round((fraction / active.length) * 100) : 0;
 
   return (
-    <section aria-labelledby="progress-h" className="card mx-auto max-w-2xl p-6 sm:p-8">
+    <section aria-labelledby="progress-h" className="card animate-fade-up mx-auto max-w-2xl p-6 sm:p-8">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="progress-h" className="font-display text-2xl font-semibold">
           Checking your paper
@@ -69,17 +69,21 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
         aria-valuenow={pct}
         className="mt-5 h-2 overflow-hidden rounded-full bg-desk-deep"
       >
-        <div className="h-full rounded-full bg-action transition-[width] duration-500" style={{ width: `${Math.max(3, pct)}%` }} />
+        <div className="progress-shimmer h-full rounded-full bg-action transition-[width] duration-500" style={{ width: `${Math.max(3, pct)}%` }} />
       </div>
 
       <ol className="mt-6 space-y-1" aria-live="polite">
-        {order.map((id) => {
+        {order.map((id, i) => {
           const st = state.steps[id];
           return (
-            <li key={id} className={cx("flex items-start gap-3 rounded-lg px-3 py-2.5", st === "running" && "bg-action-soft/60")}>
+            <li
+              key={id}
+              className={cx("animate-fade-up flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-300", st === "running" && "bg-action-soft/60")}
+              style={{ ["--i" as string]: i }}
+            >
               <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center" aria-hidden>
                 {st === "done" ? (
-                  <span className="inline-flex size-6 items-center justify-center rounded-full bg-ok text-page">
+                  <span className="animate-pop inline-flex size-6 items-center justify-center rounded-full bg-ok text-page">
                     <CheckIcon size={15} strokeWidth={2.6} />
                   </span>
                 ) : st === "running" ? (

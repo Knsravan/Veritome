@@ -70,9 +70,9 @@ export function Limits({ children }: { children: ReactNode }) {
 export function ToolHeader({ title, intro, children }: { title: string; intro: ReactNode; children?: ReactNode }) {
   return (
     <header className="mb-8 max-w-3xl">
-      <h1 className="font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">{title}</h1>
-      <p className="mt-3 text-lg text-ink-soft">{intro}</p>
-      {children}
+      <h1 className="animate-fade-up font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">{title}</h1>
+      <p className="animate-fade-up mt-3 text-lg text-ink-soft [--i:1]">{intro}</p>
+      {children && <div className="animate-fade-up [--i:2]">{children}</div>}
     </header>
   );
 }
@@ -119,7 +119,7 @@ export function ProofLayout({ sheet, margin }: { sheet: ReactNode; margin: React
 
 export function Sheet({ children, label }: { children: ReactNode; label?: string }) {
   return (
-    <section aria-label={label} className="rounded-2xl border border-rule bg-page px-5 py-6 shadow-[var(--shadow-card)] sm:px-10 sm:py-10">
+    <section aria-label={label} className="animate-fade-in rounded-2xl border border-rule bg-page px-5 py-6 shadow-[var(--shadow-card)] sm:px-10 sm:py-10">
       {children}
     </section>
   );

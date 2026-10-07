@@ -544,7 +544,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
             aria-labelledby={`${baseId}-tab-${t.id}`}
             tabIndex={0}
             // A class rather than the hidden attribute, so printing can still show every section.
-            className={cx("pt-8 focus-visible:outline-none", tab !== t.id && "hidden print:block", i > 0 && "print-break")}
+            className={cx("pt-8 focus-visible:outline-none", tab === t.id ? "animate-fade-up" : "hidden print:block", i > 0 && "print-break")}
           >
             <h2 className="mb-6 hidden font-display text-2xl font-semibold print:block">{t.label}</h2>
             {panels[t.id]}

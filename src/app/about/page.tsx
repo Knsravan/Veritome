@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Reveal } from "@/components/motion";
 import { TOOLS } from "@/lib/tools";
 
 export const metadata: Metadata = { title: "Limits and privacy" };
@@ -8,7 +9,7 @@ const GH = "https://github.com/Knsravan/Veritome/blob/main";
 export default function Page() {
   return (
     <article className="max-w-3xl space-y-10">
-      <header>
+      <header className="animate-fade-up">
         <h1 className="font-display text-4xl font-semibold tracking-tight">Limits and privacy</h1>
         <p className="mt-3 text-lg text-ink-soft">
           Veritome is built to help you review your own work. No tool here, and no commercial tool either, can tell you with certainty that a text
@@ -16,7 +17,7 @@ export default function Page() {
         </p>
       </header>
 
-      <section className="space-y-3">
+      <Reveal as="section" index={1} className="space-y-3">
         <h2 className="font-display text-2xl font-semibold">How sure is each check?</h2>
         <dl className="divide-y divide-rule border-y border-rule">
           {TOOLS.map((t) => (
@@ -35,9 +36,9 @@ export default function Page() {
           </a>
           .
         </p>
-      </section>
+      </Reveal>
 
-      <section className="space-y-3">
+      <Reveal as="section" index={2} className="space-y-3">
         <h2 className="font-display text-2xl font-semibold">What happens to your text</h2>
         <ul className="list-disc space-y-2 pl-5">
           <li>Text and uploaded files are processed in memory and dropped when the request ends. Veritome does not store or log them.</li>
@@ -50,15 +51,15 @@ export default function Page() {
           <li>Settings you choose are kept in your browser&rsquo;s local storage.</li>
         </ul>
         <p>For confidential manuscripts, run Veritome on your own machine with Docker and a local model. Instructions are in the README.</p>
-      </section>
+      </Reveal>
 
-      <section className="space-y-3">
+      <Reveal as="section" index={3} className="space-y-3">
         <h2 className="font-display text-2xl font-semibold">Using AI tools responsibly</h2>
         <p>
           Many journals and universities require authors to disclose substantive use of AI tools, and none accept a detector score as proof of
           misconduct on its own. If you use the humaniser or paraphraser, check your publisher&rsquo;s policy and disclose where it asks you to.
         </p>
-      </section>
+      </Reveal>
     </article>
   );
 }

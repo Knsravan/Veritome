@@ -61,7 +61,7 @@ export function GrammarTool() {
           </>
         }
       />
-      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
+      <div className="card animate-fade-up max-w-4xl space-y-4 p-4 sm:p-6 [--i:2]">
         <TextSource value={text} onChange={setText} />
         {status?.publicLanguageTool && (
           <Checkbox
@@ -77,6 +77,7 @@ export function GrammarTool() {
         {error && <Notice kind="error">{error}</Notice>}
       </div>
       {result && doc && (
+        <div className="animate-fade-up">
         <ProofLayout
           sheet={
             <Sheet label="Your text with marked issues">
@@ -162,6 +163,7 @@ export function GrammarTool() {
             </>
           }
         />
+        </div>
       )}
     </div>
   );
