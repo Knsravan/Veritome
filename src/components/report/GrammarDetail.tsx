@@ -66,7 +66,7 @@ export function GrammarDetail({ text, result }: { text: string; result: GrammarC
       margin={
         <>
           <div>
-            <p className="font-serif text-5xl font-semibold tabular-nums">
+            <p className="font-display text-5xl font-semibold tabular-nums">
               {summary.score}
               <span className="text-2xl text-ink-faint">/100</span>
             </p>

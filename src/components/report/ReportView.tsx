@@ -11,6 +11,7 @@ import { AlertIcon, ArrowLeftIcon, CheckIcon, ChevronDownIcon, DownloadIcon, Inf
 import { PlagiarismResultView } from "../PlagiarismResultView";
 import { RewriteResultView } from "../RewriteResultView";
 import { Button, Notice, cx } from "../ui";
+import { CountUp } from "../motion";
 import { GrammarDetail } from "./GrammarDetail";
 import { ORDER, STATUS, TONE_BAR, TONE_CLASS, TOOL_LABEL, type Tone } from "./labels";
 
@@ -141,15 +142,15 @@ function ScoreCard({ s, status, onOpen }: { s: Score; status: OverviewStatus; on
     <button
       type="button"
       onClick={onOpen}
-      className="card group flex flex-col p-4 text-left transition-colors hover:border-ink-faint/60 sm:p-5"
+      className="card card-hover group flex w-full flex-col p-4 text-left sm:p-5"
       aria-label={`${s.label}: ${s.value}${s.unit ?? ""}. ${s.note}. ${STATUS[status].text}. Open details.`}
     >
       <span className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-ink-soft">{s.label}</span>
         <StatusPill status={status} />
       </span>
-      <span className="mt-3 font-serif text-4xl font-semibold tracking-tight tabular-nums">
-        {s.value}
+      <span className="mt-3 font-display text-4xl font-semibold tracking-tight tabular-nums">
+        {Number.isFinite(Number(s.value)) ? <CountUp value={Number(s.value)} decimals={Number.isInteger(Number(s.value)) ? 0 : 1} /> : s.value}
         {s.unit && <span className="ml-0.5 text-lg font-normal text-ink-faint">{s.unit}</span>}
       </span>
       {s.meter !== undefined && (
@@ -223,7 +224,7 @@ function Overview({ report, text, onOpen }: { report: PaperReport; text: string;
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <section aria-labelledby="todo-h">
-        <h3 id="todo-h" className="font-serif text-2xl font-semibold">
+        <h3 id="todo-h" className="font-display text-2xl font-semibold">
           What to fix first
         </h3>
         <div className="mt-3">
@@ -296,7 +297,7 @@ function CitationsPanel({ report }: { report: PaperReport }) {
             </>
           )}
           <section aria-labelledby="claims-h">
-            <h3 id="claims-h" className="font-serif text-xl font-semibold">
+            <h3 id="claims-h" className="font-display text-xl font-semibold">
               Sentences that may need a citation ({c.claims.length})
             </h3>
             {c.claims.length === 0 ? (
@@ -338,7 +339,7 @@ function RewritesPanel({ report }: { report: PaperReport }) {
     <div className="space-y-10">
       {(["paraphrase", "humanise"] as const).map((key) => (
         <section key={key} aria-labelledby={`h-${key}`} className="space-y-4">
-          <h3 id={`h-${key}`} className="font-serif text-xl font-semibold">
+          <h3 id={`h-${key}`} className="font-display text-xl font-semibold">
             {TOOL_LABEL[key]}
           </h3>
           <SectionBody s={report[key]}>
@@ -475,7 +476,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
           <h2 id="report-h" className="sr-only">
             Report
           </h2>
-          <p className="mt-1 font-serif text-3xl leading-tight font-semibold tracking-tight sm:text-4xl" aria-hidden={!title}>
+          <p className="mt-1 font-display text-3xl leading-tight font-semibold tracking-tight sm:text-4xl" aria-hidden={!title}>
             {title ?? "Report"}
           </p>
           <p className="mt-2 text-sm text-ink-soft">
@@ -495,8 +496,10 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
         <Notice kind="error">The PDF could not be made in this browser. Try another browser, or use Print this page under More formats.</Notice>
       )}
       <section aria-label="Summary scores" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {scores(report).map((s) => (
-          <ScoreCard key={s.label} s={s} status={statusOf(report, s.tool)} onOpen={() => open(s.tab)} />
+        {scores(report).map((s, i) => (
+          <div key={s.label} className="animate-fade-up flex" style={{ ["--i" as string]: i }}>
+            <ScoreCard s={s} status={statusOf(report, s.tool)} onOpen={() => open(s.tab)} />
+          </div>
         ))}
       </section>
 
@@ -543,7 +546,7 @@ export function ReportView({ report, text, onNew }: { report: PaperReport; text:
             // A class rather than the hidden attribute, so printing can still show every section.
             className={cx("pt-8 focus-visible:outline-none", tab !== t.id && "hidden print:block", i > 0 && "print-break")}
           >
-            <h2 className="mb-6 hidden font-serif text-2xl font-semibold print:block">{t.label}</h2>
+            <h2 className="mb-6 hidden font-display text-2xl font-semibold print:block">{t.label}</h2>
             {panels[t.id]}
           </section>
         ))}

@@ -13,6 +13,8 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     launchOptions: executablePath ? { executablePath } : {},
     trace: "retain-on-failure",
+    // Accessibility checks look at the settled page, not text that is still fading in.
+    reducedMotion: "reduce",
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

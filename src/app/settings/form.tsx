@@ -24,7 +24,7 @@ export function SettingsForm() {
       <ToolHeader title="Settings" intro="Choices here are saved in this browser only." />
 
       <section aria-labelledby="srv-h">
-        <h2 id="srv-h" className="font-serif text-2xl font-semibold">
+        <h2 id="srv-h" className="font-display text-2xl font-semibold">
           This server
         </h2>
         {status ? (
@@ -41,7 +41,7 @@ export function SettingsForm() {
       </section>
 
       <section aria-labelledby="priv-h" className="space-y-3">
-        <h2 id="priv-h" className="font-serif text-2xl font-semibold">
+        <h2 id="priv-h" className="font-display text-2xl font-semibold">
           Outside services
         </h2>
         <p className="text-ink-soft">
@@ -63,7 +63,7 @@ export function SettingsForm() {
       </section>
 
       <section aria-labelledby="llm-h" className="space-y-3">
-        <h2 id="llm-h" className="font-serif text-2xl font-semibold">
+        <h2 id="llm-h" className="font-display text-2xl font-semibold">
           Your own language model
         </h2>
         {!status?.allowClientLlm ? (

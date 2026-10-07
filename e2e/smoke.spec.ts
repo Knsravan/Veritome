@@ -107,7 +107,7 @@ test("plagiarism results explain each finding and update when filtered", async (
   await page.getByLabel("Your text").fill("x".repeat(60) + " " + "y".repeat(39));
   await page.getByLabel("Scholarly databases").uncheck();
   await page.getByRole("button", { name: "Check for overlap" }).click();
-  await expect(page.getByText("30%", { exact: true }).first()).toBeVisible();
+  await expect(page.getByLabel("Similarity summary")).toContainText("30");
   await expect(page.getByText("Copied without a citation").first()).toBeVisible();
   await page.getByRole("button", { name: /“SPAN_A”/ }).click();
   await expect(page.getByLabel("Selected finding")).toContainText("SOURCE WORDS");

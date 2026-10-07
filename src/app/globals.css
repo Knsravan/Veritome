@@ -1,23 +1,23 @@
 @import "tailwindcss";
 @import "@fontsource-variable/source-serif-4/index.css";
 @import "@fontsource-variable/source-serif-4/wght-italic.css";
-@import "@fontsource-variable/atkinson-hyperlegible-next/index.css";
+@import "@fontsource-variable/inter/index.css";
 
 /*
- * Veritome: the manuscript is a proof sheet on a cool desk; findings are proof marks.
+ * Veritome: a calm, modern workspace; the manuscript keeps its serif, findings are proof marks.
  * Colours are tokens so light and dark themes share every component.
  */
 :root {
-  --desk: #e4e9ef;
-  --desk-deep: #d5dce5;
+  --desk: #f4f5f8;
+  --desk-deep: #e8ebf0;
   --page: #ffffff;
-  --ink: #1c2733;
-  --ink-soft: #4a5868;
-  --ink-faint: #536276;
-  --rule: #c7d0db;
-  --action: #1d4e89;
+  --ink: #0e1320;
+  --ink-soft: #434b5a;
+  --ink-faint: #5b6474;
+  --rule: #e1e4ea;
+  --action: #4f46e5;
   --action-ink: #ffffff;
-  --action-soft: #dbe7f5;
+  --action-soft: #eef0fe;
   --mark-match: #f7e26b;
   --mark-match-line: #a68a00;
   --mark-ai: #5a42b5;
@@ -32,7 +32,8 @@
   --warn-soft: #fbefd6;
   --danger: #9e1c25;
   --danger-soft: #fbe3e4;
-  --focus: #1d4e89;
+  --focus: #4f46e5;
+  --glow: rgb(79 70 229 / 0.16);
   /* One colour per matched source, so a passage can be traced to its source at a glance. */
   --src-1: #fbe38a; --src-1-line: #8a6d00;
   --src-2: #c9e3fb; --src-2-line: #1d5c99;
@@ -40,7 +41,8 @@
   --src-4: #cdeccf; --src-4-line: #2c6b32;
   --src-5: #e2d6f7; --src-5-line: #5a3aa6;
   --src-6: #fbd9bf; --src-6-line: #9a4b10;
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 6px 20px -10px rgb(15 23 42 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -18px rgb(15 23 42 / 0.28);
   /* Chart colours (validated for colour-blind separation and 3:1 contrast on the page surface). */
   --chart-seq: #2a78d6;
   --chart-human: #2a78d6;
@@ -53,16 +55,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --desk: #12171e;
-    --desk-deep: #0c1015;
-    --page: #1b222c;
-    --ink: #e3e9f0;
-    --ink-soft: #b2bfcd;
-    --ink-faint: #8796a8;
-    --rule: #334050;
-    --action: #8ab8f0;
-    --action-ink: #0c1a2c;
-    --action-soft: #1f3550;
+    --desk: #0a0c11;
+    --desk-deep: #161a23;
+    --page: #11141b;
+    --ink: #eceef3;
+    --ink-soft: #b0b7c3;
+    --ink-faint: #8f98a6;
+    --rule: #262b36;
+    --action: #9a9bff;
+    --action-ink: #0a0c11;
+    --action-soft: #1d1f3d;
     --mark-match: #6b5a00;
     --mark-match-line: #e6c93a;
     --mark-ai: #b3a3f5;
@@ -77,14 +79,16 @@
     --warn-soft: #3e2f10;
     --danger: #f1868c;
     --danger-soft: #4a1d21;
-    --focus: #8ab8f0;
+    --focus: #9a9bff;
+    --glow: rgb(154 155 255 / 0.14);
     --src-1: #5c4a05; --src-1-line: #e6c93a;
     --src-2: #173a5c; --src-2-line: #7fb6ee;
     --src-3: #5a1f2f; --src-3-line: #f29ab0;
     --src-4: #1c4421; --src-4-line: #82cf8a;
     --src-5: #352659; --src-5-line: #b9a3f2;
     --src-6: #5a300f; --src-6-line: #f0a56a;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.3);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
     --chart-seq: #3987e5;
     --chart-human: #3987e5;
     --chart-ai: #d55181;
@@ -94,7 +98,8 @@
 
 @theme inline {
   --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
-  --font-sans: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-desk: var(--desk);
   --color-desk-deep: var(--desk-deep);
   --color-page: var(--page);
@@ -132,7 +137,19 @@ body {
   min-height: 100dvh;
   background: var(--desk);
   font-size: 1rem;
-  line-height: 1.55;
+  line-height: 1.6;
+  font-feature-settings: "cv11", "ss01";
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
 }
 
 :focus-visible {
@@ -244,9 +261,127 @@ body {
 
 .card {
   border: 1px solid var(--rule);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   background: var(--page);
   box-shadow: var(--shadow-card);
+}
+.card-hover {
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* A faint grid that fades out from the top, behind hero sections. */
+.bg-grid {
+  background-image:
+    radial-gradient(60rem 28rem at 50% -8rem, var(--glow), transparent 70%),
+    linear-gradient(to right, color-mix(in srgb, var(--rule) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 70%, transparent) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    44px 44px,
+    44px 44px;
+  mask-image: linear-gradient(to bottom, black 40%, transparent);
+}
+
+/* Motion. Everything here is switched off by the reduced-motion rule at the end. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes draw-mark {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--glow);
+  }
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+.animate-grow-x {
+  transform-origin: left center;
+  animation: grow-x 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+}
+.animate-grow-y {
+  transform-origin: center bottom;
+  animation: grow-y 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 35ms + 150ms);
+}
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+/* Highlights that draw across the words, left to right. */
+.draw-mark {
+  background-repeat: no-repeat;
+  background-image: linear-gradient(var(--draw-color, var(--mark-match)), var(--draw-color, var(--mark-match)));
+  animation: draw-mark 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 450ms + 400ms);
+}
+@keyframes draw-stroke {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.draw-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: draw-stroke 0.9s 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+/* Revealed on scroll by <Reveal>; content below the fold starts slightly lowered and transparent. */
+.reveal-pending {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.reveal-shown {
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
 }
 
 /* Printing (and "Download PDF") gives a clean paper report: no chrome, every section shown. */

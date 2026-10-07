@@ -60,7 +60,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
       >
         {pending && (
           <div className="p-6">
-            <h2 id={titleId} className="font-serif text-2xl font-semibold">
+            <h2 id={titleId} className="font-display text-2xl font-semibold">
               Send parts of your text to search services?
             </h2>
             <p className="mt-3 text-ink-soft">{WHAT_IS_SENT[pending.purpose]}</p>

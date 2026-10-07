@@ -50,7 +50,7 @@ export function ReportProgress({ order, state, words, onCancel }: { order: reado
   return (
     <section aria-labelledby="progress-h" className="card mx-auto max-w-2xl p-6 sm:p-8">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 id="progress-h" className="font-serif text-2xl font-semibold">
+        <h2 id="progress-h" className="font-display text-2xl font-semibold">
           Checking your paper
         </h2>
         <span className="text-sm text-ink-faint tabular-nums" aria-label={`Elapsed ${fmt(elapsed)}`}>

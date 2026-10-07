@@ -26,13 +26,13 @@ export function StackedBar({ segments, label, legendExtra }: { segments: Segment
     <figure className="m-0">
       <div className="relative">
         <div role="img" aria-label={`${label}: ${segments.map((s) => `${s.label} ${pct(s.value)}`).join(", ")}`} className="flex h-3.5 w-full gap-[2px] overflow-hidden rounded-full bg-desk-deep">
-          {shown.map((s) => (
+          {shown.map((s, i) => (
             <span
               key={s.key}
               onMouseEnter={() => setHover(s.key)}
               onMouseLeave={() => setHover(null)}
-              className="h-full first:rounded-l-full last:rounded-r-full transition-opacity"
-              style={{ width: `${Math.max(0.6, s.value)}%`, background: s.color, opacity: hover && hover !== s.key ? 0.45 : 1 }}
+              className="animate-grow-x h-full first:rounded-l-full last:rounded-r-full transition-opacity"
+              style={{ width: `${Math.max(0.6, s.value)}%`, background: s.color, opacity: hover && hover !== s.key ? 0.45 : 1, ["--i" as string]: i }}
             />
           ))}
         </div>
@@ -145,8 +145,8 @@ export function ColumnStrip({
                 className={cx("group flex h-full w-full items-end justify-center", onSelect && "cursor-pointer")}
               >
                 <span
-                  className="block w-full max-w-6 rounded-t-[4px] transition-opacity"
-                  style={{ height: `${Math.max(d.value > 0 ? 3 : 1, d.value * h)}px`, background: d.value > 0 ? color : "var(--rule)", opacity: hover !== null && hover !== i ? 0.5 : 1 }}
+                  className="animate-grow-y block w-full max-w-6 rounded-t-[4px] transition-opacity"
+                  style={{ height: `${Math.max(d.value > 0 ? 3 : 1, d.value * h)}px`, background: d.value > 0 ? color : "var(--rule)", opacity: hover !== null && hover !== i ? 0.5 : 1, ["--i" as string]: i }}
                 />
               </button>
               </div>

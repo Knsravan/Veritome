@@ -137,7 +137,7 @@ export function VerifyView({ result, crossCheck }: { result: VerifyListResult; c
         ).map(([k, v]) => (
           <div key={k} className="rounded bg-page px-3 py-2">
             <dt className="text-sm text-ink-soft">{k}</dt>
-            <dd className="font-serif text-2xl font-semibold tabular-nums">{v}</dd>
+            <dd className="font-display text-2xl font-semibold tabular-nums">{v}</dd>
           </div>
         ))}
       </dl>

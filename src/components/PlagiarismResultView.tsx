@@ -8,6 +8,7 @@ import type { MatchedSource, PlagiarismReport, SourceExcerpt } from "@/core/plag
 import { paragraphStats } from "@/core/report/paragraphs";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";
 import { ColumnStrip, StackedBar } from "./charts";
+import { CountUp } from "./motion";
 import { AlertIcon, CheckIcon, DownloadIcon, InfoIcon, XIcon } from "./icons";
 import { Button, Limits, Notice, ProofLayout, Sheet, Warnings, cx } from "./ui";
 
@@ -171,13 +172,13 @@ const AI_LABEL = { ai: "Likely AI-written", uncertain: "Unclear", human: "Likely
 /** The AI-writing score: what share of the text reads as machine-written, with how far to trust it. */
 function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
   return (
-    <section aria-label="AI writing summary" className="card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
+    <section aria-label="AI writing summary" style={{ ["--i" as string]: 1 }} className="animate-fade-up card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
       <div className="lg:min-w-48 lg:border-r lg:border-rule lg:pr-8">
         <p className="text-sm font-semibold text-ink-soft">AI writing</p>
         {b.judged ? (
           <>
-            <p className="font-serif text-6xl font-semibold tracking-tight tabular-nums">
-              {b.aiPercent}
+            <p className="font-display text-6xl font-semibold tracking-tight tabular-nums">
+              <CountUp value={b.aiPercent} decimals={Number.isInteger(b.aiPercent) ? 0 : 1} />
               <span className="text-3xl text-ink-faint">%</span>
             </p>
             <p className="mt-1 font-semibold">
@@ -187,7 +188,7 @@ function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
           </>
         ) : (
           <>
-            <p className="mt-1 font-serif text-4xl font-semibold text-ink-faint">–</p>
+            <p className="mt-1 font-display text-4xl font-semibold text-ink-faint">–</p>
             <p className="mt-1 text-sm text-ink-soft">Not enough text to judge. AI detection needs about 150 words or more.</p>
           </>
         )}
@@ -315,10 +316,10 @@ export function PlagiarismResultView({
           </Button>
         </div>
       )}
-      <section aria-label="Similarity summary" className="card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
+      <section aria-label="Similarity summary" style={{ ["--i" as string]: 0 }} className="animate-fade-up card grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_1fr]">
         <div className="lg:min-w-48 lg:border-r lg:border-rule lg:pr-8">
-          <p className="font-serif text-6xl font-semibold tracking-tight tabular-nums">
-            {r.similarity}
+          <p className="font-display text-6xl font-semibold tracking-tight tabular-nums">
+            <CountUp value={r.similarity} decimals={Number.isInteger(r.similarity) ? 0 : 1} />
             <span className="text-3xl text-ink-faint">%</span>
           </p>
           <p className="mt-1 font-semibold">{VERDICT[r.verdict]}</p>
@@ -395,7 +396,7 @@ export function PlagiarismResultView({
       {ai && aiB && <AiSummary ai={ai} b={aiB} />}
 
       {paras.length >= 2 && (
-        <section aria-labelledby="where-h" className="card p-5 sm:p-6">
+        <section aria-labelledby="where-h" style={{ ["--i" as string]: 2 }} className="animate-fade-up card p-5 sm:p-6">
           <h3 id="where-h" className="font-semibold">
             Where in your document
           </h3>
