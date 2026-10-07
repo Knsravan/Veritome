@@ -15,6 +15,12 @@ export const TOOLS: readonly ToolInfo[] = [
     cannot: "Cannot see paywalled full texts or student-paper databases; heavy rewriting can slip through.",
   },
   {
+    href: "/compare",
+    name: "Compare papers",
+    does: "For teachers: add a class's papers and see which share text with each other, and where. Runs in your browser.",
+    cannot: "Finds passages shared word for word (with small edits); reworded or translated sharing between papers is not found.",
+  },
+  {
     href: "/detector",
     name: "AI patterns",
     does: "A trained model scores how closely the text resembles machine writing, section by section, with a range.",

@@ -10,13 +10,13 @@ import type { Issue } from "@/core/grammar/types";
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
 describe("components", () => {
-  test("home page lists all six tools with their limits", () => {
+  test("home page lists all seven tools with their limits", () => {
     render(<Home />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Check your paper before reviewers do.");
     for (const name of ["Plagiarism", "AI patterns", "Humaniser", "Paraphraser", "Citations", "Grammar"]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
-    expect(screen.getAllByText(/^Limit:/, { selector: "span" })).toHaveLength(6);
+    expect(screen.getAllByText(/^Limit:/, { selector: "span" })).toHaveLength(7);
   });
 
   test("BandBar describes the range for screen readers", () => {

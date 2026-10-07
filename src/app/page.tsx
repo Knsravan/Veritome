@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  CompareIcon,
   ArrowRightIcon,
   BookIcon,
   CheckIcon,
@@ -24,6 +25,7 @@ const TOOL_ICON: Record<string, ReactNode> = {
   "/paraphraser": <RepeatIcon size={20} />,
   "/citations": <BookIcon size={20} />,
   "/grammar": <TypeIcon size={20} />,
+  "/compare": <CompareIcon size={20} />,
 };
 
 const SOURCES = ["OpenAlex", "Crossref", "Europe PMC", "arXiv", "Semantic Scholar", "CORE", "Wikipedia", "The open web"];
@@ -233,7 +235,7 @@ export default function Home() {
         <Reveal>
           <p className="text-sm font-semibold tracking-wide text-action uppercase">Tools</p>
           <h2 id="tools-title" className="mt-2 font-display text-3xl font-bold sm:text-4xl">
-            Six tools, each honest about its limits
+            Seven tools, each honest about its limits
           </h2>
           <p className="mt-3 max-w-2xl text-lg text-ink-soft">
             Use them together in one report, or one at a time. No checker is right every time, commercial ones included, so each tool tells you what it

@@ -200,3 +200,11 @@ export const MonitorIcon = (p: IconProps) => (
     <path d="M8 20h8M12 16v4" />
   </Icon>
 );
+
+export const CompareIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="7" height="16" rx="1.5" />
+    <rect x="14" y="4" width="7" height="16" rx="1.5" />
+    <path d="M6 9h1M6 13h1M17 9h1M17 13h1" />
+  </Icon>
+);
