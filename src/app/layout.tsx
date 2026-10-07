@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <footer className="border-t border-rule print:hidden">
               <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 text-sm sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
                 <div className="space-y-3">
-                  <p className="flex items-center gap-2 font-serif text-lg font-semibold">
+                  <p className="flex items-center gap-2 font-display text-lg font-semibold">
                     <LogoMark size={22} /> Veritome
                   </p>
                   <p className="max-w-sm text-ink-soft">

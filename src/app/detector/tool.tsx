@@ -30,7 +30,7 @@ export function DetectorTool() {
         title="AI writing patterns"
         intro="Measures how strongly a text shows patterns common in language-model output. It reports a range, not a verdict about who wrote it."
       />
-      <div className="max-w-4xl space-y-4">
+      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
         <TextSource value={text} onChange={setText} />
         <Checkbox
           checked={useLlm && hasLlm}

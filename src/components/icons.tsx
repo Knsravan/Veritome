@@ -130,3 +130,53 @@ export function LogoMark({ size = 26 }: { size?: number }) {
     </svg>
   );
 }
+
+export const CopyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+  </Icon>
+);
+
+export const ScanIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+    <path d="M7 12h10" />
+  </Icon>
+);
+
+export const PenIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </Icon>
+);
+
+export const RepeatIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v2a3 3 0 0 1-3 3H3" />
+  </Icon>
+);
+
+export const BookIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" />
+    <path d="M4 19V5M9 7h6" />
+  </Icon>
+);
+
+export const TypeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 18 9 6l5 12M5.6 14h6.8" />
+    <path d="m15 15 2 2 4-5" />
+  </Icon>
+);
+
+export const SparkIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" />
+  </Icon>
+);

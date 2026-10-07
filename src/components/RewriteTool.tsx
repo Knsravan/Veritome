@@ -43,7 +43,7 @@ export function RewriteTool({ kind }: { kind: "humanise" | "paraphrase" }) {
         />
       )}
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="min-w-0 space-y-4">
+        <div className="card min-w-0 space-y-4 p-4 sm:p-6">
           <TextSource value={text} onChange={setText} maxChars={MAX} rows={12} hint={`Up to ${MAX.toLocaleString("en")} characters. Nothing is stored.`} />
           {kind === "paraphrase" && (
             <fieldset>

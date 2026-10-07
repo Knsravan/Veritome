@@ -61,7 +61,7 @@ export function GrammarTool() {
           </>
         }
       />
-      <div className="max-w-4xl space-y-4">
+      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
         <TextSource value={text} onChange={setText} />
         {status?.publicLanguageTool && (
           <Checkbox
@@ -95,7 +95,7 @@ export function GrammarTool() {
           margin={
             <>
               <section aria-labelledby="g-sum" className="space-y-2">
-                <h2 id="g-sum" className="font-serif text-2xl font-semibold">
+                <h2 id="g-sum" className="font-display text-2xl font-semibold">
                   {doc.issues.length === 0 ? "No issues left" : `${doc.issues.length} issue${doc.issues.length === 1 ? "" : "s"}`}
                 </h2>
                 <p className="text-sm text-ink-soft">

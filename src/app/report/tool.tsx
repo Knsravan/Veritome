@@ -111,7 +111,7 @@ export function ReportTool() {
   return (
     <div className="space-y-8">
       <header className="max-w-3xl">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">Check a paper</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Check a paper</h1>
         <p className="mt-2 text-lg text-ink-soft">
           Upload your manuscript and get one report covering plagiarism, AI-writing patterns, references and grammar, with every finding shown in your text.
         </p>

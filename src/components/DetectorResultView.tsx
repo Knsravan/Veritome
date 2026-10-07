@@ -18,7 +18,7 @@ const leanWord = (lean: number) => (lean > 0.25 ? "model-like" : lean < -0.25 ? 
 export function DetectorSummary({ result }: { result: DetectorResult }) {
   return (
     <div className="space-y-3">
-      <p className="font-serif text-2xl font-semibold">{VERDICT_TEXT[result.verdict]}</p>
+      <p className="font-display text-2xl font-semibold">{VERDICT_TEXT[result.verdict]}</p>
       <BandBar
         score={result.score}
         low={result.band.low}

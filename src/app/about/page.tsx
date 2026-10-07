@@ -9,7 +9,7 @@ export default function Page() {
   return (
     <article className="max-w-3xl space-y-10">
       <header>
-        <h1 className="font-serif text-4xl font-semibold tracking-tight">Limits and privacy</h1>
+        <h1 className="font-display text-4xl font-semibold tracking-tight">Limits and privacy</h1>
         <p className="mt-3 text-lg text-ink-soft">
           Veritome is built to help you review your own work. No tool here, and no commercial tool either, can tell you with certainty that a text
           is original or who wrote it.
@@ -17,7 +17,7 @@ export default function Page() {
       </header>
 
       <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-semibold">How sure is each check?</h2>
+        <h2 className="font-display text-2xl font-semibold">How sure is each check?</h2>
         <dl className="divide-y divide-rule border-y border-rule">
           {TOOLS.map((t) => (
             <div key={t.href} className="grid gap-1 py-3 sm:grid-cols-[10rem_1fr]">
@@ -38,7 +38,7 @@ export default function Page() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-semibold">What happens to your text</h2>
+        <h2 className="font-display text-2xl font-semibold">What happens to your text</h2>
         <ul className="list-disc space-y-2 pl-5">
           <li>Text and uploaded files are processed in memory and dropped when the request ends. Veritome does not store or log them.</li>
           <li>
@@ -53,7 +53,7 @@ export default function Page() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-semibold">Using AI tools responsibly</h2>
+        <h2 className="font-display text-2xl font-semibold">Using AI tools responsibly</h2>
         <p>
           Many journals and universities require authors to disclose substantive use of AI tools, and none accept a detector score as proof of
           misconduct on its own. If you use the humaniser or paraphraser, check your publisher&rsquo;s policy and disclose where it asks you to.

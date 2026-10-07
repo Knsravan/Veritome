@@ -25,7 +25,7 @@ function CheckReferences() {
   };
   return (
     <div className="space-y-6">
-      <div className="max-w-4xl space-y-4">
+      <div className="card max-w-4xl space-y-4 p-4 sm:p-6">
         <TextSource
           value={text}
           onChange={setText}
@@ -103,7 +103,7 @@ function FindSources() {
   return (
     <div className="space-y-6">
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-4">
+        <div className="card space-y-4 p-4 sm:p-6">
           <TextSource value={text} onChange={setText} label="Scan a text for uncited claims" rows={10} hint="Finding the claims happens on the server without any outside service." />
           <Button onClick={() => void scanText()} busy={scan.busy} disabled={!text.trim()}>
             Find claims that may need a citation
@@ -132,7 +132,7 @@ function FindSources() {
       {claims && (
         <section aria-labelledby="claims-h" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="claims-h" className="font-serif text-2xl font-semibold">
+            <h2 id="claims-h" className="font-display text-2xl font-semibold">
               {claims.length === 0 ? "No uncited claims found" : `${claims.length} sentence${claims.length === 1 ? "" : "s"} that may need a citation`}
             </h2>
             <StylePicker value={style} onChange={setStyle} />

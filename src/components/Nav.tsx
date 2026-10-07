@@ -4,18 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { TOOLS } from "@/lib/tools";
-import { LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
+import { ArrowRightIcon, LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
 import { cx } from "./ui";
 
 const LINKS = TOOLS.map((t) => ({ href: t.href, name: t.name }));
 
-/** Site header: brand, tool links, settings and the main call to action. Collapses into a menu on small screens. */
+/** Site header: brand, tool links, settings and the main call to action. Tightens on scroll; a menu on small screens. */
 export function SiteHeader() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
 
   useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -24,15 +31,24 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-rule bg-desk/95 backdrop-blur supports-[backdrop-filter]:bg-desk/85 print:hidden">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 rounded" aria-label="Veritome home">
-          <LogoMark />
-          <span className="font-serif text-[1.35rem] font-semibold tracking-tight">Veritome</span>
+    <header
+      className={cx(
+        "sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow] duration-300 print:hidden",
+        scrolled || open
+          ? "border-rule bg-page/80 shadow-[0_8px_30px_-18px_rgb(15_23_42/0.35)] backdrop-blur-xl supports-[backdrop-filter]:bg-page/70"
+          : "border-transparent bg-transparent",
+      )}
+    >
+      <div className={cx("mx-auto flex max-w-7xl items-center gap-6 px-4 transition-[height] duration-300 sm:px-6", scrolled ? "h-14" : "h-[4.5rem]")}>
+        <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-lg" aria-label="Veritome home">
+          <span className="transition-transform duration-300 group-hover:-rotate-6">
+            <LogoMark />
+          </span>
+          <span className="font-display text-[1.25rem] font-bold tracking-tight">Veritome</span>
         </Link>
 
-        <nav aria-label="Tools" className="hidden flex-1 lg:block">
-          <ul className="flex items-center gap-0.5">
+        <nav aria-label="Tools" className="hidden flex-1 justify-center lg:flex">
+          <ul className="flex items-center gap-1 rounded-full border border-rule bg-page/70 p-1 shadow-sm">
             {LINKS.map((l) => {
               const active = path === l.href;
               return (
@@ -41,8 +57,8 @@ export function SiteHeader() {
                     href={l.href}
                     aria-current={active ? "page" : undefined}
                     className={cx(
-                      "block rounded-md px-3 py-2 text-[0.94rem] whitespace-nowrap transition-colors",
-                      active ? "bg-page font-semibold text-ink shadow-[0_0_0_1px_var(--rule)]" : "text-ink-soft hover:bg-page/70 hover:text-ink",
+                      "block rounded-full px-3.5 py-1.5 text-[0.9rem] font-medium whitespace-nowrap transition-colors duration-200",
+                      active ? "bg-ink text-page" : "text-ink-soft hover:bg-desk-deep hover:text-ink",
                     )}
                   >
                     {l.name}
@@ -57,7 +73,7 @@ export function SiteHeader() {
           <Link
             href="/settings"
             aria-current={path === "/settings" ? "page" : undefined}
-            className="hidden size-10 items-center justify-center rounded-md text-ink-soft hover:bg-page/70 hover:text-ink sm:inline-flex"
+            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink sm:inline-flex"
             title="Settings"
           >
             <SettingsIcon />
@@ -66,13 +82,14 @@ export function SiteHeader() {
           <Link
             href="/report"
             aria-current={path === "/report" ? "page" : undefined}
-            className="inline-flex h-10 items-center rounded-md bg-action px-4 text-[0.94rem] font-semibold whitespace-nowrap text-action-ink shadow-sm transition-opacity hover:opacity-90"
+            className="group inline-flex h-10 items-center gap-1.5 rounded-full bg-action px-4 text-[0.9rem] font-semibold whitespace-nowrap text-action-ink shadow-[0_6px_16px_-6px_var(--action)] transition-transform duration-200 hover:-translate-y-px active:scale-[0.97]"
           >
             Check a paper
+            <ArrowRightIcon size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" />
           </Link>
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-md text-ink hover:bg-page/70 lg:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-desk-deep lg:hidden"
             aria-expanded={open}
             aria-controls={menuId}
             onClick={() => setOpen((o) => !o)}
@@ -83,14 +100,14 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <nav id={menuId} aria-label="Menu" hidden={!open} className="border-t border-rule bg-page lg:hidden">
+      <nav id={menuId} aria-label="Menu" hidden={!open} className="animate-fade-in border-t border-rule bg-page lg:hidden">
         <ul className="mx-auto grid max-w-7xl gap-1 px-4 py-3 sm:grid-cols-2 sm:px-6">
-          {[...LINKS, { href: "/settings", name: "Settings" }, { href: "/about", name: "Limits and privacy" }].map((l) => (
-            <li key={l.href}>
+          {[...LINKS, { href: "/settings", name: "Settings" }, { href: "/about", name: "Limits and privacy" }].map((l, i) => (
+            <li key={l.href} className="animate-fade-up" style={{ ["--i" as string]: i }}>
               <Link
                 href={l.href}
                 aria-current={path === l.href ? "page" : undefined}
-                className={cx("block rounded-md px-3 py-2.5", path === l.href ? "bg-action-soft font-semibold" : "hover:bg-desk")}
+                className={cx("block rounded-xl px-3 py-2.5 font-medium", path === l.href ? "bg-action-soft text-action" : "hover:bg-desk")}
               >
                 {l.name}
               </Link>

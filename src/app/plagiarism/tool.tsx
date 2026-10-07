@@ -24,7 +24,7 @@ function Progress({ done, total, onCancel }: { done: number; total: number; onCa
   return (
     <section aria-labelledby="pl-progress" className="card mx-auto max-w-xl p-6 sm:p-8">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 id="pl-progress" className="font-serif text-2xl font-semibold">
+        <h2 id="pl-progress" className="font-display text-2xl font-semibold">
           Searching for matching text
         </h2>
         <span className="text-sm text-ink-faint tabular-nums">{s}s</span>
@@ -125,7 +125,7 @@ export function PlagiarismTool() {
               <ArrowLeftIcon size={16} /> New check
             </button>
             <p className="text-sm font-semibold tracking-wide text-ink-faint uppercase">Veritome plagiarism report</p>
-            <h1 id="pl-result" className="mt-1 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 id="pl-result" className="mt-1 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
               Similarity report
             </h1>
             <p className="mt-1 text-sm text-ink-soft">
@@ -141,7 +141,7 @@ export function PlagiarismTool() {
   return (
     <div className="space-y-8">
       <header className="max-w-3xl">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">Plagiarism check</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Plagiarism check</h1>
         <p className="mt-2 text-lg text-ink-soft">
           Finds passages that match published papers, the web or your own documents, checks how much reads as AI-written, and shows you exactly what to fix.
         </p>
