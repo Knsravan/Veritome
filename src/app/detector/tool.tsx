@@ -17,6 +17,7 @@ import {
 import { Button, Checkbox, Notice, cx } from "@/components/ui";
 import type { DetectorResult } from "@/core/detector/types";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
+import { reflowParagraphs } from "@/core/text/reflow";
 import { ApiError, postNdjson } from "@/lib/api";
 import type { DocModel } from "@/lib/doc/model";
 import { sampleDocx } from "@/lib/sample-file";
@@ -371,7 +372,7 @@ export function DetectorTool() {
                 <Button
                   className="h-12 px-6 text-base"
                   disabled={s.words < 80}
-                  onClick={() => void check(tidyPasted(text), null)}
+                  onClick={() => void check(reflowParagraphs(tidyPasted(text)), null)}
                 >
                   Check for AI writing <ArrowRightIcon />
                 </Button>

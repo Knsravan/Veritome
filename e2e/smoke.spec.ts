@@ -154,7 +154,6 @@ test("tools that are not ready yet say they are coming soon", async ({
 }) => {
   for (const path of [
     "/compare",
-    "/humaniser",
     "/paraphraser",
     "/citations",
     "/grammar",
@@ -165,6 +164,41 @@ test("tools that are not ready yet say they are coming soon", async ({
       page.getByRole("link", { name: /Plagiarism/ }).first(),
     ).toBeVisible();
   }
+});
+
+test("humaniser revises paragraph by paragraph, lets each change be reviewed, and gives a Word file", async ({
+  page,
+}) => {
+  // A pretend language model, so the test needs no API key.
+  await page.route("**/api/status", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ json: { ...(await res.json()), llm: true, llmModel: "test-model" } });
+  });
+  let calls = 0;
+  await page.route("**/api/humanise", async (route) => {
+    calls++;
+    const body = route.request().postDataJSON() as { text: string; tone: string };
+    expect(body.tone).toBe("natural");
+    const text = body.text.replace("It is important to note that the method plays a crucial role in", "The method is central to");
+    await route.fulfill({
+      json: { original: body.text, text, status: "rewritten", attempts: 1, problems: [], meaningChecked: true, changed: 0.2 },
+    });
+  });
+  await page.goto("/humaniser");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Make stiff writing read like you wrote it");
+  const para = "It is important to note that the method plays a crucial role in the analysis of river sediments (Smith et al., 2020), and accuracy reached 94.2% on the held-out samples.";
+  await page.getByRole("textbox", { name: "Paste your text" }).fill(`Introduction\n\n${para}\n\n${para}`);
+  await page.getByRole("radio", { name: "Natural" }).click();
+  await page.getByRole("button", { name: /Humanise/ }).click();
+  await expect(page.getByText("2 of 2 paragraphs revised")).toBeVisible();
+  expect(calls).toBe(2);
+  await expect(page.getByText("Meaning checked").first()).toBeVisible();
+  await page.getByRole("radio", { name: "Keep original" }).first().click();
+  await expect(page.getByRole("heading", { name: "Disclose the help you used" })).toBeVisible();
+  await axe(page);
+  const word = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download Word file" }).click();
+  expect((await word).suggestedFilename()).toBe("text-humanised.docx");
 });
 
 test("external checks ask for consent first, and cancelling sends nothing", async ({
