@@ -34,3 +34,21 @@ describe("reviseDocx", () => {
     expect(doc.text).toContain("Second paragraph.");
   });
 });
+
+describe("reviseDocx clean mode", () => {
+  it("replaces the paragraph in its own formatting and keeps italic words that are still there", async () => {
+    const body = `<w:p><w:pPr><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Georgia"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">Moreover, the bacterium </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Georgia"/><w:i/><w:sz w:val="22"/></w:rPr><w:t>E. coli</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Georgia"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve"> plays a pivotal role in the study of growth.</w:t></w:r></w:p>`;
+    const data = await makeDocx(body);
+    const doc = await readDocx("t.docx", data);
+    const out = await reviseDocx("t.docx", data, [{ start: 0, end: doc.text.length, text: "We grew E. coli to study how cells divide." }], { mode: "clean" });
+    expect(out.applied).toBe(1);
+    const xml = await (await JSZip.loadAsync(await out.blob.arrayBuffer())).file("word/document.xml")!.async("string");
+    expect(xml).not.toMatch(/<w:(ins|del)\b/);
+    expect(xml).toContain('<w:jc w:val="both"/>');
+    expect(xml).toMatch(/<w:rFonts w:ascii="Georgia"\/><w:sz w:val="22"\/><\/w:rPr><w:t xml:space="preserve">We grew <\/w:t>/);
+    expect(xml).toMatch(/<w:i\/>.*<w:t xml:space="preserve">E\. coli<\/w:t>/);
+    expect(xml).not.toContain("pivotal");
+    const again = await readDocx("o.docx", new Uint8Array(await out.blob.arrayBuffer()));
+    expect(again.text).toBe("We grew E. coli to study how cells divide.");
+  });
+});

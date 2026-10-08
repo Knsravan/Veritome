@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -214,6 +215,44 @@ test("humaniser revises paragraph by paragraph, lets each change be reviewed, an
   const word = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download Word file" }).click();
   expect((await word).suggestedFilename()).toBe("text-humanised.docx");
+});
+
+test("humaniser file mode humanises the whole document and gives back the same kind of file in its own layout", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.route("**/api/status", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ json: { ...(await res.json()), llm: true, llmModel: "test-model" } });
+  });
+  await page.route("**/api/humanise", async (route) => {
+    const body = route.request().postDataJSON() as { text: string };
+    const text = body.text.replace(/^(Furthermore|Moreover|In conclusion), /, "").replace(/^./, (c) => c.toUpperCase()).replace(/It is important to note that /, "");
+    await route.fulfill({
+      json: { original: body.text, text, status: "rewritten", attempts: 1, problems: [], meaningChecked: true, changed: 0.1 },
+    });
+  });
+  for (const [file, mime, label, ext] of [
+    ["humanise.pdf", "application/pdf", "PDF", "pdf"],
+    ["humanise.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Word file", "docx"],
+  ] as const) {
+    await page.goto("/humaniser?mode=file");
+    await page.locator('input[type="file"]').setInputFiles({ name: file, mimeType: mime, buffer: readFileSync(`tests/fixtures/${file}`) });
+    await page.getByRole("button", { name: /Humanise/ }).click();
+    await expect(page.getByText(/12 of 12 paragraphs humanised/)).toBeVisible({ timeout: 60_000 });
+    // One document, no copy button on each paragraph.
+    await expect(page.getByRole("article", { name: "Your humanised document" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: /^Also, the proposed framework|^The proposed framework/ }).first().click();
+    await expect(page.getByRole("radio", { name: "Keep original" })).toBeVisible();
+    await axe(page);
+    const dl = page.waitForEvent("download");
+    await page.getByRole("button", { name: `Download humanised ${label}` }).click();
+    expect((await dl).suggestedFilename()).toBe(`humanise-humanised.${ext}`);
+    await expect(page.getByText(/All 12 humanised paragraphs are in your/)).toBeVisible();
+    await page.getByRole("tab", { name: `Preview the ${label}` }).click();
+    await expect(page.getByLabel("Preview of the humanised file")).toBeVisible({ timeout: 30_000 });
+  }
 });
 
 test("checks are saved in this browser's history, reopen without checking again, and repeats are pointed out", async ({

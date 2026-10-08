@@ -265,7 +265,7 @@ export function planParagraphs(text: string): PlannedParagraph[] {
   const prose = proseRanges(text);
   const whole = prose.length === 1 && prose[0]!.start === 0 && prose[0]!.end === text.length;
   const out: PlannedParagraph[] = [];
-  for (const p of splitParagraphs(text)) {
+  for (const p of splitParagraphs(text).flatMap(peelHeadings).flatMap(splitDisplayLines)) {
     const rewrite = (whole ? countWords(p.text) >= 12 : prose.some((r) => r.start <= p.start && p.end <= r.end)) && countWords(p.text) >= 8;
     const parts = rewrite && p.text.length > MAX_PIECE_CHARS ? chunkBySentences(p.text, MAX_PIECE_CHARS) : [{ start: 0, end: p.text.length }];
     for (const c of parts) {
@@ -278,6 +278,69 @@ export function planParagraphs(text: string): PlannedParagraph[] {
   return out;
 }
 
+/**
+ * A heading on its own line at the top of a paragraph ("I. INTRODUCTION", "2.1 Data Collection") that a PDF reader
+ * joined to the text below it: split off, so it is left as it is and stays on its own line.
+ */
+function peelHeadings(p: { text: string; start: number; end: number }): Array<{ text: string; start: number; end: number }> {
+  const out: Array<{ text: string; start: number; end: number }> = [];
+  let cur = p;
+  for (let k = 0; k < 3; k++) {
+    const nl = cur.text.indexOf("\n");
+    if (nl < 0) break;
+    const line = cur.text.slice(0, nl).trim();
+    const words = line.replace(/^(?:[IVX]+|[A-Z]|\d+(?:\.\d+)*)[.)]?\s+/, "").split(/\s+/).filter(Boolean);
+    const letters = words.filter((w) => /\p{L}/u.test(w));
+    const caps = letters.length > 0 && letters.every((w) => w === w.toUpperCase());
+    const title = letters.length > 0 && letters.every((w) => w.replace(/^\P{L}+/u, "").length < 4 || /^\P{L}*\p{Lu}/u.test(w));
+    if (!letters.length || words.length > 12 || /[.,;:!?]$/.test(line) || !(caps || title)) break;
+    out.push({ text: line, start: cur.start, end: cur.start + line.length });
+    const rest = cur.text.slice(nl + 1);
+    const lead = rest.length - rest.trimStart().length;
+    cur = { text: rest.trim(), start: cur.start + nl + 1 + lead, end: cur.end };
+  }
+  out.push(cur);
+  return out;
+}
+
+/** A displayed equation on its own line: maths symbols and, usually, an equation number at the end. */
+function isDisplayLine(line: string): boolean {
+  const t = line.trim();
+  if (!t || t.length > 160) return false;
+  const maths = (t.match(/[=≤≥≈≠∑∏∫√∞∂∇±×÷⟨⟩|]|[\u{1D400}-\u{1D7FF}]|[\u0370-\u03FF]/gu) ?? []).length;
+  const numbered = /\(\d{1,3}[a-z]?\)$/.test(t);
+  const words = (t.match(/\p{L}{3,}/gu) ?? []).length;
+  return (numbered && maths > 0) || (maths >= 1 && words === 0) || (maths >= 2 && words <= 2) || (maths >= 3 && words <= 4);
+}
+
+/** Splits displayed equations out of a paragraph, so they are left exactly as they are. */
+function splitDisplayLines(p: { text: string; start: number; end: number }): Array<{ text: string; start: number; end: number }> {
+  if (!p.text.includes("\n")) return [p];
+  const out: Array<{ text: string; start: number; end: number }> = [];
+  let from = 0;
+  let at = 0;
+  const flush = (end: number) => {
+    const raw = p.text.slice(from, end);
+    const t = raw.trim();
+    if (t) {
+      const s = p.start + from + (raw.length - raw.trimStart().length);
+      out.push({ text: t, start: s, end: s + t.length });
+    }
+  };
+  for (const line of p.text.split("\n")) {
+    const end = at + line.length;
+    if (isDisplayLine(line)) {
+      flush(at);
+      from = at;
+      flush(end);
+      from = end + 1;
+    }
+    at = end + 1;
+  }
+  flush(p.text.length);
+  return out;
+}
+
 /** Puts the text back together with each piece replaced by its new version (same order as planParagraphs). */
 export function assemble(text: string, pieces: readonly PlannedParagraph[], replacements: readonly string[]): string {
   let out = "";
@@ -287,6 +350,29 @@ export function assemble(text: string, pieces: readonly PlannedParagraph[], repl
     cursor = p.end;
   });
   return out + text.slice(cursor);
+}
+
+/**
+ * Whole-paragraph edits for writing back into a file: pieces of one paragraph (a long paragraph is revised in
+ * parts) are joined into one edit. Paragraphs with no change are left out.
+ */
+export function paragraphEdits(
+  text: string,
+  pieces: readonly PlannedParagraph[],
+  replacements: readonly string[],
+): Array<{ start: number; end: number; text: string }> {
+  const out: Array<{ start: number; end: number; text: string; changed: boolean }> = [];
+  pieces.forEach((p, i) => {
+    const next = (replacements[i] ?? p.text).replace(/\s+/g, " ").trim();
+    const changed = next !== p.text.replace(/\s+/g, " ").trim();
+    const last = out[out.length - 1];
+    if (last && !/\n\s*\n/.test(text.slice(last.end, p.start)) && pieces[i - 1]?.rewrite && p.rewrite) {
+      last.end = p.end;
+      last.text += ` ${next}`;
+      last.changed ||= changed;
+    } else out.push({ start: p.start, end: p.end, text: next, changed });
+  });
+  return out.filter((e) => e.changed).map(({ start, end, text: t }) => ({ start, end, text: t }));
 }
 
 export const HUMANISE_DISCLOSURE =

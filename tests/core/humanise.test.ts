@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ChatRequest, LlmClient } from "../../src/core/llm/client.ts";
-import { assemble, checkRewrite, humaniseParagraph, humaniseSystemPrompt, planParagraphs } from "../../src/core/rewrite/humanise.ts";
+import { assemble, checkRewrite, humaniseParagraph, humaniseSystemPrompt, paragraphEdits, planParagraphs } from "../../src/core/rewrite/humanise.ts";
 
 /** A fake model: rewrite calls get the next scripted reply; meaning checks answer with `same`. */
 function fake(rewrites: string[], same: boolean | boolean[] = true): LlmClient & { calls: ChatRequest[] } {
@@ -105,4 +105,34 @@ test("the prompt asks for plain words, not fancier synonyms", () => {
   const p = humaniseSystemPrompt("academic", "balanced");
   assert.match(p, /plainest accurate word/);
   assert.match(p, /Never replace a plain word with a fancier synonym/);
+});
+
+test("planParagraphs keeps headings and displayed equations out of the rewrite, each as it is", () => {
+  const text =
+    "I. INTRODUCTION\nA computer science student who meets quantum mechanics for the first time often finds the notation hard to follow, and the\nsimulators we tried did not help them much at all.\n\nThe state space grows quickly as qubits are added to the register:\ndim(ℋ𝑁) = 2𝑁 (8)\nwhere each added qubit doubles the number of amplitudes the simulator has to keep in memory.";
+  const pieces = planParagraphs(text);
+  assert.deepEqual(
+    pieces.map((p) => [p.rewrite, p.text.split("\n")[0]]),
+    [
+      [false, "I. INTRODUCTION"],
+      [true, "A computer science student who meets quantum mechanics for the first time often finds the notation hard to follow, and the"],
+      [true, "The state space grows quickly as qubits are added to the register:"],
+      [false, "dim(ℋ𝑁) = 2𝑁 (8)"],
+      [true, "where each added qubit doubles the number of amplitudes the simulator has to keep in memory."],
+    ],
+  );
+  for (const p of pieces) assert.equal(text.slice(p.start, p.end), p.text);
+});
+
+test("paragraphEdits joins the parts of one long paragraph and leaves out unchanged paragraphs", () => {
+  const long = Array.from({ length: 40 }, (_, i) => `Sentence number ${i + 1} describes one more step of the long method in some detail.`).join(" ");
+  const text = `Methods\n\n${long}\n\nA final paragraph that is not changed by the rewrite at all here.`;
+  const pieces = planParagraphs(text);
+  const parts = pieces.filter((p) => p.text.startsWith("Sentence"));
+  assert.ok(parts.length >= 2, "the long paragraph is revised in parts");
+  const edits = paragraphEdits(text, pieces, pieces.map((p) => (p.text.startsWith("A final") ? p.text : p.text.replace(/Sentence/g, "Line"))));
+  assert.equal(edits.length, 1);
+  assert.equal(text.slice(edits[0]!.start, edits[0]!.end), long);
+  assert.ok(edits[0]!.text.startsWith("Line number 1 "));
+  assert.ok(edits[0]!.text.endsWith("in some detail."));
 });
