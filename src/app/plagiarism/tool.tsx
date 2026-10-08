@@ -10,6 +10,7 @@ import { ReportProgress, type ProgressState, type StepState } from "@/components
 import { ReportView } from "@/components/report/ReportView";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
 import { Button, Checkbox, Notice, cx } from "@/components/ui";
+import { detectorOverview } from "@/core/detector/overview";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
 import { ApiError, postNdjson } from "@/lib/api";
 import { sampleDocx } from "@/lib/sample-file";
@@ -143,7 +144,17 @@ export function PlagiarismTool() {
       );
       if (c.signal.aborted) return;
       if (!finished) throw new ApiError("The check stopped before the report was ready. Try again, or with fewer checks at once.", 0);
-      const done: PaperReport = finished;
+      let done: PaperReport = finished;
+      if (done.detector.status === "done") {
+        // The neural model reads each paragraph here in the browser; the paper is not sent anywhere for it.
+        setProgress((p) => (p ? { ...p, extra: { label: "AI writing, second opinion", state: "running", text: "Reading each paragraph with the neural model" } } : p));
+        const { withNeuralOpinion } = await import("@/lib/ai-model/neural");
+        const result = await withNeuralOpinion(done.detector.result, text, c.signal);
+        if (c.signal.aborted) return;
+        const line = detectorOverview(result);
+        done = { ...done, detector: { ...done.detector, result }, overview: done.overview.map((o) => (o.tool === "detector" ? { ...o, ...line } : o)) };
+        setProgress((p) => (p ? { ...p, extra: { label: "AI writing, second opinion", state: "done" } } : p));
+      }
       if (checkImages && doc) {
         setProgress((p) => (p ? { ...p, extra: { label: "Pictures", state: "running", text: "Finding the pictures" } } : p));
         try {

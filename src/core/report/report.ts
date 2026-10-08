@@ -4,6 +4,7 @@ import { parseReferenceList } from "../citations/parse.ts";
 import type { ParsedReference } from "../citations/types.ts";
 import { verifyReferences, type VerifierDeps, type VerifyListResult } from "../citations/verify.ts";
 import { detectAiText } from "../detector/detect.ts";
+import { detectorOverview } from "../detector/overview.ts";
 import type { DetectorResult } from "../detector/types.ts";
 import { checkGrammar, type GrammarCheckResult } from "../grammar/check.ts";
 import type { LanguageToolOptions } from "../grammar/languagetool.ts";
@@ -168,13 +169,7 @@ export function buildOverview(r: Omit<PaperReport, "overview" | "generatedAt" | 
         headline: `${p.similarity}% of words match ${external} source${external === 1 ? "" : "s"}${uncitedWords ? ` (${uncitedWords} words copied without a citation)` : ""}${p.paraphrasePercent > 0 ? `, plus ${p.paraphrasePercent}% reworded` : ""}${p.providers.some((x) => x.kind !== "self") ? "" : " (no external search configured)"}.${flags ? ` ${flags} sign${flags === 1 ? "" : "s"} that copying was hidden (disguised text or paraphrasing-tool phrases).` : ""}`,
       };
     }),
-    item("detector", r.detector, (d) => ({
-      status: d.verdict === "likely_ai" ? "attention" : d.verdict === "uncertain" ? "review" : d.verdict === "insufficient_text" ? "skipped" : "ok",
-      headline:
-        d.verdict === "insufficient_text"
-          ? "Not enough text to judge."
-          : `Pattern score ${d.score} (plausible range ${d.band.low} to ${d.band.high}).`,
-    })),
+    item("detector", r.detector, detectorOverview),
     item("citations", r.citations, (c) => {
       const v = c.verification?.counts;
       const problems = (v ? v.mismatch + v.flagged + v.not_found : 0) + c.crossCheck.citedButMissing.length;

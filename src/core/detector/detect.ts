@@ -45,7 +45,7 @@ export function verdictFor(words: number, band: { low: number; high: number }): 
   return "uncertain";
 }
 
-function levelFor(score: number): SentenceLevel {
+export function levelFor(score: number): SentenceLevel {
   return score >= 0.7 ? "high" : score >= 0.45 ? "medium" : "low";
 }
 

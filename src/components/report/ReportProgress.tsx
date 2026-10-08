@@ -19,7 +19,7 @@ export interface ProgressState {
 
 const RUNNING_TEXT: Record<ToolId, string> = {
   plagiarism: "Searching scholarly databases and the open web for matching passages",
-  detector: "Scoring the writing with the trained model",
+  detector: "Scoring the writing with the trained models",
   citations: "Looking up each reference and checking in-text citations",
   grammar: "Checking grammar, spelling and readability",
   paraphrase: "Drafting rewrites for matched passages",
