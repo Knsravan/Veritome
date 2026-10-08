@@ -100,3 +100,9 @@ test("text pasted without paragraph breaks is split into paragraphs at sentence 
   const short = "One short paragraph.\n\nAnother one.";
   assert.equal(reflowParagraphs(short), short);
 });
+
+test("the prompt asks for plain words, not fancier synonyms", () => {
+  const p = humaniseSystemPrompt("academic", "balanced");
+  assert.match(p, /plainest accurate word/);
+  assert.match(p, /Never replace a plain word with a fancier synonym/);
+});
