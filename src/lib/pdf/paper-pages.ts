@@ -15,10 +15,19 @@ const hex = (c: string): Rgb => {
 };
 const SRC = ["#e0a100", "#3a8ee6", "#2fa36b", "#ee7a2f", "#d6539b", "#13a3b5"];
 
-export type LineStyle = "solid" | "dotted" | "wavy" | "dashed" | "thin" | "double";
+export type LineStyle =
+  | "solid"
+  | "dotted"
+  | "wavy"
+  | "dashed"
+  | "thin"
+  | "double";
 
 /** Colour and line style for a mark, as on screen. */
-export function markStyle(m: Pick<ExactMark, "className" | "group">): { color: string; style: LineStyle } {
+export function markStyle(m: Pick<ExactMark, "className" | "group">): {
+  color: string;
+  style: LineStyle;
+} {
   const c = m.className;
   const src = m.group ? SRC[(m.group - 1) % SRC.length]! : "#e0a100";
   if (c.includes("mark-flag")) return { color: "#dc2626", style: "double" };
@@ -29,7 +38,13 @@ export function markStyle(m: Pick<ExactMark, "className" | "group">): { color: s
   return { color: src, style: "solid" };
 }
 
-function zigzag(x0: number, x1: number, y: number, amp: number, step: number): Array<[number, number]> {
+function zigzag(
+  x0: number,
+  x1: number,
+  y: number,
+  amp: number,
+  step: number,
+): Array<[number, number]> {
   const pts: Array<[number, number]> = [];
   let up = true;
   for (let x = x0; x <= x1; x += step) {
@@ -42,24 +57,41 @@ function zigzag(x0: number, x1: number, y: number, amp: number, step: number): A
 /**
  * A Word file laid out exactly and underlined, as one picture per page (JPEG data URLs with their size in points).
  */
-export async function wordPages(doc: DocxModel, text: string, marks: ExactMark[]): Promise<Array<{ url: string; width: number; height: number }>> {
+export async function wordPages(
+  doc: DocxModel,
+  text: string,
+  marks: ExactMark[],
+): Promise<Array<{ url: string; width: number; height: number }>> {
   if (!doc.data) return [];
-  const [{ renderDocx, drawMarks }, { default: html2canvas }] = await Promise.all([import("../doc/docx-exact"), import("html2canvas-pro")]);
+  const [{ renderDocx, drawMarks }, { default: html2canvas }] =
+    await Promise.all([import("../doc/docx-exact"), import("html2canvas-pro")]);
   const host = document.createElement("div");
   host.className = "docx-exact docx-capture";
   // Laid out on the page (so it can be photographed) but behind everything and never seen.
-  host.style.cssText = "position:fixed;left:0;top:0;z-index:-1000;pointer-events:none;";
+  host.style.cssText =
+    "position:fixed;left:0;top:0;z-index:-1000;pointer-events:none;";
   document.body.appendChild(host);
   try {
     await renderDocx(host, doc.data);
     drawMarks(host, text, marks, false);
     await document.fonts?.ready;
     const out: Array<{ url: string; width: number; height: number }> = [];
-    for (const section of Array.from(host.querySelectorAll<HTMLElement>("section.docx"))) {
+    for (const section of Array.from(
+      host.querySelectorAll<HTMLElement>("section.docx"),
+    )) {
       const box = section.getBoundingClientRect();
       // The underlines are part of the page as laid out, so the picture shows them in their own styles.
-      const canvas = await html2canvas(section, { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
-      out.push({ url: canvas.toDataURL("image/jpeg", 0.88), width: box.width * 0.75, height: box.height * 0.75 });
+      const canvas = await html2canvas(section, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true,
+      });
+      out.push({
+        url: canvas.toDataURL("image/jpeg", 0.88),
+        width: box.width * 0.75,
+        height: box.height * 0.75,
+      });
     }
     return out;
   } finally {
@@ -67,21 +99,49 @@ export async function wordPages(doc: DocxModel, text: string, marks: ExactMark[]
   }
 }
 
+/** A mark for the file itself: the finding's number is drawn as a badge where it starts. */
+export type NumberedMark = Pick<
+  ExactMark,
+  "id" | "start" | "end" | "className" | "group"
+> & { n?: number };
+
+/** Curve settings per line style: every finding is drawn as a wave, heavier for copying, lighter for notes. */
+const WAVE: Record<
+  LineStyle,
+  { amp: number; step: number; thickness: number; twice?: boolean }
+> = {
+  solid: { amp: 0.9, step: 1.8, thickness: 1.25 },
+  dotted: { amp: 0.7, step: 1.6, thickness: 0.8 },
+  wavy: { amp: 0.9, step: 1.8, thickness: 1.0 },
+  dashed: { amp: 0.7, step: 2.2, thickness: 0.9 },
+  thin: { amp: 0.6, step: 1.5, thickness: 0.6 },
+  double: { amp: 0.7, step: 1.6, thickness: 0.7, twice: true },
+};
+
 /**
- * The original PDF with every finding underlined on its pages (vector lines, so the text stays sharp and
- * selectable). Returns the annotated file's bytes.
+ * The original PDF with every finding underlined on its pages by a coloured curve (vector lines, so the text stays
+ * sharp and selectable) and numbered where it starts, matching the numbers in the report. The pages themselves are
+ * not changed in any other way. Returns the marked file's bytes.
  */
-export async function annotatePdf(doc: PdfModel, marks: ExactMark[]): Promise<Uint8Array> {
-  const [{ PDFDocument, rgb }, { segmentMarks }] = await Promise.all([import("pdf-lib"), import("@/components/DocumentView")]);
-  const pdf = await PDFDocument.load(doc.data.slice(), { ignoreEncryption: true });
+export async function annotatePdf(
+  doc: PdfModel,
+  marks: NumberedMark[],
+): Promise<Uint8Array> {
+  const [{ PDFDocument, rgb, StandardFonts }, { segmentMarks }] =
+    await Promise.all([import("pdf-lib"), import("@/components/DocumentView")]);
+  const pdf = await PDFDocument.load(doc.data.slice(), {
+    ignoreEncryption: true,
+  });
+  const font = await pdf.embedFont(StandardFonts.HelveticaBold);
   const segs = segmentMarks(
-    marks.map((m) => ({ ...m })),
+    marks.map((m) => ({ ...m, label: "" })),
     doc.text.length,
   );
   const color = (c: string) => {
     const [r, g, b] = hex(c);
     return rgb(r, g, b);
   };
+  const badged = new Set<string>();
   doc.pages.forEach((p, i) => {
     if (i >= pdf.getPageCount()) return;
     const page = pdf.getPage(i);
@@ -100,19 +160,43 @@ export async function annotatePdf(doc: PdfModel, marks: ExactMark[]): Promise<Ui
         const x1 = crop.x + (it.x + ((b - it.start) / span) * it.w) * sx;
         s.marks.forEach((m, depth) => {
           const st = markStyle(m);
-          const y = crop.y + crop.height - (it.y + it.h * 0.95) * sy - depth * 2.2;
-          const opts = { color: color(st.color), thickness: st.style === "thin" ? 0.7 : st.style === "double" ? 0.6 : 1.1 };
-          if (st.style === "wavy") {
-            const pts = zigzag(x0, x1, y - 0.6, 0.8, 1.6);
-            for (let k = 1; k < pts.length; k++) page.drawLine({ start: { x: pts[k - 1]![0], y: pts[k - 1]![1] }, end: { x: pts[k]![0], y: pts[k]![1] }, ...opts });
-          } else {
-            page.drawLine({
-              start: { x: x0, y },
-              end: { x: x1, y },
-              ...opts,
-              ...(st.style === "dotted" ? { dashArray: [0.8, 1.6] } : st.style === "dashed" ? { dashArray: [3, 2] } : {}),
+          const wave = WAVE[st.style];
+          const y =
+            crop.y + crop.height - (it.y + it.h * 0.95) * sy - depth * 2.4;
+          const opts = { color: color(st.color), thickness: wave.thickness };
+          for (const off of wave.twice ? [0, 1.8] : [0]) {
+            const pts = zigzag(x0, x1, y - off, wave.amp, wave.step);
+            for (let k = 1; k < pts.length; k++)
+              page.drawLine({
+                start: { x: pts[k - 1]![0], y: pts[k - 1]![1] },
+                end: { x: pts[k]![0], y: pts[k]![1] },
+                ...opts,
+              });
+          }
+          // The finding's number, in a small badge just before where it starts.
+          const nm = m as NumberedMark;
+          if (nm.n !== undefined && !badged.has(nm.id) && a === nm.start) {
+            badged.add(nm.id);
+            const label = String(nm.n);
+            const size = 5.5;
+            const w = font.widthOfTextAtSize(label, size) + 4;
+            const cx = Math.max(crop.x + w / 2 + 1, x0 - w / 2 - 1.5);
+            const cy = crop.y + crop.height - (it.y + it.h * 0.45) * sy;
+            page.drawRectangle({
+              x: cx - w / 2,
+              y: cy - 4,
+              width: w,
+              height: 8,
+              color: color(st.color),
+              opacity: 0.95,
             });
-            if (st.style === "double") page.drawLine({ start: { x: x0, y: y - 1.6 }, end: { x: x1, y: y - 1.6 }, ...opts });
+            page.drawText(label, {
+              x: cx - w / 2 + 2,
+              y: cy - 2,
+              size,
+              font,
+              color: rgb(1, 1, 1),
+            });
           }
         });
       }
@@ -122,12 +206,16 @@ export async function annotatePdf(doc: PdfModel, marks: ExactMark[]): Promise<Ui
 }
 
 /** Puts the summary pages (made with jsPDF) and the annotated original pages together in one file. */
-export async function joinPdfs(first: ArrayBuffer | Uint8Array, second: ArrayBuffer | Uint8Array): Promise<Uint8Array> {
+export async function joinPdfs(
+  first: ArrayBuffer | Uint8Array,
+  second: ArrayBuffer | Uint8Array,
+): Promise<Uint8Array> {
   const { PDFDocument } = await import("pdf-lib");
   const out = await PDFDocument.create();
   for (const bytes of [first, second]) {
     const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
-    for (const p of await out.copyPages(src, src.getPageIndices())) out.addPage(p);
+    for (const p of await out.copyPages(src, src.getPageIndices()))
+      out.addPage(p);
   }
   return out.save();
 }

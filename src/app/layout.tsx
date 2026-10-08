@@ -9,7 +9,10 @@ import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Veritome: check your paper before you submit", template: "%s · Veritome" },
+  title: {
+    default: "Veritome: check your paper before you submit",
+    template: "%s · Veritome",
+  },
   description:
     "Open-source pre-publication checks for researchers: plagiarism, AI-writing patterns, citations and grammar, with the evidence and limits shown for every result.",
 };
@@ -28,13 +31,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="flex min-h-dvh flex-col">
-        <a href="#main" className="sr-only z-50 rounded bg-page px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        <a
+          href="#main"
+          className="sr-only z-50 rounded bg-page px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+        >
           Skip to content
         </a>
         <SettingsProvider>
           <ConsentProvider>
             <SiteHeader />
-            <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+            <main
+              id="main"
+              className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+            >
               {children}
             </main>
             <footer className="border-t border-rule print:hidden">
@@ -44,25 +53,62 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     <LogoMark size={22} /> Veritome
                   </p>
                   <p className="max-w-sm text-ink-soft">
-                    Free, open-source checks for research writing. Your text is processed in memory and never stored or logged.
+                    Free, open-source checks for research writing. Your text is
+                    processed in memory and never stored or logged.
                   </p>
                 </div>
                 <div>
                   <p className="font-semibold">Tools</p>
                   <ul className="mt-3 space-y-2 text-ink-soft">
-                    <li><Link href="/plagiarism" className="hover:text-ink hover:underline">Plagiarism (full check)</Link></li>
-                    <li><Link href="/compare" className="hover:text-ink hover:underline">Compare papers</Link></li>
-                    <li><Link href="/detector" className="hover:text-ink hover:underline">AI patterns</Link></li>
-                    <li><Link href="/citations" className="hover:text-ink hover:underline">Citations</Link></li>
-                    <li><Link href="/grammar" className="hover:text-ink hover:underline">Grammar</Link></li>
+                    <li>
+                      <Link
+                        href="/plagiarism"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Plagiarism
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/detector"
+                        className="hover:text-ink hover:underline"
+                      >
+                        AI detector
+                      </Link>
+                    </li>
+                    <li className="text-ink-faint">
+                      Compare, Citations, Grammar, Humaniser and Paraphraser:
+                      coming soon
+                    </li>
                   </ul>
                 </div>
                 <div>
                   <p className="font-semibold">About</p>
                   <ul className="mt-3 space-y-2 text-ink-soft">
-                    <li><Link href="/about" className="hover:text-ink hover:underline">Limits and privacy</Link></li>
-                    <li><Link href="/settings" className="hover:text-ink hover:underline">Settings</Link></li>
-                    <li><a href="https://github.com/Knsravan/Veritome" className="hover:text-ink hover:underline">Source code (MIT)</a></li>
+                    <li>
+                      <Link
+                        href="/about"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Limits and privacy
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        href="/settings"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Settings
+                      </Link>
+                    </li>
+                    <li>
+                      <a
+                        href="https://github.com/Knsravan/Veritome"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Source code (MIT)
+                      </a>
+                    </li>
                   </ul>
                 </div>
               </div>

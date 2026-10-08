@@ -14,9 +14,13 @@ export interface ExactMark {
   className: string;
   label: string;
   group?: number;
+  n?: number;
 }
 
-export async function renderDocx(container: HTMLElement, data: Uint8Array): Promise<void> {
+export async function renderDocx(
+  container: HTMLElement,
+  data: Uint8Array,
+): Promise<void> {
   const { renderAsync } = await import("docx-preview");
   container.innerHTML = "";
   await renderAsync(data.slice().buffer, container, container, {
@@ -46,8 +50,11 @@ function textNodes(container: HTMLElement): Text[] {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => {
       const el = n.parentElement;
-      if (!el || el.closest("header, footer, style, script")) return NodeFilter.FILTER_REJECT;
-      return n.nodeValue && n.nodeValue.length ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      if (!el || el.closest("header, footer, style, script"))
+        return NodeFilter.FILTER_REJECT;
+      return n.nodeValue && n.nodeValue.length
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
     },
   });
   for (let n = walker.nextNode(); n; n = walker.nextNode()) out.push(n as Text);
@@ -63,7 +70,9 @@ export function alignText(text: string, nodes: Text[]): Array<Point | null> {
   const page: Array<{ c: string; p: Point }> = [];
   for (const node of nodes) {
     const v = node.nodeValue ?? "";
-    for (let i = 0; i < v.length; i++) if (!/\s/.test(v[i]!)) page.push({ c: norm(v[i]!), p: { node, offset: i } });
+    for (let i = 0; i < v.length; i++)
+      if (!/\s/.test(v[i]!))
+        page.push({ c: norm(v[i]!), p: { node, offset: i } });
   }
   const out: Array<Point | null> = new Array(text.length).fill(null);
   const chars: number[] = [];
@@ -79,7 +88,10 @@ export function alignText(text: string, nodes: Text[]): Array<Point | null> {
     }
     // Out of step: find the next 12 characters of the text a little further on the page (the page has extra
     // characters such as list numbers), or skip this character of the text (the page left it out).
-    const probe = chars.slice(k, k + 12).map((x) => norm(text[x]!)).join("");
+    const probe = chars
+      .slice(k, k + 12)
+      .map((x) => norm(text[x]!))
+      .join("");
     let found = -1;
     for (let d = 1; d <= 400 && j + d + probe.length <= page.length; d++) {
       let ok = true;
@@ -104,7 +116,8 @@ export function alignText(text: string, nodes: Text[]): Array<Point | null> {
 
 /** Removes marks drawn earlier, joining the text back together. */
 export function clearMarks(container: HTMLElement) {
-  for (const el of Array.from(container.querySelectorAll("[data-vt]"))) el.replaceWith(...Array.from(el.childNodes));
+  for (const el of Array.from(container.querySelectorAll("[data-vt]")))
+    el.replaceWith(...Array.from(el.childNodes));
   container.normalize();
 }
 
@@ -112,19 +125,36 @@ export function clearMarks(container: HTMLElement) {
  * Draws findings as underlines. Overlapping findings nest: the first given is innermost and takes the click.
  * Each finding's first piece is focusable and has id "mark-{id}", so it can be scrolled to.
  */
-export function drawMarks(container: HTMLElement, text: string, marks: readonly ExactMark[], interactive = true): void {
+export function drawMarks(
+  container: HTMLElement,
+  text: string,
+  marks: readonly ExactMark[],
+  interactive = true,
+): void {
   clearMarks(container);
   if (!marks.length) return;
   const points = alignText(text, textNodes(container));
   // Pieces per text node: [from, to) within the node, with the marks covering them.
-  const pieces = new Map<Text, Array<{ from: number; to: number; marks: ExactMark[] }>>();
+  const pieces = new Map<
+    Text,
+    Array<{ from: number; to: number; marks: ExactMark[] }>
+  >();
   const order = new Map(marks.map((m, i) => [m, i]));
-  const covering = (i: number) => marks.filter((m) => m.start <= i && i < m.end);
-  let current: { node: Text; from: number; to: number; marks: ExactMark[]; key: string } | null = null;
+  const covering = (i: number) =>
+    marks.filter((m) => m.start <= i && i < m.end);
+  let current: {
+    node: Text;
+    from: number;
+    to: number;
+    marks: ExactMark[];
+    key: string;
+  } | null = null;
   const flush = () => {
     if (!current) return;
     if (!pieces.has(current.node)) pieces.set(current.node, []);
-    pieces.get(current.node)!.push({ from: current.from, to: current.to, marks: current.marks });
+    pieces
+      .get(current.node)!
+      .push({ from: current.from, to: current.to, marks: current.marks });
     current = null;
   };
   const sorted = [...marks].sort((a, b) => a.start - b.start);
@@ -139,11 +169,29 @@ export function drawMarks(container: HTMLElement, text: string, marks: readonly 
       flush();
       continue;
     }
-    if (current && current.node === p.node && current.key === key && current.to === p.offset) current.to = p.offset + 1;
-    else if (current && current.node === p.node && current.key === key && /^\s*$/.test((p.node.nodeValue ?? "").slice(current.to, p.offset))) current.to = p.offset + 1;
+    if (
+      current &&
+      current.node === p.node &&
+      current.key === key &&
+      current.to === p.offset
+    )
+      current.to = p.offset + 1;
+    else if (
+      current &&
+      current.node === p.node &&
+      current.key === key &&
+      /^\s*$/.test((p.node.nodeValue ?? "").slice(current.to, p.offset))
+    )
+      current.to = p.offset + 1;
     else {
       flush();
-      current = { node: p.node, from: p.offset, to: p.offset + 1, marks: ms, key };
+      current = {
+        node: p.node,
+        from: p.offset,
+        to: p.offset + 1,
+        marks: ms,
+        key,
+      };
     }
   }
   flush();
@@ -174,9 +222,19 @@ export function drawMarks(container: HTMLElement, text: string, marks: readonly 
       inner.appendChild(middle);
     }
   }
+  // Each numbered finding's badge sits on its first piece.
+  for (const m of marks) {
+    if (m.n === undefined) continue;
+    const el = container.querySelector<HTMLElement>(
+      `[data-mark="${CSS.escape(m.id)}"]`,
+    );
+    if (el) el.dataset.n = String(m.n);
+  }
   if (!interactive) return;
   // Focusable first pieces, in reading order.
-  for (const el of Array.from(container.querySelectorAll<HTMLElement>("mark[data-vt]"))) {
+  for (const el of Array.from(
+    container.querySelectorAll<HTMLElement>("mark[data-vt]"),
+  )) {
     const id = el.dataset.mark!;
     if (placed.has(id)) continue;
     placed.add(id);
@@ -184,6 +242,9 @@ export function drawMarks(container: HTMLElement, text: string, marks: readonly 
     el.id = `mark-${id}`;
     el.tabIndex = 0;
     el.setAttribute("role", "button");
-    el.setAttribute("aria-label", `${m.label}: ${text.slice(m.start, m.end).replace(/\s+/g, " ").slice(0, 120)}`);
+    el.setAttribute(
+      "aria-label",
+      `${m.label}: ${text.slice(m.start, m.end).replace(/\s+/g, " ").slice(0, 120)}`,
+    );
   }
 }

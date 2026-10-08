@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { CitationsTool } from "./tool";
+import { ComingSoon } from "@/components/ComingSoon";
 
-export const metadata: Metadata = { title: "Citations" };
+export const metadata: Metadata = { title: "Citations (coming soon)" };
 
 export default function Page() {
-  return <CitationsTool />;
+  return <ComingSoon href="/citations" />;
 }
