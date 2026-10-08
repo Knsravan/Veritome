@@ -82,6 +82,9 @@ export function toClassifierScale(p: number, humanQuantiles: number[], to: { lik
 /** Human paragraphs up to this percentile map to "likely human" or below. */
 const HUMAN_ANCHOR = 0.8;
 
+/** In a paper judged AI-written as a whole, paragraphs at or above this percentile of human paragraphs count as AI. */
+export const DOCUMENT_RAISE_PERCENTILE = 0.8;
+
 /**
  * Combines the neural scores with the detector result. `scores[segment][model]` lists the window scores of each
  * model for a paragraph segment (null when the segment was not read). A segment that any model rates as likely
@@ -105,7 +108,11 @@ export function mergeNeural(result: DetectorResult, scores: Array<number[][] | n
   const merged = segments.map((s, i) => {
     const perModel = scores[i];
     if (!perModel?.length) return s;
-    if (documentLevel && doc && pcts[i]! >= doc.percentile) return { ...s, probability: Math.max(s.probability, AI_LEVEL) };
+    // In a paper judged AI-written as a whole, a paragraph in the top fifth of human writing is far more likely
+    // to be part of that writing than an exception, so it counts as AI rather than unclear. Papers below the
+    // whole-paper bar (about 99 in 100 human papers) are never affected.
+    if (documentLevel && pcts[i]! >= Math.min(doc!.percentile, DOCUMENT_RAISE_PERCENTILE))
+      return { ...s, probability: Math.max(s.probability, AI_LEVEL) };
     const neural = Math.max(...perModel.map((w, m) => (w.length && meta.models[m] ? toClassifierScale(mean(w), meta.models[m].humanQuantiles, to) : 0)));
     // Only a confident neural opinion (past the 1-in-100 human level) changes a segment; below it the classifier
     // keeps its say, so borderline paragraphs are not all pushed into "uncertain".

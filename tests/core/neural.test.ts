@@ -91,3 +91,25 @@ test("mergeNeural judges the document as a whole when most paragraphs score abov
   assert.equal(three.model.document, undefined);
   assert.equal(three.model.segments![0]!.probability, 0.1);
 });
+
+test("in a paper judged AI-written as a whole, paragraphs in the top fifth of human writing count as AI", () => {
+  const segs = Array.from({ length: 8 }, (_, i) => ({ start: i * 100, end: i * 100 + 90, words: 160, probability: 0.1 }));
+  const base = {
+    words: 1280,
+    score: 10,
+    band: { low: 5, high: 15 },
+    verdict: "likely_human",
+    sentences: [],
+    model: { version: "1", probability: 0.1, windows: [], segments: segs, topPhrases: [], thresholds: to },
+  } as unknown as DetectorResult;
+  const docMeta: NeuralMeta = { ...meta, document: { minParagraphs: 6, percentile: 0.9, share: 0.55 } };
+  const high = [[0.93], [0.1]];
+  const upper = [[0.65], [0.1]]; // about the 85th human percentile
+  const typical = [[0.45], [0.1]]; // about the 65th
+  const r = mergeNeural(base, [high, high, high, high, high, upper, typical, typical], docMeta);
+  assert.ok(r.model.segments![5]!.probability > 0.93);
+  assert.equal(r.model.segments![6]!.probability, 0.1);
+  // Without the whole-paper judgement the same paragraph is left alone.
+  const alone = mergeNeural(base, [high, high, upper, typical, typical, typical, typical, typical], docMeta);
+  assert.equal(alone.model.segments![2]!.probability, 0.1);
+});
