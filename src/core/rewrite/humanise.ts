@@ -31,20 +31,29 @@ export const HUMANISE_STRENGTHS: ReadonlyArray<{ id: HumaniseStrength; label: st
 
 const TONE: Record<HumaniseTone, string> = {
   academic:
-    "Write in the register of a well-edited research journal: precise, measured and readable. Use the first person (we/I) only where the original does.",
-  natural: "Write clear, direct professional prose, the way a thoughtful expert explains their work to a colleague.",
+    "Academic, but the way good researchers actually write: plain, exact words and direct statements, not ornate or formal-sounding phrasing. Use the first person (we/I) only where the original does.",
+  natural: "Clear, direct prose, the way a thoughtful expert explains their work to a colleague.",
   simple:
-    "Write in plain language with short sentences, so a reader outside the field can follow. Keep technical terms that have no plain equivalent and explain nothing that the original does not.",
+    "Plain language with short sentences, so a reader outside the field can follow. Keep technical terms that have no plain equivalent and explain nothing that the original does not.",
 };
 
 const STRENGTH: Record<HumaniseStrength, string> = {
   light:
-    "Make light edits: fix the habits listed below and awkward phrasing, but keep most of the author's wording and every sentence's structure where it already reads well.",
+    "Make light edits only: fix the habits listed below and genuinely awkward phrasing, and leave every other word as the author wrote it.",
   balanced:
-    "Rewrite sentence by sentence: change wording and structure freely, but keep the paragraph's order of ideas.",
+    "Rewrite where it helps: change wording and structure where a sentence is stiff or formulaic, keep the author's wording where it already reads well, and keep the paragraph's order of ideas.",
   strong:
     "Rebuild the paragraph: you may reorder, merge and split sentences and choose new wording throughout, as long as every idea, claim and qualification survives.",
 };
+
+/** How people actually write, which over-polished and machine-written prose lacks. */
+const PLAIN_STYLE = [
+  "Use the plainest accurate word. Never replace a plain word with a fancier synonym (keep 'uses', not 'utilizes'; 'is based on', not 'relies upon'; 'shows', not 'demonstrates'; 'at once', not 'concurrently').",
+  "Avoid formal connectors and filler such as 'whereas', 'thereby', 'whereby', 'thus', 'hence', 'in turn', 'notably', 'consequently' unless the logic truly needs them.",
+  "Prefer verbs to nouns made from verbs ('we measured', not 'the measurement of ... was performed').",
+  "Let sentence length vary naturally: some short and direct, some longer. Do not polish every sentence to the same smooth rhythm or make each one a perfect summary.",
+  "Keep the author's own words and quirks wherever they are already clear; a revision should sound like the same person on a good day, not like a different, more formal writer.",
+];
 
 /** Accepted ratio of output to input words, by strength. */
 export const HUMANISE_LENGTH: Record<HumaniseStrength, readonly [number, number]> = {
@@ -70,10 +79,13 @@ export function humaniseSystemPrompt(tone: HumaniseTone, strength: HumaniseStren
   const voiceBlock = voice?.trim()
     ? `\n\nThe author supplied a sample of their own writing, between <voice> tags. Match its voice: sentence length and variety, vocabulary level, use of the first person, how it opens sentences and its punctuation habits. Do not copy its content or phrases.\n<voice>\n${voice.trim()}\n</voice>`
     : "";
-  return `You are an experienced academic editor. You revise one paragraph of a manuscript so it reads as if a careful, skilled human writer wrote it.
+  return `You are an experienced editor of research writing. You revise one paragraph so it reads the way a careful person writes: clear, plain and natural, never ornate.
 
 Tone: ${TONE[tone]}
 How much to change: ${STRENGTH[strength]}
+
+How to write:
+${PLAIN_STYLE.map((h) => `- ${h}`).join("\n")}
 
 Remove these habits wherever they appear:
 ${STIFF_HABITS.map((h) => `- ${h}`).join("\n")}
