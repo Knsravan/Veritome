@@ -1,7 +1,7 @@
 import { llmTranslator } from "@/core/plagiarism/translated";
 import { buildPaperReport, TOOL_IDS, type ReportDeps, type ReportEvent, type ToolId } from "@/core/report/report";
 import { ownAuthor, hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
-import { finderDeps, fullTextFetcher, ownWorks, languageToolOptions, llmClient, plagiarismProviders, scholarlyHttp, verifierDeps } from "@/server/deps";
+import { finderDeps, fullTextFetcher, webPageFetcher, ownWorks, languageToolOptions, llmClient, plagiarismProviders, scholarlyHttp, verifierDeps } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
 export const runtime = "nodejs";
@@ -29,7 +29,7 @@ export const POST = route({ bucket: "report", weight: 0.1 }, async ({ cfg, req }
     ...(own ? { own } : ownAuthor(body) && external ? { notes: [OWN_MISSING] } : {}),
     library: [...(await loadLibrary(cfg.libraryDir)), ...libraryDocs(body)],
     ...(external
-      ? { providers: plagiarismProviders(cfg, http, { web: optionalBool(body, "web", true) }), fullText: fullTextFetcher(cfg, http), verifier: verifierDeps(cfg, http), finder: finderDeps(cfg, http) }
+      ? { providers: plagiarismProviders(cfg, http, { web: optionalBool(body, "web", true) }), fullText: fullTextFetcher(cfg, http), webPage: webPageFetcher(cfg), verifier: verifierDeps(cfg, http), finder: finderDeps(cfg, http) }
       : {}),
     ...(llm ? { llm, translate: llmTranslator(llm) } : {}),
     ...(lt ? { languageTool: lt } : {}),

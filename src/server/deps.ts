@@ -26,6 +26,7 @@ import {
 import { assertSafeUrl } from "../core/infra/netguard.ts";
 import { fetchFullText } from "../core/plagiarism/fulltext.ts";
 import { findOwnWorks } from "../core/plagiarism/ownwork.ts";
+import { htmlToText } from "../core/plagiarism/webpage.ts";
 import type { SourceDoc } from "../core/plagiarism/providers.ts";
 import { cleanPdfText } from "../core/text/latex.ts";
 import type { PublicStatus, ServerConfig } from "./config.ts";
@@ -68,6 +69,12 @@ function buildClients(cfg: ServerConfig, http: Http) {
     coreHttp: pacedHttp(http, { service: "CORE", minIntervalMs: 6500, maxRequests: 12 }),
     // Brave's free plan allows one query a second and 2,000 a month, so a check spends at most 30.
     braveHttp: pacedHttp(http, { service: "Brave Search", minIntervalMs: 1100, maxRequests: 30 }),
+    // Without a key, Semantic Scholar shares a small allowance among all callers; a paced, budgeted client for the
+    // plagiarism search avoids being turned away for every passage.
+    semanticscholarPaced: createSemanticScholar(
+      pacedHttp(http, { service: "Semantic Scholar", minIntervalMs: cfg.semanticScholarKey ? 250 : 1100, maxRequests: cfg.semanticScholarKey ? 120 : 40 }),
+      cfg.semanticScholarKey ? { apiKey: cfg.semanticScholarKey } : {},
+    ),
   };
 }
 
@@ -86,7 +93,7 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
   const providers: SourceProvider[] = [
     openAlexProvider(c.openalex),
     crossrefProvider(c.crossref),
-    semanticScholarProvider(c.semanticscholar),
+    semanticScholarProvider(c.semanticscholarPaced),
     arxivProvider(c.arxiv),
     europePmcProvider(http),
     wikipediaProvider(http),
@@ -139,19 +146,20 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
 }
 
 const MAX_PDF_BYTES = 20 * 1024 * 1024;
+const MAX_PAGE_BYTES = 5 * 1024 * 1024;
 
 /**
- * Downloads a public PDF and returns its text. Every hop of a redirect is checked against the SSRF guard
- * (no private, local or cloud-metadata addresses), the size is capped and the download times out.
+ * Downloads a public URL. Every hop of a redirect is checked against the SSRF guard (no private, local or
+ * cloud-metadata addresses), the size is capped and the download times out.
  */
-export async function publicPdfText(cfg: ServerConfig, url: string, signal?: AbortSignal): Promise<string> {
+async function safeDownload(cfg: ServerConfig, url: string, accept: string, maxBytes: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; type: string }> {
   let target = url;
   let res: Response | null = null;
   for (let hop = 0; hop < 4; hop++) {
     const safe = await assertSafeUrl(target, { allowPrivate: false });
     res = await fetch(safe, {
       redirect: "manual",
-      headers: { "user-agent": USER_AGENT(cfg), accept: "application/pdf,*/*;q=0.5" },
+      headers: { "user-agent": USER_AGENT(cfg), accept },
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),
     });
     const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
@@ -159,8 +167,8 @@ export async function publicPdfText(cfg: ServerConfig, url: string, signal?: Abo
     target = new URL(loc, target).toString();
     res = null;
   }
-  if (!res || !res.ok) throw new Error("The PDF could not be downloaded.");
-  if (Number(res.headers.get("content-length") ?? "0") > MAX_PDF_BYTES) throw new Error("The PDF is too large.");
+  if (!res || !res.ok) throw new Error("The document could not be downloaded.");
+  if (Number(res.headers.get("content-length") ?? "0") > maxBytes) throw new Error("The document is too large.");
   const reader = res.body?.getReader();
   if (!reader) throw new Error("Empty response.");
   const chunks: Uint8Array[] = [];
@@ -169,9 +177,9 @@ export async function publicPdfText(cfg: ServerConfig, url: string, signal?: Abo
     const { done, value } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > MAX_PDF_BYTES) {
+    if (size > maxBytes) {
       await reader.cancel();
-      throw new Error("The PDF is too large.");
+      throw new Error("The document is too large.");
     }
     chunks.push(value);
   }
@@ -181,11 +189,41 @@ export async function publicPdfText(cfg: ServerConfig, url: string, signal?: Abo
     bytes.set(c, at);
     at += c.byteLength;
   }
-  if (String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new Error("Not a PDF.");
+  return { bytes, type: res.headers.get("content-type") ?? "" };
+}
+
+const isPdf = (bytes: Uint8Array) => String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-";
+
+async function pdfBytesToText(bytes: Uint8Array): Promise<string> {
   const { extractText, getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(bytes);
   const { text } = await extractText(pdf, { mergePages: false });
   return cleanPdfText((text as string[]).join("\n\n"));
+}
+
+/** Downloads a public PDF and returns its text (see safeDownload for the safeguards). */
+export async function publicPdfText(cfg: ServerConfig, url: string, signal?: AbortSignal): Promise<string> {
+  const { bytes } = await safeDownload(cfg, url, "application/pdf,*/*;q=0.5", MAX_PDF_BYTES, signal);
+  if (!isPdf(bytes)) throw new Error("Not a PDF.");
+  return pdfBytesToText(bytes);
+}
+
+/** The readable text of a public web page or PDF, for comparing a matched page as a whole. */
+export async function publicPageText(cfg: ServerConfig, url: string, signal?: AbortSignal): Promise<string> {
+  const { bytes, type } = await safeDownload(cfg, url, "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.5", MAX_PDF_BYTES, signal);
+  if (isPdf(bytes)) return pdfBytesToText(bytes);
+  if (!/html|xml|text\/plain/i.test(type) || bytes.byteLength > MAX_PAGE_BYTES) throw new Error("Not a readable page.");
+  const html = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  return /text\/plain/i.test(type) ? html : htmlToText(html);
+}
+
+/** Fetches web pages found by the search, so the whole page is compared rather than its snippet. */
+export function webPageFetcher(cfg: ServerConfig): (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null> {
+  return async (doc, signal) => {
+    if (!doc.url) return null;
+    const text = (await publicPageText(cfg, doc.url, signal)).slice(0, 400_000);
+    return text.length > 500 ? { text, via: "the whole web page" } : null;
+  };
 }
 
 /** Fetches the free full text of matched papers for a closer comparison. */

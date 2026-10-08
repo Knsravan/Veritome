@@ -29,6 +29,7 @@ export interface ReportDeps {
   providers?: SourceProvider[];
   /** Fetches the free full text of a matched paper. */
   fullText?: PlagiarismOptions["fullText"];
+  webPage?: PlagiarismOptions["webPage"];
   /** The author's own earlier papers, for the self-plagiarism check. */
   own?: PlagiarismOptions["own"];
   /** Translates non-English papers into English for the plagiarism search. */
@@ -221,6 +222,7 @@ export async function buildPaperReport(text: string, deps: ReportDeps = {}, opti
       providers: deps.providers ?? [],
       library: deps.library ?? [],
       ...(deps.fullText ? { fullText: deps.fullText } : {}),
+      ...(deps.webPage ? { webPage: deps.webPage } : {}),
       ...(deps.own ? { own: deps.own } : {}),
       ...(deps.notes ? { notes: deps.notes } : {}),
       ...(deps.translate ? { translate: deps.translate } : {}),

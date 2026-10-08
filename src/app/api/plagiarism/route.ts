@@ -1,7 +1,7 @@
 import { checkPlagiarism } from "@/core/plagiarism/check";
 import { llmTranslator } from "@/core/plagiarism/translated";
 import { ownAuthor, hiddenRanges, libraryDocs, llmOverride, ndjsonStream, optionalBool, readJson, requireConsent, route, text } from "@/server/api";
-import { fullTextFetcher, llmClient, ownWorks, plagiarismProviders, scholarlyHttp } from "@/server/deps";
+import { fullTextFetcher, webPageFetcher, llmClient, ownWorks, plagiarismProviders, scholarlyHttp } from "@/server/deps";
 import { loadLibrary } from "@/server/library";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export const POST = route({ bucket: "plagiarism", weight: 0.25 }, async ({ cfg, 
     ...(own ? { own } : ownAuthor(body) && external ? { notes: [OWN_MISSING] } : {}),
     providers,
     library,
-    ...(external ? { fullText: fullTextFetcher(cfg, http) } : {}),
+    ...(external ? { fullText: fullTextFetcher(cfg, http), webPage: webPageFetcher(cfg) } : {}),
     ...(llm ? { translate: llmTranslator(llm) } : {}),
     excludeQuotes: optionalBool(body, "excludeQuotes", true),
     excludeReferences: optionalBool(body, "excludeReferences", true),
