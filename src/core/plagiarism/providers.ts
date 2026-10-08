@@ -68,8 +68,8 @@ export function openAlexProvider(client: Pick<OpenAlexClient, "search"> & Partia
     coverage: "Titles and abstracts of about 250 million scholarly works, and full text where OpenAlex has it, searched by exact phrase first.",
     async search(p) {
       if (client.searchPhrase) {
-        // At most two phrases per passage to keep within the API budget.
-        for (const phrase of phrasesOf(p).slice(0, 2)) {
+        // One exact phrase per passage: OpenAlex meters requests, and every passage of the paper is searched.
+        for (const phrase of phrasesOf(p).slice(0, 1)) {
           const hits = await client.searchPhrase(phrase, 3);
           if (hits.length) {
             // OpenAlex confirmed the phrase is in each work, possibly in full text we cannot see,

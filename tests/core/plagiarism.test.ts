@@ -231,3 +231,20 @@ test("the search stops on time and says so", async () => {
   assert.equal(calls, 0);
   assert.ok(r.warnings.some((w) => /took longer than usual/.test(w)));
 });
+
+test("a service that keeps turning us away is not asked again", async () => {
+  let calls = 0;
+  const busy: SourceProvider = {
+    name: "Busy",
+    kind: "scholarly",
+    coverage: "test",
+    async search() {
+      calls++;
+      throw new Error("HTTP 429 Too Many Requests");
+    },
+  };
+  const long = Array.from({ length: 12 }, (_, i) => `Sentence ${i} describes distinctive coastal sediment chemistry measured near station ${i} during the survey.`).join(" ");
+  const r = await checkPlagiarism(long, { providers: [busy], concurrency: 1 });
+  assert.equal(calls, 4);
+  assert.ok(r.warnings.some((w) => /turned us away several times/.test(w)));
+});
