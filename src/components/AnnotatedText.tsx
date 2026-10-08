@@ -12,11 +12,18 @@ export interface TextMark {
   label: string;
   /** Colour group, e.g. the number of the matched source (1 to 6). */
   group?: number;
+  /** The finding's number in the report, shown as a badge where it starts. */
+  n?: number;
 }
 
 /** Drops marks that overlap an earlier one so the text renders as flat segments. */
-export function flattenMarks(marks: readonly TextMark[], length: number): TextMark[] {
-  const sorted = [...marks].filter((m) => m.end > m.start && m.start >= 0 && m.end <= length).sort((a, b) => a.start - b.start || b.end - a.end);
+export function flattenMarks(
+  marks: readonly TextMark[],
+  length: number,
+): TextMark[] {
+  const sorted = [...marks]
+    .filter((m) => m.end > m.start && m.start >= 0 && m.end <= length)
+    .sort((a, b) => a.start - b.start || b.end - a.end);
   const out: TextMark[] = [];
   let lastEnd = -1;
   for (const m of sorted) {
@@ -86,13 +93,23 @@ export function AnnotatedText({
 export function focusNote(id: string) {
   const el = document.getElementById(`note-${id}`);
   if (!el) return;
-  el.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  el.scrollIntoView({
+    block: "nearest",
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  });
   el.focus({ preventScroll: true });
 }
 
 export function focusMark(id: string) {
   const el = document.getElementById(`mark-${id}`);
   if (!el) return;
-  el.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  el.scrollIntoView({
+    block: "center",
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+  });
   el.focus({ preventScroll: true });
 }

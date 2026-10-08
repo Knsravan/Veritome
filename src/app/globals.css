@@ -36,21 +36,34 @@
   --focus: #4f46e5;
   --glow: rgb(79 70 229 / 0.16);
   /* Underline colours for findings: soft, distinct hues; style (solid, dotted, wavy, dashed, double) also differs by kind. */
-  --u-src-1: #e0a100; --u-src-2: #3a8ee6; --u-src-3: #2fa36b; --u-src-4: #ee7a2f; --u-src-5: #d6539b; --u-src-6: #13a3b5;
+  --u-src-1: #e0a100;
+  --u-src-2: #3a8ee6;
+  --u-src-3: #2fa36b;
+  --u-src-4: #ee7a2f;
+  --u-src-5: #d6539b;
+  --u-src-6: #13a3b5;
   --u-copied: #e0a100;
   --u-ai: #8b5cf6;
   --u-grammar: #e5484d;
   --u-cite: #0f9f8f;
   --u-flag: #dc2626;
   /* One colour per matched source, so a passage can be traced to its source at a glance. */
-  --src-1: #fbe38a; --src-1-line: #8a6d00;
-  --src-2: #c9e3fb; --src-2-line: #1d5c99;
-  --src-3: #f7cfd8; --src-3-line: #9b2443;
-  --src-4: #cdeccf; --src-4-line: #2c6b32;
-  --src-5: #e2d6f7; --src-5-line: #5a3aa6;
-  --src-6: #fbd9bf; --src-6-line: #9a4b10;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 6px 20px -10px rgb(15 23 42 / 0.14);
-  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -18px rgb(15 23 42 / 0.28);
+  --src-1: #fbe38a;
+  --src-1-line: #8a6d00;
+  --src-2: #c9e3fb;
+  --src-2-line: #1d5c99;
+  --src-3: #f7cfd8;
+  --src-3-line: #9b2443;
+  --src-4: #cdeccf;
+  --src-4-line: #2c6b32;
+  --src-5: #e2d6f7;
+  --src-5-line: #5a3aa6;
+  --src-6: #fbd9bf;
+  --src-6-line: #9a4b10;
+  --shadow-card:
+    0 1px 2px rgb(15 23 42 / 0.04), 0 6px 20px -10px rgb(15 23 42 / 0.14);
+  --shadow-lift:
+    0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -18px rgb(15 23 42 / 0.28);
   /* Chart colours (validated for colour-blind separation and 3:1 contrast on the page surface). */
   --chart-seq: #2a78d6;
   --chart-human: #2a78d6;
@@ -91,20 +104,33 @@
     --danger-soft: #4a1d21;
     --focus: #9a9bff;
     --glow: rgb(154 155 255 / 0.14);
-    --u-src-1: #f5c044; --u-src-2: #6aaef5; --u-src-3: #4cc68a; --u-src-4: #f79a5a; --u-src-5: #ec7cb8; --u-src-6: #3cc4d4;
+    --u-src-1: #f5c044;
+    --u-src-2: #6aaef5;
+    --u-src-3: #4cc68a;
+    --u-src-4: #f79a5a;
+    --u-src-5: #ec7cb8;
+    --u-src-6: #3cc4d4;
     --u-copied: #f5c044;
     --u-ai: #a78bfa;
     --u-grammar: #ff6b70;
     --u-cite: #34d1bf;
     --u-flag: #f87171;
-    --src-1: #5c4a05; --src-1-line: #e6c93a;
-    --src-2: #173a5c; --src-2-line: #7fb6ee;
-    --src-3: #5a1f2f; --src-3-line: #f29ab0;
-    --src-4: #1c4421; --src-4-line: #82cf8a;
-    --src-5: #352659; --src-5-line: #b9a3f2;
-    --src-6: #5a300f; --src-6-line: #f0a56a;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-    --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
+    --src-1: #5c4a05;
+    --src-1-line: #e6c93a;
+    --src-2: #173a5c;
+    --src-2-line: #7fb6ee;
+    --src-3: #5a1f2f;
+    --src-3-line: #f29ab0;
+    --src-4: #1c4421;
+    --src-4-line: #82cf8a;
+    --src-5: #352659;
+    --src-5-line: #b9a3f2;
+    --src-6: #5a300f;
+    --src-6-line: #f0a56a;
+    --shadow-card:
+      0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    --shadow-lift:
+      0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
     --chart-seq: #3987e5;
     --chart-human: #3987e5;
     --chart-ai: #d55181;
@@ -114,7 +140,12 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --u-src-1: #f5c044; --u-src-2: #6aaef5; --u-src-3: #4cc68a; --u-src-4: #f79a5a; --u-src-5: #ec7cb8; --u-src-6: #3cc4d4;
+  --u-src-1: #f5c044;
+  --u-src-2: #6aaef5;
+  --u-src-3: #4cc68a;
+  --u-src-4: #f79a5a;
+  --u-src-5: #ec7cb8;
+  --u-src-6: #3cc4d4;
   --u-copied: #f5c044;
   --u-ai: #a78bfa;
   --u-grammar: #ff6b70;
@@ -146,14 +177,21 @@
   --danger-soft: #4a1d21;
   --focus: #9a9bff;
   --glow: rgb(154 155 255 / 0.14);
-  --src-1: #5c4a05; --src-1-line: #e6c93a;
-  --src-2: #173a5c; --src-2-line: #7fb6ee;
-  --src-3: #5a1f2f; --src-3-line: #f29ab0;
-  --src-4: #1c4421; --src-4-line: #82cf8a;
-  --src-5: #352659; --src-5-line: #b9a3f2;
-  --src-6: #5a300f; --src-6-line: #f0a56a;
+  --src-1: #5c4a05;
+  --src-1-line: #e6c93a;
+  --src-2: #173a5c;
+  --src-2-line: #7fb6ee;
+  --src-3: #5a1f2f;
+  --src-3-line: #f29ab0;
+  --src-4: #1c4421;
+  --src-4-line: #82cf8a;
+  --src-5: #352659;
+  --src-5-line: #b9a3f2;
+  --src-6: #5a300f;
+  --src-6-line: #f0a56a;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-  --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
+  --shadow-lift:
+    0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
   --chart-seq: #3987e5;
   --chart-human: #3987e5;
   --chart-ai: #d55181;
@@ -162,8 +200,10 @@
 
 @theme inline {
   --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
-  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans:
+    "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display:
+    "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --color-desk: var(--desk);
   --color-desk-deep: var(--desk-deep);
   --color-page: var(--page);
@@ -227,104 +267,124 @@ h3,
 }
 
 @layer components {
-/* The manuscript sheet: serif, comfortable measure, generous leading. */
-.sheet-text {
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.75;
-  max-width: 68ch;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
+  /* The manuscript sheet: serif, comfortable measure, generous leading. */
+  .sheet-text {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    max-width: 68ch;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 
-/* Proof marks: underlines only, never a background, so the paper reads cleanly. Each kind has its own colour and
-   its own line style (solid, dotted, wavy, dashed, double) for colour-blind readers; offsets differ so stacked
-   marks stay visible. */
-.mark {
-  background: transparent;
-  border-radius: 2px;
-  cursor: pointer;
-  color: inherit;
-  text-decoration-skip-ink: none;
-  transition:
-    text-decoration-thickness 0.15s ease,
-    text-underline-offset 0.15s ease;
-}
-.mark-match {
-  text-decoration: underline solid var(--src-line, var(--u-copied));
-  text-decoration-thickness: 2.5px;
-  text-underline-offset: 3px;
-}
-.mark-para {
-  text-decoration: underline dotted var(--src-line, var(--u-copied));
-  text-decoration-thickness: 2.5px;
-  text-underline-offset: 4px;
-}
-.mark-ai {
-  text-decoration: underline wavy var(--u-ai);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 6px;
-}
-.mark-ai-medium {
-  text-decoration: underline dotted color-mix(in srgb, var(--u-ai) 65%, transparent);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
-}
-.mark-grammar {
-  text-decoration: underline solid var(--u-grammar);
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 2px;
-}
-.mark-grammar.is-info {
-  text-decoration-style: dashed;
-}
-.mark-cite {
-  text-decoration: underline dashed var(--u-cite);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
-}
-[data-src="1"] { --src-line: var(--u-src-1); }
-[data-src="2"] { --src-line: var(--u-src-2); }
-[data-src="3"] { --src-line: var(--u-src-3); }
-[data-src="4"] { --src-line: var(--u-src-4); }
-[data-src="5"] { --src-line: var(--u-src-5); }
-[data-src="6"] { --src-line: var(--u-src-6); }
-[data-src] { --src-bg: color-mix(in srgb, var(--src-line) 16%, var(--page)); }
-.src-badge {
-  display: inline-flex;
-  min-width: 1.6rem;
-  height: 1.6rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.35rem;
-  background: var(--src-bg, var(--desk-deep));
-  box-shadow: inset 0 0 0 1.5px var(--src-line, var(--rule));
-  font-size: 0.8rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.mark:hover,
-.mark.is-active,
-.mark[aria-current="true"] {
-  text-decoration-thickness: 3.5px;
-}
-.mark.is-active,
-.mark[aria-current="true"] {
-  outline: 1.5px dashed color-mix(in srgb, var(--focus) 70%, transparent);
-  outline-offset: 2px;
-}
+  /* Proof marks: curved underlines only, never a background, so the paper reads cleanly. Each kind has its own
+   colour and weight (copying heavy, rewording light, AI violet, citations teal, grammar thin); offsets differ so
+   stacked marks stay visible. */
+  .mark {
+    background: transparent;
+    border-radius: 2px;
+    cursor: pointer;
+    color: inherit;
+    text-decoration-skip-ink: none;
+    transition:
+      text-decoration-thickness 0.15s ease,
+      text-underline-offset 0.15s ease;
+  }
+  .mark-match {
+    text-decoration: underline wavy var(--src-line, var(--u-copied));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .mark-para {
+    text-decoration: underline wavy
+      color-mix(in srgb, var(--src-line, var(--u-copied)) 70%, transparent);
+    text-decoration-thickness: 1.25px;
+    text-underline-offset: 5px;
+  }
+  .mark-ai {
+    text-decoration: underline wavy var(--u-ai);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 6px;
+  }
+  .mark-ai-medium {
+    text-decoration: underline dotted
+      color-mix(in srgb, var(--u-ai) 65%, transparent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+  }
+  .mark-grammar {
+    text-decoration: underline wavy var(--u-grammar);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .mark-grammar.is-info {
+    text-decoration-color: color-mix(
+      in srgb,
+      var(--u-grammar) 55%,
+      transparent
+    );
+  }
+  .mark-cite {
+    text-decoration: underline wavy var(--u-cite);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 5px;
+  }
+  [data-src="1"] {
+    --src-line: var(--u-src-1);
+  }
+  [data-src="2"] {
+    --src-line: var(--u-src-2);
+  }
+  [data-src="3"] {
+    --src-line: var(--u-src-3);
+  }
+  [data-src="4"] {
+    --src-line: var(--u-src-4);
+  }
+  [data-src="5"] {
+    --src-line: var(--u-src-5);
+  }
+  [data-src="6"] {
+    --src-line: var(--u-src-6);
+  }
+  [data-src] {
+    --src-bg: color-mix(in srgb, var(--src-line) 16%, var(--page));
+  }
+  .src-badge {
+    display: inline-flex;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.35rem;
+    background: var(--src-bg, var(--desk-deep));
+    box-shadow: inset 0 0 0 1.5px var(--src-line, var(--rule));
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .mark:hover,
+  .mark.is-active,
+  .mark[aria-current="true"] {
+    text-decoration-thickness: 3.5px;
+  }
+  .mark.is-active,
+  .mark[aria-current="true"] {
+    outline: 1.5px dashed color-mix(in srgb, var(--focus) 70%, transparent);
+    outline-offset: 2px;
+  }
 
-.diff-add {
-  background: var(--ok-soft);
-  text-decoration: none;
-}
-.diff-del {
-  margin-right: 0.2em;
-  background: var(--danger-soft);
-  text-decoration: line-through;
-  text-decoration-color: var(--danger);
-}
+  .diff-add {
+    background: var(--ok-soft);
+    text-decoration: none;
+  }
+  .diff-del {
+    margin-right: 0.2em;
+    background: var(--danger-soft);
+    text-decoration: line-through;
+    text-decoration-color: var(--danger);
+  }
 }
 
 .card {
@@ -348,8 +408,16 @@ h3,
 .bg-grid {
   background-image:
     radial-gradient(60rem 28rem at 50% -8rem, var(--glow), transparent 70%),
-    linear-gradient(to right, color-mix(in srgb, var(--rule) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--rule) 70%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--rule) 70%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--rule) 70%, transparent) 1px,
+      transparent 1px
+    );
   background-size:
     100% 100%,
     44px 44px,
@@ -425,7 +493,10 @@ h3,
   background-repeat: no-repeat;
   background-position: 0 100%;
   padding-bottom: 1px;
-  background-image: linear-gradient(var(--draw-color, var(--u-copied)), var(--draw-color, var(--u-copied)));
+  background-image: linear-gradient(
+    var(--draw-color, var(--u-copied)),
+    var(--draw-color, var(--u-copied))
+  );
   animation: draw-mark 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   animation-delay: calc(var(--i, 0) * 450ms + 400ms);
 }
@@ -549,7 +620,12 @@ h3,
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.35),
+    transparent
+  );
   animation: sheen 1.6s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -562,8 +638,8 @@ h3,
 /* Integrity flags (disguised text, paraphrasing-tool phrases): a double red underline. */
 @layer components {
   .mark-flag {
-    text-decoration: underline double var(--u-flag);
-    text-decoration-thickness: 3px;
+    text-decoration: underline wavy var(--u-flag);
+    text-decoration-thickness: 2.5px;
     text-underline-offset: 4px;
   }
 }
@@ -595,35 +671,79 @@ h3,
 .pdf-hl::after {
   content: "";
   position: absolute;
-  inset: auto 0 -1px 0;
-  height: 0;
-  border-bottom: 2.5px solid var(--pdf-line, #e0a100);
-  transition: border-width 0.15s ease;
+  inset: auto 0 -3px 0;
+  height: 5px;
+  background: var(--pdf-line, #e0a100);
+  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E\") repeat-x;
+  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E\") repeat-x;
+  transition: opacity 0.15s ease;
 }
-.pdf-hl[data-src="1"] { --pdf-line: #e0a100; }
-.pdf-hl[data-src="2"] { --pdf-line: #3a8ee6; }
-.pdf-hl[data-src="3"] { --pdf-line: #2fa36b; }
-.pdf-hl[data-src="4"] { --pdf-line: #ee7a2f; }
-.pdf-hl[data-src="5"] { --pdf-line: #d6539b; }
-.pdf-hl[data-src="6"] { --pdf-line: #13a3b5; }
-.pdf-hl.mark-para::after { border-bottom-style: dotted; }
-.pdf-hl.mark-grammar::after { border-bottom: 1.5px solid #e5484d; }
-.pdf-hl.mark-grammar.is-info::after { border-bottom-style: dashed; }
-.pdf-hl.mark-cite::after { border-bottom: 2px dashed #0f9f8f; }
-.pdf-hl.mark-flag::after { border-bottom: 3.5px double #dc2626; }
+.pdf-hl[data-src="1"] {
+  --pdf-line: #e0a100;
+}
+.pdf-hl[data-src="2"] {
+  --pdf-line: #3a8ee6;
+}
+.pdf-hl[data-src="3"] {
+  --pdf-line: #2fa36b;
+}
+.pdf-hl[data-src="4"] {
+  --pdf-line: #ee7a2f;
+}
+.pdf-hl[data-src="5"] {
+  --pdf-line: #d6539b;
+}
+.pdf-hl[data-src="6"] {
+  --pdf-line: #13a3b5;
+}
+.pdf-hl.mark-para::after {
+  opacity: 0.75;
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E\");
+}
+.pdf-hl.mark-grammar::after {
+  --pdf-line: #e5484d;
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E\");
+}
+.pdf-hl.mark-grammar.is-info::after {
+  opacity: 0.55;
+}
+.pdf-hl.mark-cite::after {
+  --pdf-line: #0f9f8f;
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E\");
+}
+.pdf-hl.mark-flag::after {
+  --pdf-line: #dc2626;
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E\");
+}
 .pdf-hl.mark-ai::after,
 .pdf-hl.mark-ai-medium::after {
-  height: 4px;
-  bottom: -3px;
-  border: 0;
-  background: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' viewBox='0 0 8 4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='%238b5cf6' stroke-width='1.3'/%3E%3C/svg%3E\") repeat-x;
+  --pdf-line: #8b5cf6;
+  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E\");
+  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E\");
 }
-.pdf-hl.mark-ai-medium::after { opacity: 0.6; }
-.pdf-hl.is-under { pointer-events: none; }
+.pdf-hl.mark-ai-medium::after {
+  opacity: 0.6;
+}
+.pdf-hl.is-under {
+  pointer-events: none;
+}
 .pdf-hl:hover::after,
-.pdf-hl.is-active::after { border-bottom-width: 4px; }
-.pdf-hl.is-active { outline: 1.5px dashed #4f46e5; outline-offset: 2px; }
-.pdf-hl:focus-visible { outline: 3px solid #4f46e5; outline-offset: 2px; }
+.pdf-hl.is-active::after {
+  height: 6px;
+  bottom: -4px;
+}
+.pdf-hl.is-active {
+  outline: 1.5px dashed #4f46e5;
+  outline-offset: 2px;
+}
+.pdf-hl:focus-visible {
+  outline: 3px solid #4f46e5;
+  outline-offset: 2px;
+}
 
 /* Waiting screen: a beam reads down the page; underlines draw in as checks finish. */
 @keyframes scan {
@@ -638,7 +758,13 @@ h3,
   position: absolute;
   inset: 0 0 auto;
   height: 40%;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--action) 16%, transparent) 70%, color-mix(in srgb, var(--action) 45%, transparent) 98%, transparent);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--action) 16%, transparent) 70%,
+    color-mix(in srgb, var(--action) 45%, transparent) 98%,
+    transparent
+  );
   animation: scan 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   pointer-events: none;
 }
@@ -646,10 +772,29 @@ h3,
   height: 2.5px;
   border-radius: 2px;
 }
-.scan-u-copied { background: var(--u-src-1); }
-.scan-u-grammar { background: var(--u-grammar); height: 1.5px; }
-.scan-u-cite { background: repeating-linear-gradient(90deg, var(--u-cite) 0 5px, transparent 5px 8px); }
-.scan-u-ai { background: var(--u-ai); height: 2px; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x; height: 4px; }
+.scan-u-copied {
+  background: var(--u-src-1);
+}
+.scan-u-grammar {
+  background: var(--u-grammar);
+  height: 1.5px;
+}
+.scan-u-cite {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--u-cite) 0 5px,
+    transparent 5px 8px
+  );
+}
+.scan-u-ai {
+  background: var(--u-ai);
+  height: 2px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E")
+    repeat-x;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4'%3E%3Cpath d='M0 3 Q2 0 4 2 T8 1' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E")
+    repeat-x;
+  height: 4px;
+}
 @media (prefers-reduced-motion: reduce) {
   .scan-beam {
     display: none;
@@ -658,7 +803,8 @@ h3,
 
 /* File-type icon: a light sweep across the page now and then. */
 @keyframes file-shine {
-  0%, 70% {
+  0%,
+  70% {
     transform: translateX(0) skewX(-20deg);
   }
   100% {
@@ -683,7 +829,14 @@ h3,
   border: 2px solid transparent;
   background:
     linear-gradient(var(--page), var(--page)) padding-box,
-    conic-gradient(from var(--angle), color-mix(in srgb, var(--action) 15%, transparent), var(--action), color-mix(in srgb, var(--u-src-2) 70%, transparent), color-mix(in srgb, var(--action) 15%, transparent)) border-box;
+    conic-gradient(
+        from var(--angle),
+        color-mix(in srgb, var(--action) 15%, transparent),
+        var(--action),
+        color-mix(in srgb, var(--u-src-2) 70%, transparent),
+        color-mix(in srgb, var(--action) 15%, transparent)
+      )
+      border-box;
   animation: border-flow 6s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -695,11 +848,21 @@ h3,
 
 /* Waiting screen: a reading lens sweeps across the page. */
 @keyframes lens {
-  0% { transform: translate(10%, 8%); }
-  25% { transform: translate(120%, 30%); }
-  50% { transform: translate(20%, 95%); }
-  75% { transform: translate(130%, 140%); }
-  100% { transform: translate(10%, 8%); }
+  0% {
+    transform: translate(10%, 8%);
+  }
+  25% {
+    transform: translate(120%, 30%);
+  }
+  50% {
+    transform: translate(20%, 95%);
+  }
+  75% {
+    transform: translate(130%, 140%);
+  }
+  100% {
+    transform: translate(10%, 8%);
+  }
 }
 .scan-lens {
   position: absolute;
@@ -709,8 +872,13 @@ h3,
   aspect-ratio: 1;
   border-radius: 9999px;
   border: 3px solid color-mix(in srgb, var(--action) 70%, transparent);
-  background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 0.35), color-mix(in srgb, var(--action) 8%, transparent) 60%);
-  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--action) 60%, transparent);
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgb(255 255 255 / 0.35),
+    color-mix(in srgb, var(--action) 8%, transparent) 60%
+  );
+  box-shadow: 0 10px 30px -10px
+    color-mix(in srgb, var(--action) 60%, transparent);
   backdrop-filter: saturate(1.4) contrast(1.05);
   animation: lens 7s ease-in-out infinite;
   pointer-events: none;
@@ -723,7 +891,12 @@ h3,
 
 /* A Word file in its exact layout. Pages are white paper in both themes, so underlines use the light colours. */
 .docx-exact {
-  --u-src-1: #e0a100; --u-src-2: #3a8ee6; --u-src-3: #2fa36b; --u-src-4: #ee7a2f; --u-src-5: #d6539b; --u-src-6: #13a3b5;
+  --u-src-1: #e0a100;
+  --u-src-2: #3a8ee6;
+  --u-src-3: #2fa36b;
+  --u-src-4: #ee7a2f;
+  --u-src-5: #d6539b;
+  --u-src-6: #13a3b5;
   --u-copied: #e0a100;
   --u-ai: #8b5cf6;
   --u-grammar: #e5484d;
@@ -747,15 +920,38 @@ h3,
   color: inherit;
 }
 /* Papers use tight line spacing, so underlines are slimmer and closer to the words than in the plain view. */
-.docx-exact .mark-match { text-decoration-thickness: 2px; text-underline-offset: 2px; }
-.docx-exact .mark-para { text-decoration-thickness: 2px; text-underline-offset: 2px; }
-.docx-exact .mark-ai { text-decoration-thickness: 1px; text-underline-offset: 2px; }
-.docx-exact .mark-ai-medium { text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
-.docx-exact .mark-grammar { text-decoration-thickness: 1.5px; text-underline-offset: 1px; }
-.docx-exact .mark-cite { text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
-.docx-exact .mark-flag { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.docx-exact .mark-match {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.docx-exact .mark-para {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.docx-exact .mark-ai {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.docx-exact .mark-ai-medium {
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+.docx-exact .mark-grammar {
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 1px;
+}
+.docx-exact .mark-cite {
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+.docx-exact .mark-flag {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
 .docx-exact .mark:hover,
-.docx-exact .mark.is-active { text-decoration-thickness: 2.5px; }
+.docx-exact .mark.is-active {
+  text-decoration-thickness: 2.5px;
+}
 
 /* The Veritome ribbon mark. */
 .vt-logo {
@@ -823,5 +1019,82 @@ h3,
   .vt-logo .vt-knot,
   .vt-logo .vt-run {
     animation: none !important;
+  }
+}
+
+/* Finding numbers, as in the downloadable report: a small badge in the finding's colour where it starts. */
+.mark[data-n],
+.pdf-hl[data-n] {
+  position: relative;
+}
+.mark[data-n]::before,
+.pdf-hl[data-n]::before,
+.finding-n {
+  --badge: var(--src-line, var(--u-copied));
+  content: attr(data-n);
+  display: inline-block;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.28rem;
+  border-radius: 0.3rem;
+  background: var(--badge);
+  color: #fff;
+  font:
+    700 0.62rem/1.1rem var(--font-sans, system-ui),
+    sans-serif;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.3);
+}
+.mark[data-n]::before,
+.pdf-hl[data-n]::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  transform: translate(-60%, -78%);
+  pointer-events: none;
+}
+/* A badge on a mark is part of it: clicking the number opens the finding. */
+.mark[data-n]::before {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.mark-ai[data-n]::before,
+.pdf-hl.mark-ai[data-n]::before,
+.finding-n[data-cat="ai"] {
+  --badge: #8b5cf6;
+}
+.mark-cite[data-n]::before,
+.pdf-hl.mark-cite[data-n]::before,
+.finding-n[data-cat="citations"] {
+  --badge: #0f9f8f;
+}
+.mark-flag[data-n]::before,
+.pdf-hl.mark-flag[data-n]::before,
+.finding-n[data-cat="flags"] {
+  --badge: #dc2626;
+}
+.pdf-hl[data-src="1"]::before {
+  --badge: #e0a100;
+}
+.pdf-hl[data-src="2"]::before {
+  --badge: #3a8ee6;
+}
+.pdf-hl[data-src="3"]::before {
+  --badge: #2fa36b;
+}
+.pdf-hl[data-src="4"]::before {
+  --badge: #ee7a2f;
+}
+.pdf-hl[data-src="5"]::before {
+  --badge: #d6539b;
+}
+.pdf-hl[data-src="6"]::before {
+  --badge: #13a3b5;
+}
+@media print {
+  .mark[data-n]::before {
+    box-shadow: none;
   }
 }

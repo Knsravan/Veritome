@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { CompareTool } from "./tool";
+import { ComingSoon } from "@/components/ComingSoon";
 
-export const metadata: Metadata = { title: "Compare papers" };
+export const metadata: Metadata = { title: "Compare papers (coming soon)" };
 
 export default function Page() {
-  return <CompareTool />;
+  return <ComingSoon href="/compare" />;
 }

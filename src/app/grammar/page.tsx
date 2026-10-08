@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { GrammarTool } from "./tool";
+import { ComingSoon } from "@/components/ComingSoon";
 
-export const metadata: Metadata = { title: "Grammar" };
+export const metadata: Metadata = { title: "Grammar (coming soon)" };
 
 export default function Page() {
-  return <GrammarTool />;
+  return <ComingSoon href="/grammar" />;
 }

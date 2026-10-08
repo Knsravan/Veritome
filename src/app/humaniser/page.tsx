@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { RewriteTool } from "@/components/RewriteTool";
+import { ComingSoon } from "@/components/ComingSoon";
 
-export const metadata: Metadata = { title: "Humaniser" };
+export const metadata: Metadata = { title: "Humaniser (coming soon)" };
 
 export default function Page() {
-  return <RewriteTool kind="humanise" />;
+  return <ComingSoon href="/humaniser" />;
 }
