@@ -32,6 +32,7 @@ import type { DocModel } from "@/lib/doc/model";
 import { sampleDocx } from "@/lib/sample-file";
 import { useSettings } from "@/lib/settings";
 import { tidyPasted } from "../detector/tool";
+import { MakeYours } from "./make-yours";
 
 type Mode = "text" | "file";
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
@@ -49,6 +50,7 @@ interface Item {
 
 interface Job {
   text: string;
+  tone: HumaniseTone;
   doc: DocModel | null;
   fileName?: string;
   items: Item[];
@@ -215,6 +217,7 @@ export function HumaniserTool() {
     const pieces = planParagraphs(source);
     const j: Job = {
       text: source,
+      tone,
       doc,
       ...(fileName ? { fileName } : {}),
       items: pieces.map((piece) => ({
@@ -483,6 +486,7 @@ function Result({
   onRetry: (i: number) => void;
 }) {
   const [showChanges, setShowChanges] = useState(true);
+  const [yours, setYours] = useState<number | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -792,6 +796,13 @@ function Result({
                       </button>
                       <button
                         type="button"
+                        onClick={() => setYours(i)}
+                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-semibold text-action hover:bg-action-soft"
+                      >
+                        <PenIcon size={14} /> Make it yours
+                      </button>
+                      <button
+                        type="button"
                         disabled={running}
                         onClick={() => onRetry(i)}
                         className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-semibold text-action hover:bg-action-soft disabled:opacity-40"
@@ -801,6 +812,17 @@ function Result({
                     </div>
                   </div>
                 )}
+              {yours === i && (
+                <MakeYours
+                  paragraph={finalOf(it)}
+                  tone={job.tone}
+                  onClose={() => setYours(null)}
+                  onDone={(text) => {
+                    onUpdate(i, { use: "edited", edited: text });
+                    setYours(null);
+                  }}
+                />
+              )}
             </li>
           );
         })}
