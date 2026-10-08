@@ -99,14 +99,17 @@ export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { we
   const providers: SourceProvider[] = [
     openAlexProvider(c.openalexPaced),
     crossrefProvider(c.crossref),
-    semanticScholarProvider(c.semanticscholarPaced),
     arxivProvider(c.arxiv),
     europePmcProvider(http),
     wikipediaProvider(http),
   ];
   // CORE's free plan allows only a few requests a minute.
   if (cfg.coreApiKey) providers.push(coreProvider(c.coreHttp, cfg.coreApiKey));
-  if (cfg.semanticScholarKey) providers.push(semanticScholarSnippetProvider(http, { apiKey: cfg.semanticScholarKey }));
+  // Without a key Semantic Scholar turns away nearly every request, and OpenAlex covers the same papers.
+  if (cfg.semanticScholarKey) {
+    providers.push(semanticScholarProvider(c.semanticscholarPaced));
+    providers.push(semanticScholarSnippetProvider(http, { apiKey: cfg.semanticScholarKey }));
+  }
   if (options.web && cfg.braveApiKey) providers.push(braveProvider(c.braveHttp, cfg.braveApiKey));
   if (options.web && cfg.serperApiKey) providers.push(serperProvider(http, cfg.serperApiKey));
   return providers;
@@ -146,6 +149,7 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
     maxUploadBytes: cfg.maxUploadBytes,
     webSearch: web,
     semanticScholarKey: Boolean(cfg.semanticScholarKey),
+    openAlexKey: Boolean(cfg.openAlexKey),
     plagiarismSources: plagiarismProviders(cfg, scholarlyHttp(cfg), { web: false }).map((p) => p.name),
     libraryDocuments: (await loadLibrary(cfg.libraryDir)).length,
   };
