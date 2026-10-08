@@ -194,6 +194,20 @@ test("humaniser revises paragraph by paragraph, lets each change be reviewed, an
   expect(calls).toBe(2);
   await expect(page.getByText("Meaning checked").first()).toBeVisible();
   await page.getByRole("radio", { name: "Keep original" }).first().click();
+  await page.route("**/api/make-yours", async (route) => {
+    const body = route.request().postDataJSON() as { action: string; answers?: Array<{ answer: string }> };
+    await route.fulfill({
+      json:
+        body.action === "ask"
+          ? { questions: [{ quote: "the held-out samples", question: "Which samples did you hold out?", why: "names your data" }] }
+          : { status: "rewritten", problems: [], text: `The method is central to the analysis of river sediments; on ${body.answers![0]!.answer}, accuracy reached 94.2%.` },
+    });
+  });
+  await page.getByRole("button", { name: "Make it yours" }).nth(1).click();
+  await page.getByLabel("Which samples did you hold out?").fill("the 120 cores from the 2019 survey");
+  await page.getByRole("button", { name: "Write my answers in" }).click();
+  await expect(page.getByText("the 120 cores from the 2019 survey, accuracy").or(page.getByText(/120 cores from the 2019 survey/))).toBeVisible();
+  await expect(page.getByText("Your edit")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Disclose the help you used" })).toBeVisible();
   await axe(page);
   const word = page.waitForEvent("download");
