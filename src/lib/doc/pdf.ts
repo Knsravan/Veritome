@@ -63,7 +63,17 @@ export async function readPdf(name: string, data: Uint8Array): Promise<PdfModel>
       const [vx, vy] = vp.convertToViewportPoint(e, f) as [number, number];
       items.push({ str: raw.str, x: vx, base: vy, w: (raw.width ?? 0) * (vp.scale ?? 1), h, eol: Boolean(raw.hasEOL) });
     }
-    pages.push({ width: vp.width, height: vp.height, lines: lines(items.filter((i) => i.str.length > 0 || i.eol)) });
+    const ls = lines(items.filter((i) => i.str.length > 0 || i.eol));
+    // Some files (justified text from Word, often) report spaces hundreds of points wide. An item never reaches past
+    // the next one on its line or off the page, so underlines stop where the words do.
+    for (const l of ls)
+      l.forEach((it, k) => {
+        const next = l[k + 1];
+        if (next && next.x > it.x) it.w = Math.min(it.w, next.x - it.x);
+        else if (!it.str.trim()) it.w = Math.min(it.w, it.h * 0.5);
+        it.w = Math.max(0, Math.min(it.w, vp.width - it.x));
+      });
+    pages.push({ width: vp.width, height: vp.height, lines: ls });
   }
 
   const skip = furniture(pages.map((p) => p.lines));

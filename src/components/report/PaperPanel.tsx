@@ -262,11 +262,14 @@ export function PaperPanel({
   text,
   onOpen,
   label = "Your paper with every finding underlined",
+  noun = "paper",
 }: {
   report: PaperReport;
   text: string;
   onOpen?: (tab: string) => void;
   label?: string;
+  /** What the checked text is called in the panel ("paper", or "text" for pasted text). */
+  noun?: string;
 }) {
   const doc = useDocModel(text);
   const all = useMemo(
@@ -320,7 +323,7 @@ export function PaperPanel({
         <section aria-labelledby="legend-h" className="card p-4">
           <div className="flex items-baseline justify-between gap-2">
             <h3 id="legend-h" className="font-semibold">
-              {all.length} finding{all.length === 1 ? "" : "s"} in your paper
+              {all.length} finding{all.length === 1 ? "" : "s"} in your {noun}
             </h3>
             <span className="text-xs text-ink-faint">
               Tap a type to hide it
@@ -512,7 +515,7 @@ export function PaperPanel({
         ) : (
           all.length > 0 && (
             <p className="card px-4 py-3 text-sm text-ink-soft">
-              Select any underline in your paper, or press{" "}
+              Select any underline in your {noun}, or press{" "}
               <span className="font-semibold">Next</span>, to see what is wrong
               and how to fix it.
             </p>

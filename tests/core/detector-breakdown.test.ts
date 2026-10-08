@@ -66,3 +66,20 @@ test("a machine-written paragraph is scored on its own, not averaged with human 
   assert.ok(b.aiPercent > 30 && b.aiPercent < 70, String(b.aiPercent));
   assert.equal(b.regions[b.regions.length - 1]?.kind, "ai");
 });
+
+test("only prose paragraphs count: title, author lines, headings and references are left out", async () => {
+  const { proseRanges } = await import("../../src/core/detector/breakdown.ts");
+  const para = "Quantum computers process many states at once, which makes some problems far easier to solve than before.";
+  const text = [
+    "Interactive Quantum Computing Simulator: Visualization and\nExploration of Qubit States",
+    "Macharla Shashidhar 1* , K. Sony 1 , K. Thirupathi Reddy 2 Research student, KITS warangal, Telangana",
+    "Abstract",
+    para,
+    "Introduction",
+    para,
+    "References",
+    "1. Kandadi, T. (2025). Drawbacks of Random Forest algorithm to examine extensive datasets. SSRN. https://doi.org/10.2139/ssrn.5236759",
+  ].join("\n\n");
+  const ranges = proseRanges(text).map((r) => text.slice(r.start, r.end));
+  assert.deepEqual(ranges, [para, para]);
+});
