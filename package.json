@@ -9,7 +9,9 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "predev": "node scripts/copy-ort.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-ort.mjs",
     "build": "next build",
     "start": "next start",
     "test": "npm run test:core && npm run test:server && npm run test:web",

@@ -192,7 +192,7 @@ function scores(r: PaperReport, text: string): Score[] {
   );
   const d = r.detector;
   out.push(
-    d.status === "done" && d.result.verdict !== "insufficient_text"
+    d.status === "done" && aiBreakdown(d.result, text).judged
       ? {
           tab: "ai",
           tool: "detector",
@@ -210,7 +210,9 @@ function scores(r: PaperReport, text: string): Score[] {
           value: "–",
           note:
             d.status === "done"
-              ? "Not enough text"
+              ? d.result.model.neural === "unavailable"
+                ? "AI models did not run"
+                : "Not enough text"
               : d.status === "skipped"
                 ? "Not run"
                 : "Check failed",

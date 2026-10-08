@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 
 # builds
+public/ort/
 .next/
 out/
 dist/

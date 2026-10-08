@@ -86,7 +86,8 @@ const PASTED = Array.from(
 test("AI detector text mode shows the report, the underlined text and the detailed signals", async ({
   page,
 }) => {
-  // The neural second opinion loads from a CDN; without it the check still finishes with the browser-side rules.
+  test.setTimeout(180_000);
+  // The neural models and their runtime are served by the site itself, so this works with outside CDNs blocked.
   await page.route("**/cdn.jsdelivr.net/**", (route) => route.abort());
   await page.goto("/detector");
   await expect(page.getByRole("tab", { name: /Text mode/ })).toHaveAttribute(
@@ -97,8 +98,10 @@ test("AI detector text mode shows the report, the underlined text and the detail
   await expect(page.getByText(/words$/).first()).toBeVisible();
   await page.getByRole("button", { name: "Check for AI writing" }).click();
   await expect(page.getByText("AI detector report")).toBeVisible({
-    timeout: 60_000,
+    timeout: 150_000,
   });
+  await expect(page.getByText("could not run")).toHaveCount(0);
+  await expect(page.getByLabel("AI writing summary")).toContainText("%");
   await expect(
     page.getByLabel("Your paper with the AI-written parts underlined"),
   ).toBeVisible();
@@ -111,7 +114,8 @@ test("AI detector file mode previews the paper and offers both downloads", async
   page,
 }) => {
   test.setTimeout(120_000);
-  await page.route("**/cdn.jsdelivr.net/**", (route) => route.abort());
+  // With the neural models blocked the page says so plainly instead of showing a share.
+  await page.route("**/ort/**", (route) => route.abort());
   await page.goto("/detector?mode=file");
   await expect(page.getByRole("tab", { name: /File mode/ })).toHaveAttribute(
     "aria-selected",
@@ -123,6 +127,10 @@ test("AI detector file mode previews the paper and offers both downloads", async
   await expect(page.getByText("AI detector report")).toBeVisible({
     timeout: 60_000,
   });
+  await expect(
+    page.getByText("The AI models could not run in this browser"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   const sheet = page.getByLabel(
     "Your paper with the AI-written parts underlined",
   );
@@ -458,7 +466,7 @@ test("dark theme keeps contrast on results", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await axe(page);
-  await page.route("**/cdn.jsdelivr.net/**", (route) => route.abort());
+  await page.route("**/ort/**", (route) => route.abort());
   await page.goto("/detector");
   await page.getByRole("textbox", { name: "Your text" }).fill(PASTED);
   await page.getByRole("button", { name: "Check for AI writing" }).click();

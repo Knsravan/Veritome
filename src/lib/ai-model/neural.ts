@@ -7,7 +7,6 @@ import type { DetectorResult } from "@/core/detector/types";
 import { wordPiece, type WordPiece } from "./wordpiece";
 
 const BASE = "/models/ai-writing/";
-const ORT_VERSION = "1.30.0";
 
 type Ort = typeof import("onnxruntime-web/wasm");
 interface Loaded {
@@ -22,7 +21,8 @@ let loading: Promise<Loaded> | null = null;
 function load(): Promise<Loaded> {
   loading ??= (async () => {
     const ort = await import("onnxruntime-web/wasm");
-    ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+    // Served from this site (copied into public/ort at build time), so no outside CDN has to be reachable.
+    ort.env.wasm.wasmPaths = "/ort/";
     ort.env.wasm.numThreads = 1;
     const [meta, vocab] = await Promise.all([fetch(`${BASE}meta.json`).then((r) => r.json() as Promise<NeuralMeta>), fetch(`${BASE}vocab.txt`).then((r) => r.text())]);
     const sessions = await Promise.all(
@@ -57,12 +57,22 @@ async function score(m: Loaded, session: Loaded["sessions"][number], text: strin
  * keep the classifier's estimate). Returns the result unchanged if the models cannot be loaded or take longer than
  * `timeoutMs`.
  */
-export function withNeuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal, timeoutMs = 90_000): Promise<DetectorResult> {
-  // A slow connection or device never holds the report back for long.
-  return Promise.race([neuralOpinion(result, text, signal), new Promise<DetectorResult>((resolve) => setTimeout(() => resolve(result), timeoutMs))]);
+export function withNeuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal, timeoutMs = 120_000): Promise<DetectorResult> {
+  // A slow connection or device never holds the report back for long, but the result says the models did not run.
+  const unavailable = (): DetectorResult => ({ ...result, model: { ...result.model, neural: "unavailable" } });
+  return Promise.race([
+    neuralOpinion(result, text, signal).then((r) => (r ? { ...r, model: { ...r.model, neural: "used" as const } } : unavailable())),
+    new Promise<DetectorResult>((resolve) => setTimeout(() => resolve(unavailable()), timeoutMs)),
+  ]);
 }
 
-async function neuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal): Promise<DetectorResult> {
+/** Starts downloading the neural models early (for example while the user is still typing), so the check is quicker. */
+export function preloadNeural(): void {
+  void load().catch(() => undefined);
+}
+
+/** The result with the models' opinion, or null when they could not run. */
+async function neuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal): Promise<DetectorResult | null> {
   const segments = result.model.segments;
   if (!segments?.length || result.verdict === "insufficient_text") return result;
   try {
@@ -85,7 +95,8 @@ async function neuralOpinion(result: DetectorResult, text: string, signal?: Abor
       scores.push(perModel);
     }
     return mergeNeural(result, scores, m.meta);
-  } catch {
-    return result;
+  } catch (err) {
+    console.error("Veritome: the neural models could not run:", err instanceof Error ? err.message : err);
+    return null;
   }
 }

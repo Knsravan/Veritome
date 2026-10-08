@@ -45,7 +45,8 @@ export function proseRanges(text: string): Array<{ start: number; end: number }>
  */
 export function aiBreakdown(result: DetectorResult, text: string): AiBreakdown {
   const empty: AiBreakdown = { judged: false, aiPercent: 0, uncertainPercent: 0, humanPercent: 0, words: result.words, regions: [] };
-  if (result.verdict === "insufficient_text") return empty;
+  // Without the neural models the lighter classifier misses most AI-polished text, so no share is claimed.
+  if (result.verdict === "insufficient_text" || result.model.neural === "unavailable") return empty;
   const { likelyAi, likelyHuman } = result.model.thresholds;
   // Paragraph segments when the detector provides them; otherwise its overlapping windows.
   const parts = result.model.segments?.length

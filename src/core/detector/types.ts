@@ -52,6 +52,11 @@ export interface ModelEvidence {
    * human writing (a pattern about 1 in 100 human papers shows), so paragraphs above that range count as likely AI.
    */
   document?: { paragraphs: number; aboveHumanRange: number; share: number };
+  /**
+   * Whether the neural models (run in the browser) read the text. "unavailable" means they could not be loaded or
+   * took too long, so only the lighter classifier judged it and the result is much less reliable.
+   */
+  neural?: "used" | "unavailable";
 }
 
 export interface EvasionSigns {

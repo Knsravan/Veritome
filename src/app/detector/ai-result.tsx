@@ -57,12 +57,15 @@ export function AiResult({
   doc,
   fileName,
   onNew,
+  onRetry,
 }: {
   result: DetectorResult;
   text: string;
   doc: DocModel | null;
   fileName?: string;
   onNew: () => void;
+  /** Runs the check again (offered when the neural models could not run). */
+  onRetry?: () => void;
 }) {
   const report = useMemo(() => aiOnlyReport(result), [result]);
   const b = useMemo(() => aiBreakdown(result, text), [result, text]);
@@ -159,7 +162,7 @@ export function AiResult({
           </Notice>
         )}
 
-        <AiSummary ai={result} b={b} />
+        <AiSummary ai={result} b={b} {...(onRetry ? { onRetry } : {})} />
 
         <section aria-labelledby="paper-h" className="space-y-3">
           <h2 id="paper-h" className="font-display text-xl font-semibold">
@@ -169,6 +172,7 @@ export function AiResult({
             report={report}
             text={text}
             label="Your paper with the AI-written parts underlined"
+            noun={doc ? "paper" : "text"}
           />
         </section>
 

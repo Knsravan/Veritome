@@ -19,6 +19,8 @@ ENV NODE_ENV=production \
 # The standalone output contains only the files the server needs.
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
+# Static files: the AI detector's neural models and the WebAssembly runtime that runs them.
+COPY --from=build --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
