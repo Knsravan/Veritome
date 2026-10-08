@@ -18,6 +18,27 @@ export interface AiBreakdown {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
+ * The stretches of running prose that an AI share is judged on, as Turnitin does: paragraphs of real sentences.
+ * Titles, author lines, affiliations, headings, captions, short list items and everything from the reference list
+ * on are left out (a sentence ends with a word, so initials such as "K. Sony" do not make an author line prose).
+ * Text with no paragraph breaks counts as a whole.
+ */
+export function proseRanges(text: string): Array<{ start: number; end: number }> {
+  const out: Array<{ start: number; end: number }> = [];
+  const re = /[^]*?(?:\n[ \t]*\n\s*|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) && m[0].length) {
+    const raw = m[0];
+    const start = m.index + (raw.length - raw.trimStart().length);
+    const body = raw.trim();
+    if (/^(references|bibliography|works cited|literature cited|reference list)\s*:?$/i.test(body)) break;
+    const words = (body.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+    if (words >= 30 || (words >= 12 && /\p{Ll}{2}[.!?]["”’)]?(\s|$)/u.test(body))) out.push({ start, end: start + body.length });
+  }
+  return out.length ? out : [{ start: 0, end: text.length }];
+}
+
+/**
  * Splits a detector result into "likely AI", "uncertain" and "likely human" shares of the text, the way
  * Turnitin reports an AI percentage. Each paragraph segment (short paragraphs joined to 150 words or more) is
  * classed with the same thresholds as the overall verdict. A short text is a single segment, so it is all one class.
@@ -42,14 +63,22 @@ export function aiBreakdown(result: DetectorResult, text: string): AiBreakdown {
 
   const counts: Record<AiRegionKind, number> = { ai: 0, uncertain: 0, human: 0 };
   const regions: AiBreakdown["regions"] = [];
+  const prose = proseRanges(text);
+  const blockOf = (t: { start: number; end: number }) => prose.findIndex((r) => r.start <= t.start && t.end <= r.end);
+  let lastBlock = -1;
   for (const t of tokens) {
+    const block = blockOf(t);
+    if (block < 0) continue;
     const covering = parts.filter((w) => w.start <= t.start && t.end <= w.end);
     if (!covering.length) continue;
     const p = covering.reduce((n, w) => n + w.probability, 0) / covering.length;
     const kind = classify(p, Math.min(...covering.map((w) => w.words)));
     counts[kind]++;
     const last = regions[regions.length - 1];
-    if (last && last.kind === kind) {
+    // Each paragraph is its own stretch, so headings between paragraphs are never underlined.
+    const sameBlock = block === lastBlock;
+    lastBlock = block;
+    if (last && last.kind === kind && sameBlock) {
       last.end = t.end;
       last.probability = Math.max(last.probability, p);
     } else regions.push({ start: t.start, end: t.end, kind, probability: p });

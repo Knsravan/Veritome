@@ -1,5 +1,7 @@
 "use client";
 
+import { aiBreakdown } from "@/core/detector/breakdown";
+import { paperTitle } from "@/lib/paper-title";
 import {
   useId,
   useMemo,
@@ -114,10 +116,9 @@ function download(name: string, type: string, content: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** A short title for the report: the paper's first line when it looks like a title. */
+/** A short title for the report: the paper's opening when it looks like a title. */
 export function guessTitle(text: string): string | null {
-  const first = text.trim().split("\n")[0]?.trim() ?? "";
-  return first && first.length <= 160 && !/[.!?]$/.test(first) ? first : null;
+  return paperTitle(text);
 }
 
 const statusOf = (r: PaperReport, tool: ToolId): OverviewStatus =>
@@ -167,7 +168,7 @@ interface Score {
   meter?: number;
 }
 
-function scores(r: PaperReport): Score[] {
+function scores(r: PaperReport, text: string): Score[] {
   const out: Score[] = [];
   const p = r.plagiarism;
   out.push(
@@ -196,10 +197,11 @@ function scores(r: PaperReport): Score[] {
           tab: "ai",
           tool: "detector",
           label: "AI writing",
-          value: `${d.result.score}`,
-          unit: "/100",
-          meter: d.result.score,
-          note: VERDICT_TEXT[d.result.verdict],
+          // The share of the prose that reads as AI-written, as Turnitin reports it, and as the PDF report shows.
+          value: `${Math.round(aiBreakdown(d.result, text).aiPercent)}`,
+          unit: "%",
+          meter: aiBreakdown(d.result, text).aiPercent,
+          note: "of the text reads as AI-written",
         }
       : {
           tab: "ai",
@@ -884,7 +886,7 @@ export function ReportView({
         aria-label="Summary scores"
         className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
-        {scores(report).map((s, i) => (
+        {scores(report, text).map((s, i) => (
           <div
             key={s.label}
             className="animate-fade-up flex"

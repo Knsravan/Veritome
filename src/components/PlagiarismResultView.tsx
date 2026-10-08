@@ -15,6 +15,8 @@ import type {
   SourceExcerpt,
 } from "@/core/plagiarism/types";
 import { paragraphStats } from "@/core/report/paragraphs";
+import { titleSimilarity } from "@/core/text/similarity";
+import { paperTitle } from "@/lib/paper-title";
 import { focusMark, focusNote, type TextMark } from "./AnnotatedText";
 import { useDocModel } from "./DocumentContext";
 import { DocumentView, LayoutToggle } from "./DocumentView";
@@ -496,6 +498,16 @@ export function PlagiarismResultView({
     setExcluded((s) => new Set(s).add(id));
     setActive(null);
   };
+  // A source with this paper's own title is most likely the paper itself, already published or posted.
+  const ownTitle = useMemo(() => paperTitle(text), [text]);
+  const ownCopy = ownTitle
+    ? r.primary.find(
+        (s) =>
+          s.kind !== "self" &&
+          !excluded.has(s.id) &&
+          titleSimilarity(s.title, ownTitle) >= 0.85,
+      )
+    : undefined;
 
   const grouped = (Object.keys(ISSUE_TEXT) as IssueKind[])
     .map((k) => ({ kind: k, items: r.issues.filter((i) => i.kind === k) }))
@@ -654,6 +666,21 @@ export function PlagiarismResultView({
                   : `${serious} passage${serious === 1 ? "" : "s"} need${serious === 1 ? "s" : ""} fixing before you submit. Reworded sentences are not counted in the percentage.`}
             </p>
           </div>
+          {ownCopy && (
+            <Notice kind="info" title="This looks like your paper itself">
+              Source {number(ownCopy.id)}, “{ownCopy.title}”, has the same
+              title as this paper, so it is probably this paper already
+              published or posted online. Checkers such as Turnitin count that
+              match too. If it is yours, exclude it to see what else matches.{" "}
+              <button
+                type="button"
+                className="font-semibold text-action hover:underline"
+                onClick={() => exclude(ownCopy.id)}
+              >
+                Exclude it
+              </button>
+            </Notice>
+          )}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-rule pt-3 text-sm print:hidden">
             <label className="flex items-center gap-2">
               Hide matches under

@@ -65,8 +65,16 @@ function familyMatches(a: Author, b: Author): boolean {
   const x = ascii(a.family);
   const y = ascii(b.family);
   if (!x || !y) return false;
-  return x === y || x.endsWith(` ${y}`) || y.endsWith(` ${x}`) || (a.organization === true && (x.startsWith(y) || y.startsWith(x)));
+  if (x === y || x.endsWith(` ${y}`) || y.endsWith(` ${x}`) || (a.organization === true && (x.startsWith(y) || y.startsWith(x))))
+    return true;
+  // Many South and East Asian names are written in either order ("Kandadi, T. R." for Thirupathi Reddy Kandadi,
+  // or a database recording Kandadi as a given name), so a surname found among the other's names matches too.
+  const words = (s: string | undefined) => ascii(s ?? "").split(" ").filter((w) => w.length > 2);
+  return words(b.given).includes(x) || words(a.given).includes(y);
 }
+
+/** A record "author" that is really an address or affiliation, as some deposited metadata has. */
+const notAPerson = (a: Author) => /\d{4,}|,.*,|\b(university|institute|college|department)\b.*,/i.test(`${a.given ?? ""} ${a.family}`);
 
 const CONTAINER_STOP = new Set(["of", "the", "and", "on", "for", "in", "a", "an", "&", "annual", "volume", "vol", "long", "short", "papers", "proceedings", "conference", "meeting"]);
 
@@ -151,15 +159,18 @@ export function findDiscrepancies(ref: ParsedReference, work: Work): Discrepancy
     out.push({ field: "year", cited: String(ref.year), actual: String(work.year) });
   }
   const firstCited = ref.authors[0];
-  if (firstCited && work.authors.length > 0 && !work.authors.slice(0, 1).some((a) => familyMatches(firstCited, a))) {
-    const present = work.authors.some((a) => familyMatches(firstCited, a));
+  const people = work.authors.filter((a) => !notAPerson(a));
+  if (firstCited && people.length > 0 && !people.slice(0, 1).some((a) => familyMatches(firstCited, a))) {
+    const present = people.some((a) => familyMatches(firstCited, a));
     out.push({
       field: "authors",
       cited: firstCited.family,
-      actual: work.authors.slice(0, 3).map((a) => a.family).join(", ") + (present ? " (cited author is not first)" : ""),
+      actual: people.slice(0, 3).map((a) => a.family).join(", ") + (present ? " (cited author is not first)" : ""),
     });
   }
-  if (ref.title && titleSimilarity(ref.title, work.title) < 0.85) out.push({ field: "title", cited: ref.title, actual: work.title });
+  // A title the parser missed (an entry in an unusual style) is not a wrong title when the real one is in the entry.
+  if (ref.title && titleSimilarity(ref.title, work.title) < 0.85 && titleContainedIn(work.title, ref.raw) < 0.9)
+    out.push({ field: "title", cited: ref.title, actual: work.title });
   if (ref.container && work.container && containerSimilarity(ref.container, work.container) < 0.5) {
     out.push({ field: "container", cited: ref.container, actual: work.container });
   }

@@ -2,6 +2,8 @@ import type { AiBreakdown } from "@/core/detector/breakdown";
 import { ISSUE_TEXT, type IssueKind, type ReviewedReport } from "@/core/plagiarism/review";
 import type { PlagiarismReport } from "@/core/plagiarism/types";
 import type { ParagraphStat } from "@/core/report/paragraphs";
+import { titleSimilarity } from "@/core/text/similarity";
+import { paperTitle } from "@/lib/paper-title";
 import { loadUnicodeFonts, PDF_COLORS, PdfWriter, type Mark } from "./writer";
 
 export interface PlagiarismPdfInput {
@@ -179,6 +181,13 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
       ]),
       [4, 52, 18, 9, 8],
     );
+    const own = paperTitle(text);
+    const copy = own ? r.primary.findIndex((s) => s.kind !== "self" && titleSimilarity(s.title, own) >= 0.85) : -1;
+    if (copy >= 0)
+      w.text(
+        `Source ${copy + 1} has the same title as this paper, so it is probably this paper already published or posted online. Checkers such as Turnitin count that match too; if it is the author's own, it can be excluded.`,
+        { size: 9, color: PDF_COLORS.soft },
+      );
   } else w.text("None of the searched sources shared a run of words with the text.", { size: 10 });
   if (r.others.length) {
     w.text(`Also containing the same wording (not the best match, often because they quote the original): ${r.others.map((s) => s.title).join("; ")}.`, { size: 8.5, color: PDF_COLORS.soft });

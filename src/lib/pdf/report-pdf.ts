@@ -1,4 +1,5 @@
 import { aiBreakdown } from "@/core/detector/breakdown";
+import { paperTitle } from "@/lib/paper-title";
 import { reviewReport } from "@/core/plagiarism/review";
 import {
   buildActionList,
@@ -455,15 +456,12 @@ function writeCover(
   });
   w.y = w.margin + 120;
   // Title.
-  const first = c.text.trim().split("\n")[0]?.trim() ?? "";
-  const title =
-    c.fileName ??
-    (first.length > 3 && first.length < 160 ? first : "Untitled document");
+  const first = paperTitle(c.text) ?? "";
+  const title = c.fileName ?? (first || "Untitled document");
   w.text(title, { size: 22, style: "bold", gap: 6 });
   if (
     c.fileName &&
-    first.length > 3 &&
-    first.length < 160 &&
+    first &&
     first !== c.fileName
   )
     w.text(first, { size: 11, color: PDF_COLORS.soft, gap: 6 });

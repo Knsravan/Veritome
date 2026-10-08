@@ -289,3 +289,22 @@ test("arXiv title search is used when databases only hold a later reprint", asyn
   assert.equal(check.status, "verified");
   assert.equal(check.match?.year, 2017);
 });
+
+test("a surname recorded in the other name order, or an affiliation listed as an author, is not a mismatch", () => {
+  const ref = parseReference("Kandadi, T. R. (2025). A framework for predicting startup success growth with multiple algorithms. TechRxiv.", 5);
+  const work: Work = {
+    title: "A framework for predicting startup success growth with multiple algorithms",
+    authors: [{ family: "Reddy", given: "Kandadi Thirupathi" }],
+    year: 2025,
+    sources: ["crossref"],
+  };
+  assert.deepEqual(findDiscrepancies(ref, work).filter((d) => d.field === "authors"), []);
+  const junk: Work = {
+    title: "Predicting a small-cap company stock price using Python with best accuracy rate",
+    authors: [{ family: "Chaitanya Deemed to be University, Kishanpura, Warangal, 506009, Telangana, India" }, { family: "Shankarlingam", given: "G." }],
+    year: 2023,
+    sources: ["crossref"],
+  };
+  const ref2 = parseReference("Shankarlingam, G., & Reddy, K. T. (2023). Predicting a small-cap company stock price using Python with best accuracy rate. Indian Journal of Science and Technology.", 1);
+  assert.deepEqual(findDiscrepancies(ref2, junk).filter((d) => d.field === "authors"), []);
+});
