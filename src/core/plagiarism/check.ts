@@ -55,6 +55,8 @@ export interface PlagiarismOptions {
   webPage?: (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null>;
   /** How many web pages are fetched. Default 8. */
   maxWebPages?: number;
+  /** Time for the searches, in milliseconds (default 150 s); later queries are skipped so the check always ends. */
+  searchBudgetMs?: number;
   /** Hidden text found in the original file (white or tiny text), with offsets into the checked text. */
   hiddenText?: Array<{ start: number; end: number }>;
   signal?: AbortSignal;
@@ -258,7 +260,10 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
 
   // External search.
   // Every part of the text is searched: about one passage per 20 words, between 40 and 200.
-  const maxPassages = options.maxPassages ?? Math.min(200, Math.max(40, Math.ceil(tokens.length / 20)));
+  const maxPassages = options.maxPassages ?? Math.min(120, Math.max(40, Math.ceil(tokens.length / 20)));
+  const started = Date.now();
+  const budget = options.searchBudgetMs ?? 150_000;
+  let outOfTime = 0;
   if (providers.length && tokens.length >= 8) {
     // Queries use the restored wording, so disguised letters do not hide a passage from the search.
     const passages = selectPassages(working, maxPassages).map((p) => ({
@@ -274,10 +279,18 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     const total = passages.length * providers.length;
     let done = 0;
     const firstError = new Map<string, unknown>();
+    // The plentiful services get most of the time; the scarce ones search until the budget runs out.
+    let deadline = budget * 0.55;
     const runProvider = (provider: SourceProvider, list: typeof passages, concurrency: number) =>
       mapLimit(list, concurrency, async (p) => {
         if (options.signal?.aborted) return;
         const s = stat(provider.name, provider.kind, provider.coverage);
+        if (Date.now() - started >= deadline) {
+          s.skipped = (s.skipped ?? 0) + 1;
+          outOfTime++;
+          options.onProgress?.(++done, total);
+          return;
+        }
         s.queries++;
         try {
           const docs = await provider.search(p, options.signal);
@@ -298,7 +311,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       });
     const plenty = providers.filter((p) => !p.scarce);
     const scarce = providers.filter((p) => p.scarce);
-    await Promise.all(plenty.map((p) => runProvider(p, byScore, options.concurrency ?? 3)));
+    await Promise.all(plenty.map((p) => runProvider(p, byScore, options.concurrency ?? 4)));
+    deadline = budget;
     // Passages a found source already explains need no more searching; scarce services take the rest.
     const covered = new Uint8Array(tokens.length);
     for (const e of found.values()) for (const r of e.runs) covered.fill(1, r.start, Math.min(r.end, tokens.length));
@@ -312,13 +326,14 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     options.onProgress?.(done, total);
     await Promise.all(scarce.map((p) => runProvider(p, open, 2)));
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
+    if (outOfTime) warnings.push("The search took longer than usual, so some services were not asked about every passage. Running the check again later may find more.");
 
     // A matched paper or web page is compared as a whole when its full text can be fetched, so every copied
     // passage from it is found, not only the one the search turned up.
     const upgrade = async (e: { doc: SourceDoc }, fetch: NonNullable<PlagiarismOptions["fullText"]>) => {
       try {
-        const full = await fetch(e.doc, options.signal);
-        if (!full || full.text.length <= e.doc.text.length) return;
+        const full = await fetch(e.doc, fetchSignal);
+        if (fetchClosed || !full || full.text.length <= e.doc.text.length) return;
         const doc: SourceDoc = { ...e.doc, text: full.text, fullText: full.via };
         const before = found.get(doc.id);
         found.delete(doc.id);
@@ -330,13 +345,18 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       }
     };
     const matched = (e: { runs: Run[] }) => e.runs.reduce((n, r) => n + r.end - r.start, 0);
+    // The downloads run side by side and stop after 40 seconds, so the check always ends in time.
+    const fetchSignal = options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(40_000)]) : AbortSignal.timeout(40_000);
+    // A download that ignores the signal cannot hold the check up, nor change it afterwards.
+    let fetchClosed = false;
+    const fetches: Array<Promise<unknown>> = [];
     // Papers found only by their abstract.
     if (options.fullText && !options.signal?.aborted) {
       const short = [...found.values()]
         .filter((e) => e.doc.kind === "scholarly" && e.doc.text.length < 8000 && !e.doc.fullText)
         .sort((a, b) => matched(b) - matched(a))
         .slice(0, options.maxFullTexts ?? 5);
-      await mapLimit(short, 3, (e) => upgrade(e, options.fullText!));
+      fetches.push(mapLimit(short, 3, (e) => upgrade(e, options.fullText!)));
     }
     // Web pages known only by their search snippet: those that matched first, then those several searches led to.
     if (options.webPage && !options.signal?.aborted) {
@@ -347,8 +367,10 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
         .sort((a, b) => (hits.get(b.id) ?? 0) - (hits.get(a.id) ?? 0))
         .map((doc) => ({ doc }));
       const pages = [...matchedPages, ...ledTo].slice(0, options.maxWebPages ?? 8);
-      await mapLimit(pages, 4, (e) => upgrade(e, options.webPage!));
+      fetches.push(mapLimit(pages, 4, (e) => upgrade(e, options.webPage!)));
     }
+    await Promise.race([Promise.all(fetches), new Promise((resolve) => setTimeout(resolve, 45_000))]);
+    fetchClosed = true;
     for (const s of stats.values()) {
       if (s.failures > 0) {
         const why = failureReason(firstError.get(s.name));

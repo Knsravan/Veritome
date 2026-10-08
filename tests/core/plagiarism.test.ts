@@ -215,3 +215,19 @@ test("a web page found by its snippet is compared as a whole", async () => {
   assert.ok(withPage.matchedWords > without.matchedWords + 10, `${withPage.matchedWords} vs ${without.matchedWords}`);
   assert.equal(withPage.sources[0]?.fullText, "the whole web page");
 });
+
+test("the search stops on time and says so", async () => {
+  let calls = 0;
+  const slow: SourceProvider = {
+    name: "Slow",
+    kind: "scholarly",
+    coverage: "test",
+    async search() {
+      calls++;
+      return [];
+    },
+  };
+  const r = await checkPlagiarism(PAPER, { providers: [slow], searchBudgetMs: 0 });
+  assert.equal(calls, 0);
+  assert.ok(r.warnings.some((w) => /took longer than usual/.test(w)));
+});
