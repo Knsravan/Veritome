@@ -102,7 +102,7 @@ export function collectFindings(report: PaperReport, text: string): Finding[] {
           end: x.end,
           className: "mark-ai",
           title: "Reads as AI-written",
-          why: `The trained model rates this part as likely machine-written (score ${Math.round(x.probability * 100)} out of 100). This is a signal to review, not proof of who wrote it.`,
+          why: `Our trained models rate this part as likely machine-written or machine-polished (score ${Math.round(x.probability * 100)} out of 100). This is a signal to review, not proof of who wrote it.`,
           fix: "If you used an AI tool, rewrite this in your own words and disclose the use where your journal or university asks. If you wrote it, add specific detail and vary sentence length.",
         }),
       );

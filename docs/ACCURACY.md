@@ -81,6 +81,31 @@ neighbours. In a check of 764 such segments built from 790 Europe PMC abstracts 
 documents (0.8%) had any part marked. A machine-written paragraph that the whole-text score had averaged down to
 "inconclusive" scored 0.997 on its own.
 
+### Neural second opinion for AI-polished research writing (8 October 2026)
+
+Compared with real Turnitin AI reports on two engineering papers (written by the authors, then polished with an AI
+tool), the classifier above flagged 0% of either paper while Turnitin flagged 28% and 32%. It had learned older,
+obvious machine text; human writing that an AI tool has *polished* looks different.
+
+Two small neural models (ELECTRA-small, about 14 MB each) now give a second opinion. They run in the browser
+(`src/lib/ai-model`), so the paper is not sent anywhere for this, and read every prose paragraph; tables and
+equation blocks are skipped. A paragraph that either model rates past its "likely AI" level takes that estimate.
+The levels are set so about 1 in 100 human paragraphs reach them. Training data and steps:
+`scripts/train/neural/README.md`.
+
+Held-out results (paragraphs from documents not used in training; human false-positive rate about 1% overall):
+
+| Set | Flagged |
+|---|---|
+| Human: research papers before 2022 / HAP-E / MAGE / Brown / RAID | 1.7% / 0% / 2.5% / 0% / 0.8% |
+| Research paragraphs written or polished by current Claude models | 54% |
+| APT-Eval, human text with "major" / "slight major" / 50% / "minor" / "extreme minor" AI polishing (GPT-4o, DeepSeek-V3, Llama) | 76% / 62% / 42% / 25% / 7% |
+| HAP-E AI continuations (GPT-4o, Llama 3) | 39% |
+
+On the two Turnitin-checked papers the full pipeline now reports 15% and 12% AI (Turnitin: 28% and 32%) and covers
+44% and 11% of the words Turnitin highlighted. Light polishing remains hard for every detector, Turnitin's included,
+and these scores should prompt a conversation, not a penalty.
+
 ### What this means in practice
 
 1. **False accusations are rare.** In these tests, about 1 human text in 500 was labelled AI, and none of the

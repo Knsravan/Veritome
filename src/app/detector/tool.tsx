@@ -20,8 +20,11 @@ export function DetectorTool() {
   const go = () =>
     run(async (signal) => {
       const r = await postJson<DetectorResult>("/api/detect", { text, useLlm: useLlm && hasLlm, ...llmFields() }, signal);
+      // Second opinion from the neural model, run here in the browser.
+      const { withNeuralOpinion } = await import("@/lib/ai-model/neural");
+      const merged = await withNeuralOpinion(r, text, signal);
       setChecked(text);
-      return r;
+      return merged;
     });
 
   return (
