@@ -71,6 +71,8 @@ export interface PublicStatus {
   maxUploadBytes: number;
   webSearch: string[];
   semanticScholarKey: boolean;
+  /** Whether an OpenAlex key is set (never the key itself). */
+  openAlexKey: boolean;
   /** Names of the scholarly sources plagiarism checks query. */
   plagiarismSources: string[];
   libraryDocuments: number;

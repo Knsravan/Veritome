@@ -41,7 +41,8 @@ export function SettingsForm() {
             <Row label="Language model" value={status.llm ? `Configured${status.llmModel ? ` (${status.llmModel})` : ""}` : "Not configured"} />
             <Row label="LanguageTool" value={status.languageTool ? "Connected" : "Not connected"} />
             <Row label="Web search" value={status.webSearch.length ? status.webSearch.join(", ") : "Not enabled"} />
-            <Row label="Semantic Scholar key" value={status.semanticScholarKey ? "Set (full-text snippet search enabled)" : "Not set"} />
+            <Row label="OpenAlex key" value={status.openAlexKey ? "Set (larger daily search allowance)" : "Not set"} />
+            <Row label="Semantic Scholar key" value={status.semanticScholarKey ? "Set (abstract and full-text snippet search enabled)" : "Not set (Semantic Scholar is not searched)"} />
             <Row label="Shared document library" value={`${status.libraryDocuments} document${status.libraryDocuments === 1 ? "" : "s"}`} />
           </dl>
         ) : (
