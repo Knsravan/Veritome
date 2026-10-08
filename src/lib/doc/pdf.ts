@@ -79,7 +79,9 @@ export async function readPdf(name: string, data: Uint8Array): Promise<PdfModel>
   const skip = furniture(pages.map((p) => p.lines));
   const tb = new TextBuilder();
   const out: PdfPage[] = [];
-  let prevLine: { base: number; h: number; end: string } | null = null;
+  let prevLine: { base: number; h: number; end: string; left: number; right: number } | null = null;
+  // The current column's edges, from the lines read so far, for telling where paragraphs start.
+  let col = { left: 0, right: 0 };
   pages.forEach((p, pi) => {
     const pageItems: PdfItem[] = [];
     for (const line of p.lines) {
@@ -97,8 +99,20 @@ export async function readPdf(name: string, data: Uint8Array): Promise<PdfModel>
         const newPage = gap < 0 || (pi > 0 && pageItems.every((x) => x.skipped));
         const hyphen = /[A-Za-z]-$/.test(prevLine.end) && /^[a-z]/.test(lineText.trimStart());
         // A hyphen that splits a word is followed by a bare newline; finish() removes both.
+        // A change of text size (a title or heading above a paragraph) starts a new block.
+        const resized = Math.abs(kept[0]!.h - prevLine.h) > Math.min(kept[0]!.h, prevLine.h) * 0.12;
+        // Word and similar tools often leave little space between paragraphs. A paragraph also starts after a line
+        // that ends a sentence well short of the column's edge, at an indented line, or at a numbered or bulleted
+        // item.
+        const left = kept[0]!.x;
+        const width = col.right - col.left;
+        const ended = /[.!?:;]["'”’)\]]?$/.test(prevLine.end.trimEnd());
+        const short = width > lh * 8 && prevLine.right < col.right - width * 0.1;
+        const indented = left > col.left + lh * 0.8 && Math.abs(prevLine.left - col.left) < lh * 0.5;
+        const item = /^\s*(\(?\d{1,2}[.)]|\(?[a-z][.)]|[•●▪◦‣–-])\s/.test(lineText);
+        const starts = ended && (short || indented || item) && /^\s*[\p{Lu}\d(•●▪◦‣–-]/u.test(lineText);
         if (hyphen) tb.add("\n");
-        else if (!newPage && gap > lh * 1.9) tb.breakBlock();
+        else if (!newPage && (gap > lh * 1.9 || resized || starts)) tb.breakBlock();
         else if (newPage && /[.!?:]["”)]?$/.test(prevLine.end.trimEnd()) && /^[A-Z0-9]/.test(lineText.trimStart())) tb.breakBlock();
         else if (!/\s$/.test(prevLine.end)) tb.add("\n");
       }
@@ -111,7 +125,13 @@ export async function readPdf(name: string, data: Uint8Array): Promise<PdfModel>
         const r = tb.add(i.str);
         pageItems.push({ x: i.x, y: i.base - i.h * 0.85, w: i.w, h: i.h * 1.1, ...r, chars: i.str.length });
       });
-      prevLine = { base: kept[kept.length - 1]!.base, h: kept[0]!.h, end: lineText };
+      const last = kept[kept.length - 1]!;
+      const left = kept[0]!.x;
+      const right = last.x + last.w;
+      // A line far to the left or right of the column (a new column, a page) starts a new column estimate.
+      if (!prevLine || right < col.left || left > col.right || last.base < prevLine.base) col = { left, right };
+      else col = { left: Math.min(col.left, left), right: Math.max(col.right, right) };
+      prevLine = { base: last.base, h: kept[0]!.h, end: lineText, left, right };
     }
     out.push({ number: pi + 1, width: p.width, height: p.height, items: pageItems });
   });

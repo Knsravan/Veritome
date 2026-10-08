@@ -19,7 +19,6 @@ import {
 } from "@/components/icons";
 import { Button, Notice, cx } from "@/components/ui";
 import {
-  assemble,
   HUMANISE_DISCLOSURE,
   HUMANISE_STRENGTHS,
   HUMANISE_TONES,
@@ -27,36 +26,27 @@ import {
   type HumaniseParagraphResult,
   type HumaniseStrength,
   type HumaniseTone,
-  type PlannedParagraph,
 } from "@/core/rewrite/humanise";
 import { ApiError, postJson } from "@/lib/api";
 import type { DocModel } from "@/lib/doc/model";
 import { sampleDocx } from "@/lib/sample-file";
 import { useSettings } from "@/lib/settings";
 import { tidyPasted } from "../detector/tool";
+import { FileResult } from "./file-result";
 import { MakeYours } from "./make-yours";
+import {
+  buildFile,
+  download,
+  finalOf,
+  finalText as joinFinal,
+  type Item,
+  type Job,
+  type Mode,
+} from "./shared";
 
-type Mode = "text" | "file";
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
-const CONCURRENCY = 3;
-
-interface Item {
-  piece: PlannedParagraph;
-  state: "skip" | "waiting" | "working" | "done" | "failed";
-  result?: HumaniseParagraphResult;
-  error?: string;
-  /** Which version goes into the final text. */
-  use: "revised" | "original" | "edited";
-  edited?: string;
-}
-
-interface Job {
-  text: string;
-  tone: HumaniseTone;
-  doc: DocModel | null;
-  fileName?: string;
-  items: Item[];
-}
+/** Paragraphs revised at once; a whole file goes faster. */
+const CONCURRENCY = { text: 3, file: 4 } as const;
 
 function Segmented<T extends string>({
   label,
@@ -105,24 +95,6 @@ function Segmented<T extends string>({
   );
 }
 
-const finalOf = (it: Item) =>
-  it.use === "edited" && it.edited !== undefined
-    ? it.edited
-    : it.use === "revised" && it.result?.status === "rewritten"
-      ? it.result.text
-      : it.piece.text;
-
-const save = (blob: Blob, name: string) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-};
-
 /**
  * The Humaniser: revises stiff or formulaic prose paragraph by paragraph, in the chosen tone and, optionally, the
  * author's own voice. Citations, numbers and equations stay locked, and each paragraph's meaning is checked.
@@ -158,7 +130,7 @@ export function HumaniserTool() {
         figures: [{ label: "Revised", value: `${revised} of ${todo} paragraphs` }],
         text: job.text,
         ...(job.doc?.data ? { file: { name: job.doc.name, data: new Blob([job.doc.data.slice()]) } } : {}),
-        payload: { tone: job.tone, items: job.items },
+        payload: { tone: job.tone, items: job.items, mode: job.mode },
       }).then((id) => {
         if (id) savedId.current = id;
       });
@@ -166,10 +138,11 @@ export function HumaniserTool() {
     return () => clearTimeout(t);
   }, [job, running]);
   const opening = useSavedCheck("humaniser", (entry, saved) => {
-    const p = entry.payload as { tone?: HumaniseTone; items?: Item[] } | null;
+    const p = entry.payload as { tone?: HumaniseTone; items?: Item[]; mode?: Mode } | null;
     if (!p?.items) return;
     savedId.current = entry.id;
     setJob({
+      mode: p.mode ?? (entry.file ? "file" : "text"),
       text: entry.text,
       tone: p.tone ?? "academic",
       doc: saved?.doc ?? null,
@@ -254,6 +227,7 @@ export function HumaniserTool() {
     savedId.current = null;
     const pieces = planParagraphs(source);
     const j: Job = {
+      mode: doc || fileName ? "file" : "text",
       text: source,
       tone,
       doc,
@@ -278,7 +252,7 @@ export function HumaniserTool() {
       )
         await humanise(j, next, c.signal);
     };
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    await Promise.all(Array.from({ length: CONCURRENCY[j.mode] }, worker));
     if (ctrl.current === c) setRunning(false);
   };
 
@@ -289,7 +263,24 @@ export function HumaniserTool() {
   };
 
   if (job)
-    return (
+    return job.mode === "file" ? (
+      <FileResult
+        job={job}
+        running={running}
+        fatal={fatal}
+        onStop={() => {
+          ctrl.current?.abort();
+          setRunning(false);
+        }}
+        onNew={() => {
+          ctrl.current?.abort();
+          setRunning(false);
+          setJob(null);
+        }}
+        onUpdate={update}
+        onRetry={retry}
+      />
+    ) : (
       <Result
         job={job}
         running={running}
@@ -436,8 +427,10 @@ export function HumaniserTool() {
           >
             <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} />
             <p className="mt-3 text-sm text-ink-soft">
-              A Word file comes back as the same file with every change as a
-              tracked edit you can accept or reject in Word.
+              Your whole document is humanised in one go. A PDF or Word file
+              comes back as the same kind of file, with its pages, layout,
+              fonts and formatting kept; other formats come back as a Word
+              file.
             </p>
           </section>
         )}
@@ -542,17 +535,7 @@ function Result({
     (it) => it.state === "done" || it.state === "failed",
   ).length;
   const revised = todo.filter((it) => it.result?.status === "rewritten").length;
-  const finalText = useMemo(
-    () =>
-      assemble(
-        job.text,
-        job.items.map((it) => it.piece),
-        job.items.map(finalOf),
-      ),
-    [job],
-  );
-  const base = (job.fileName ?? "text").replace(/\.[^.]+$/, "");
-
+  const finalText = useMemo(() => joinFinal(job), [job]);
   const copy = async (s: string, what: string) => {
     try {
       await navigator.clipboard.writeText(s);
@@ -563,33 +546,8 @@ function Result({
   };
 
   const downloadWord = async () => {
-    const { plainDocx, reviseDocx } = await import("@/lib/doc/docx-revise");
-    if (job.doc?.kind === "docx" && job.doc.data) {
-      const edits = job.items
-        .filter((it) => finalOf(it) !== it.piece.text)
-        .map((it) => ({
-          start: it.piece.start,
-          end: it.piece.end,
-          text: finalOf(it),
-        }));
-      const out = await reviseDocx(job.doc.name, job.doc.data, edits);
-      save(out.blob, `${base}-humanised.docx`);
-      setNote(
-        out.skipped
-          ? `${out.applied} paragraphs are tracked changes in the Word file. ${out.skipped} hold equations, pictures or notes, so they were left for you to change by hand (copy them from this page).`
-          : `All ${out.applied} changed paragraphs are tracked changes in the Word file.`,
-      );
-    } else {
-      save(
-        await plainDocx(
-          finalText
-            .split(/\n\s*\n/)
-            .map((p) => p.replace(/\s*\n\s*/g, " ").trim())
-            .filter(Boolean),
-        ),
-        `${base}-humanised.docx`,
-      );
-    }
+    const out = await buildFile(job);
+    download(out.blob, out.name);
   };
 
   return (
@@ -626,10 +584,7 @@ function Result({
             <CopyIcon size={16} /> Copy text
           </Button>
           <Button disabled={running} onClick={() => void downloadWord()}>
-            <DownloadIcon />{" "}
-            {job.doc?.kind === "docx"
-              ? "Download Word file with tracked changes"
-              : "Download Word file"}
+            <DownloadIcon /> Download Word file
           </Button>
         </div>
       </header>
@@ -831,6 +786,13 @@ function Result({
                           ))}
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => void copy(finalOf(it), "The paragraph")}
+                        className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-semibold text-ink-soft hover:bg-desk-deep hover:text-ink"
+                      >
+                        <CopyIcon size={14} /> Copy
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
