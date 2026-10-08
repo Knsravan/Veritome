@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "@/components/DiffView";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
+import { SeenBefore, useSavedCheck } from "@/components/HistoryBits";
+import { saveCheck, titleFor } from "@/lib/history";
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -140,6 +142,41 @@ export function HumaniserTool() {
   const ctrl = useRef<AbortController | null>(null);
 
   useEffect(() => () => ctrl.current?.abort(), []);
+  // Finished results are saved to the history on this device, and kept up to date as paragraphs are reviewed.
+  const savedId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!job || running) return;
+    if (job.items.some((it) => it.state === "waiting" || it.state === "working")) return;
+    const t = setTimeout(() => {
+      const revised = job.items.filter((it) => it.result?.status === "rewritten").length;
+      const todo = job.items.filter((it) => it.piece.rewrite).length;
+      void saveCheck({
+        ...(savedId.current ? { id: savedId.current } : {}),
+        tool: "humaniser",
+        title: titleFor(job.text, job.fileName),
+        words: countWords(job.text),
+        figures: [{ label: "Revised", value: `${revised} of ${todo} paragraphs` }],
+        text: job.text,
+        ...(job.doc?.data ? { file: { name: job.doc.name, data: new Blob([job.doc.data.slice()]) } } : {}),
+        payload: { tone: job.tone, items: job.items },
+      }).then((id) => {
+        if (id) savedId.current = id;
+      });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [job, running]);
+  const opening = useSavedCheck("humaniser", (entry, saved) => {
+    const p = entry.payload as { tone?: HumaniseTone; items?: Item[] } | null;
+    if (!p?.items) return;
+    savedId.current = entry.id;
+    setJob({
+      text: entry.text,
+      tone: p.tone ?? "academic",
+      doc: saved?.doc ?? null,
+      ...(entry.file ? { fileName: entry.file.name } : {}),
+      items: p.items,
+    });
+  });
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("mode") === "file")
       setMode("file");
@@ -214,6 +251,7 @@ export function HumaniserTool() {
     const c = new AbortController();
     ctrl.current = c;
     setFatal(null);
+    savedId.current = null;
     const pieces = planParagraphs(source);
     const j: Job = {
       text: source,
@@ -292,6 +330,15 @@ export function HumaniserTool() {
         </p>
       </header>
 
+      {opening === "missing" && (
+        <Notice kind="warn" title="That saved result is no longer here">
+          It may have been deleted from your history, or saved in another browser.
+        </Notice>
+      )}
+      <SeenBefore
+        tool="humaniser"
+        text={mode === "file" ? (paper?.text ?? "") : tidyPasted(text)}
+      />
       {status && !hasModel && (
         <Notice kind="warn" title="The Humaniser is not switched on yet">
           It needs a language model, and none is set up on this server. Once one
@@ -458,7 +505,7 @@ export function HumaniserTool() {
             </li>
             <li className="flex items-start gap-2">
               <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Nothing is stored. Paragraphs go to the language model only to be
+              Nothing is stored on our servers. Paragraphs go to the language model only to be
               revised.
             </li>
           </ul>

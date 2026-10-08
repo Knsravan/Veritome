@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { TOOLS } from "@/lib/tools";
 import { ThemeToggle } from "./ThemeToggle";
-import { LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
+import { HistoryIcon, LogoMark, MenuIcon, SettingsIcon, XIcon } from "./icons";
 import { cx } from "./ui";
 
 const LINKS: Array<{ href: string; name: string; soon?: boolean }> = TOOLS.map(
@@ -101,6 +101,15 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-2">
           <Link
+            href="/history"
+            aria-current={path === "/history" ? "page" : undefined}
+            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink sm:inline-flex"
+            title="History"
+          >
+            <HistoryIcon />
+            <span className="sr-only">History</span>
+          </Link>
+          <Link
             href="/settings"
             aria-current={path === "/settings" ? "page" : undefined}
             className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink sm:inline-flex"
@@ -132,6 +141,7 @@ export function SiteHeader() {
         <ul className="mx-auto grid max-w-7xl gap-1 px-4 py-3 sm:grid-cols-2 sm:px-6">
           {[
             ...LINKS,
+            { href: "/history", name: "History" },
             { href: "/settings", name: "Settings" },
             { href: "/about", name: "Limits and privacy" },
           ].map((l, i) => (

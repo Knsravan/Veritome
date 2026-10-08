@@ -523,8 +523,8 @@ export default function Home() {
           <ul className="grid gap-6 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
             {[
               [
-                "Nothing is kept",
-                "Text and files are processed in memory and dropped when the check finishes. Nothing is logged.",
+                "Nothing is kept on our servers",
+                "Text and files are processed in memory and dropped when the check finishes, and nothing is logged. Your history stays in your own browser, and you can clear it or switch it off.",
               ],
               [
                 "You decide what leaves",
@@ -552,7 +552,7 @@ export default function Home() {
           Ready to check your paper?
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-lg text-ink-soft">
-          It takes a minute or two, and your text is never stored.
+          It takes a minute or two, and your text is never stored on our servers.
         </p>
         <Link
           href="/plagiarism"

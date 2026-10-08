@@ -9,6 +9,9 @@ import { ORDER } from "@/components/report/labels";
 import { ReportProgress, type ProgressState, type StepState } from "@/components/report/ReportProgress";
 import { ReportView } from "@/components/report/ReportView";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
+import { fileOf, SeenBefore, useSavedCheck } from "@/components/HistoryBits";
+import { aiBreakdown } from "@/core/detector/breakdown";
+import { saveCheck, titleFor } from "@/lib/history";
 import { Button, Checkbox, Notice, cx } from "@/components/ui";
 import { detectorOverview } from "@/core/detector/overview";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
@@ -77,6 +80,14 @@ export function PlagiarismTool() {
   const [report, setReport] = useState<PaperReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressState | null>(null);
+  const opening = useSavedCheck("plagiarism", (entry, saved) => {
+    const r = (entry.payload as { report?: PaperReport } | null)?.report;
+    if (!r) return;
+    setPaper(saved);
+    setChecked(entry.text);
+    setReport(r);
+    setPhase("done");
+  });
   const ctrl = useRef<AbortController | null>(null);
   const { settings, update, status, llmFields } = useSettings();
   const hasLlm = useHasLlm();
@@ -178,6 +189,20 @@ export function PlagiarismTool() {
       }
       setReport(done);
       setPhase("done");
+      void saveCheck({
+        tool: "plagiarism",
+        title: titleFor(text, paper?.name),
+        words: countWords(text),
+        figures: [
+          ...(done.plagiarism.status === "done" ? [{ label: "Similarity", value: `${done.plagiarism.result.similarity}%` }] : []),
+          ...(done.detector.status === "done" && aiBreakdown(done.detector.result, text).judged
+            ? [{ label: "AI writing", value: `${Math.round(aiBreakdown(done.detector.result, text).aiPercent)}%` }]
+            : []),
+        ],
+        text,
+        ...(fileOf(paper) ? { file: fileOf(paper)! } : {}),
+        payload: { report: done },
+      });
     } catch (err) {
       if (c.signal.aborted) return;
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -223,6 +248,12 @@ export function PlagiarismTool() {
         </p>
       </header>
 
+      {opening === "missing" && (
+        <Notice kind="warn" title="That saved check is no longer here">
+          It may have been deleted from your history, or saved in another browser.
+        </Notice>
+      )}
+      {paper && <SeenBefore tool="plagiarism" text={paper.text} />}
       {error && (
         <Notice kind="error" title="The check did not finish">
           {error}
@@ -312,7 +343,7 @@ export function PlagiarismTool() {
           <ul className="space-y-1.5 px-1 text-sm text-ink-soft">
             <li className="flex items-start gap-2">
               <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Your paper is processed in memory and never stored.
+              Your paper is processed in memory and never stored on our servers. Your history stays in this browser.
             </li>
             <li className="flex items-start gap-2">
               <CheckIcon size={18} className="mt-0.5 shrink-0 text-ok" />
