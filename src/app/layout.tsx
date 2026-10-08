@@ -54,7 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                   </p>
                   <p className="max-w-sm text-ink-soft">
                     Free, open-source checks for research writing. Your text is
-                    processed in memory and never stored or logged.
+                    processed in memory and never stored or logged on our servers.
                   </p>
                 </div>
                 <div>

@@ -120,6 +120,21 @@ export const SettingsIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const HistoryIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M12 7v5l3 2" />
+  </Icon>
+);
+
+export const TrashIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6" />
+    <path d="M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </Icon>
+);
+
 export { LogoMark } from "./Logo";
 
 export const CopyIcon = (p: IconProps) => (

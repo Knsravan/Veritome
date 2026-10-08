@@ -39,6 +39,7 @@ test("every tool page loads and passes axe", async ({ page }) => {
     "/citations",
     "/grammar",
     "/settings",
+    "/history",
     "/about",
   ]) {
     await page.goto(path);
@@ -213,6 +214,31 @@ test("humaniser revises paragraph by paragraph, lets each change be reviewed, an
   const word = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download Word file" }).click();
   expect((await word).suggestedFilename()).toBe("text-humanised.docx");
+});
+
+test("checks are saved in this browser's history, reopen without checking again, and repeats are pointed out", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.route("**/ort/**", (route) => route.abort());
+  await page.goto("/history");
+  await expect(page.getByRole("heading", { name: "No saved checks yet" })).toBeVisible();
+  await page.goto("/detector");
+  await page.getByRole("textbox", { name: "Your text" }).fill(PASTED);
+  await page.getByRole("button", { name: "Check for AI writing" }).click();
+  await expect(page.getByText("AI detector report")).toBeVisible({ timeout: 60_000 });
+  await page.goto("/history");
+  const item = page.getByRole("link", { name: /In today's rapidly evolving landscape/ });
+  await expect(item).toBeVisible();
+  await axe(page);
+  await item.click();
+  await expect(page.getByText("AI detector report")).toBeVisible();
+  await page.goto("/detector");
+  await page.getByRole("textbox", { name: "Your text" }).fill(PASTED);
+  await expect(page.getByText(/You already checked this on/)).toBeVisible();
+  await page.goto("/history");
+  await page.getByRole("button", { name: /^Delete / }).click();
+  await expect(page.getByRole("heading", { name: "No saved checks yet" })).toBeVisible();
 });
 
 test("external checks ask for consent first, and cancelling sends nothing", async ({

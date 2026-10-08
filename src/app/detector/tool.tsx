@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
+import { fileOf, SeenBefore, useSavedCheck } from "@/components/HistoryBits";
+import { aiBreakdown } from "@/core/detector/breakdown";
+import { saveCheck, titleFor } from "@/lib/history";
 import {
   ArrowRightIcon,
   FileIcon,
@@ -85,6 +88,17 @@ export function DetectorTool() {
   const ctrl = useRef<AbortController | null>(null);
 
   useEffect(() => () => ctrl.current?.abort(), []);
+  const opening = useSavedCheck("detector", (entry, saved) => {
+    const r = (entry.payload as { result?: DetectorResult } | null)?.result;
+    if (!r) return;
+    setResult({
+      result: r,
+      text: entry.text,
+      doc: saved?.doc ?? null,
+      ...(saved ? { fileName: saved.name } : entry.file ? { fileName: entry.file.name } : {}),
+      from: saved,
+    });
+  });
   // Start fetching the neural models as soon as there is something to check, so the check itself is quicker.
   const wantsModels = countWords(text) >= 20 || paper !== null;
   useEffect(() => {
@@ -176,6 +190,16 @@ export function DetectorTool() {
         doc: from?.doc && from.doc.text === input ? from.doc : null,
         ...(from ? { fileName: from.name } : {}),
         from,
+      });
+      const b = aiBreakdown(merged, input);
+      void saveCheck({
+        tool: "detector",
+        title: titleFor(input, from?.name),
+        words: countWords(input),
+        figures: b.judged ? [{ label: "AI writing", value: `${Math.round(b.aiPercent)}%` }] : [],
+        text: input,
+        ...(fileOf(from) ? { file: fileOf(from)! } : {}),
+        payload: { result: merged },
       });
     } catch (err) {
       if (c.signal.aborted) return;
@@ -272,6 +296,15 @@ export function DetectorTool() {
         ))}
       </div>
 
+      {opening === "missing" && (
+        <Notice kind="warn" title="That saved check is no longer here">
+          It may have been deleted from your history, or saved in another browser.
+        </Notice>
+      )}
+      <SeenBefore
+        tool="detector"
+        text={mode === "file" ? (paper?.text ?? "") : reflowParagraphs(tidyPasted(text))}
+      />
       {error && (
         <Notice kind="error" title="The check did not finish">
           {error}
@@ -416,7 +449,7 @@ export function DetectorTool() {
             [
               ShieldIcon,
               "Nothing leaves your device",
-              "The models run in your browser and nothing is stored.",
+              "The models run in your browser and nothing is stored on our servers.",
             ],
             [
               SparkIcon,
