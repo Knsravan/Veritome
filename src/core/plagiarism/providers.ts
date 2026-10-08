@@ -30,6 +30,11 @@ export interface SourceProvider {
   kind: "scholarly" | "web";
   /** What this provider can see, shown to the user so limits are clear. */
   coverage: string;
+  /**
+   * Rate-limited or on a request budget. Scarce providers search after the others, and only the passages no source
+   * explains yet, most distinctive first, so their few requests go where they can still find something.
+   */
+  scarce?: boolean;
   search(passage: Passage, signal?: AbortSignal): Promise<SourceDoc[]>;
 }
 
@@ -95,6 +100,7 @@ export function crossrefProvider(client: Pick<CrossrefClient, "search">): Source
 export function semanticScholarProvider(client: Pick<SemanticScholarClient, "search">): SourceProvider {
   return {
     name: "Semantic Scholar",
+    scarce: true,
     kind: "scholarly",
     coverage: "Titles and abstracts.",
     async search(p) {
@@ -112,6 +118,7 @@ export function phrasesOf(p: Passage): string[] {
 export function arxivProvider(client: Pick<ArxivClient, "search"> & Partial<Pick<ArxivClient, "searchAbstractPhrase">>): SourceProvider {
   return {
     name: "arXiv",
+    scarce: true,
     kind: "scholarly",
     coverage: "Titles and abstracts of about 2.5 million preprints, searched by exact phrase first.",
     async search(p) {
@@ -266,6 +273,7 @@ export function coreProvider(http: Http, apiKey: string, options: { baseUrl?: st
   const base = (options.baseUrl ?? "https://api.core.ac.uk/v3").replace(/\/+$/, "");
   return {
     name: "CORE",
+    scarce: true,
     kind: "scholarly",
     coverage: "Full text of over 30 million open-access papers from university and subject repositories.",
     async search(p) {
@@ -312,6 +320,7 @@ export function semanticScholarSnippetProvider(http: Http, options: { apiKey?: s
   const base = (options.baseUrl ?? "https://api.semanticscholar.org/graph/v1").replace(/\/+$/, "");
   return {
     name: "Semantic Scholar full text",
+    scarce: true,
     kind: "scholarly",
     coverage: "Text snippets from the full text of open-access papers.",
     async search(p) {
@@ -349,6 +358,7 @@ export function braveProvider(http: Http, apiKey: string, options: { baseUrl?: s
   const base = (options.baseUrl ?? "https://api.search.brave.com/res/v1/web/search").replace(/\/+$/, "");
   return {
     name: "Brave Search",
+    scarce: true,
     kind: "web",
     coverage: "Search-result snippets for exact-phrase queries across the web.",
     async search(p) {
@@ -378,6 +388,7 @@ export function serperProvider(http: Http, apiKey: string, options: { baseUrl?: 
   const url = options.baseUrl ?? "https://google.serper.dev/search";
   return {
     name: "Google (Serper)",
+    scarce: true,
     kind: "web",
     coverage: "Search-result snippets for exact-phrase queries across the web.",
     async search(p) {

@@ -51,6 +51,10 @@ export interface PlagiarismOptions {
   fullText?: (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null>;
   /** How many matched papers get their full text fetched. Default 5. */
   maxFullTexts?: number;
+  /** Fetches the readable text of a web page found by a search, so the whole page is compared, not only its snippet. */
+  webPage?: (doc: SourceDoc, signal?: AbortSignal) => Promise<{ text: string; via: string } | null>;
+  /** How many web pages are fetched. Default 8. */
+  maxWebPages?: number;
   /** Hidden text found in the original file (white or tiny text), with offsets into the checked text. */
   hiddenText?: Array<{ start: number; end: number }>;
   signal?: AbortSignal;
@@ -58,7 +62,7 @@ export interface PlagiarismOptions {
 }
 
 export const DISCLAIMER =
-  "Veritome compares your text with titles, abstracts, snippets and any documents you supply. " +
+  "Veritome compares your text with titles, abstracts, open-access full texts, matched web pages and any documents you supply. " +
   "It cannot read paywalled full texts or private repositories, so a low score is not proof of originality. " +
   "Treat every match as a lead to review, not a verdict.";
 
@@ -133,6 +137,20 @@ function collapsedOffsets(src: string, base: number, start: number, end: number,
   return { matchStart: prefix + collapse(src.slice(base, start)), matchEnd: prefix + collapse(src.slice(base, end)) };
 }
 
+/** Tokens whose text lies within [start, end) (tokens are in text order). */
+function tokenRange(tokens: readonly Token[], start: number, end: number): [number, number] {
+  let lo = 0;
+  let hi = tokens.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((tokens[mid] as Token).start < start) lo = mid + 1;
+    else hi = mid;
+  }
+  let b = lo;
+  while (b < tokens.length && (tokens[b] as Token).end <= end) b++;
+  return [lo, b];
+}
+
 export async function checkPlagiarism(text: string, options: PlagiarismOptions = {}): Promise<PlagiarismReport> {
   const providers = options.providers ?? [];
   const excludeRefs = options.excludeReferences ?? true;
@@ -192,8 +210,11 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   const found = new Map<string, { doc: SourceDoc; runs: Run[] }>();
   // Every document seen, for the paraphrase pass (capped to bound the work).
   const seen = new Map<string, SourceDoc>();
+  // How many searches returned each document: a page that several exact-phrase searches lead to is worth reading.
+  const hits = new Map<string, number>();
   const addDoc = (doc: SourceDoc) => {
     if (doc.text.trim() === "") return;
+    hits.set(doc.id, (hits.get(doc.id) ?? 0) + 1);
     if (!seen.has(doc.id) && seen.size < 500) seen.set(doc.id, doc);
     if (found.has(doc.id)) return;
     const words = tokenize(doc.text).map((t) => t.word);
@@ -236,7 +257,8 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
   }
 
   // External search.
-  const maxPassages = options.maxPassages ?? 40;
+  // Every part of the text is searched: about one passage per 20 words, between 40 and 200.
+  const maxPassages = options.maxPassages ?? Math.min(200, Math.max(40, Math.ceil(tokens.length / 20)));
   if (providers.length && tokens.length >= 8) {
     // Queries use the restored wording, so disguised letters do not hide a passage from the search.
     const passages = selectPassages(working, maxPassages).map((p) => ({
@@ -247,53 +269,85 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
       keywords: cleanForSearch(p.keywords),
     }));
     searched.push(...passages.map((p) => ({ start: p.start, end: p.end })));
-    const jobs = passages.flatMap((p) => providers.map((provider) => ({ p, provider })));
+    // Most distinctive first, so budgeted services spend their requests on the best probes.
+    const byScore = [...passages].sort((a, b) => b.score - a.score);
+    const total = passages.length * providers.length;
     let done = 0;
     const firstError = new Map<string, unknown>();
-    // Paced providers wait between requests, so more workers keep the others busy meanwhile.
-    await mapLimit(jobs, options.concurrency ?? 6, async ({ p, provider }) => {
-      if (options.signal?.aborted) return;
-      const s = stat(provider.name, provider.kind, provider.coverage);
-      s.queries++;
-      try {
-        const docs = await provider.search(p, options.signal);
-        for (const d of docs) {
-          if (!found.has(d.id)) s.documents++;
-          addDoc(d);
+    const runProvider = (provider: SourceProvider, list: typeof passages, concurrency: number) =>
+      mapLimit(list, concurrency, async (p) => {
+        if (options.signal?.aborted) return;
+        const s = stat(provider.name, provider.kind, provider.coverage);
+        s.queries++;
+        try {
+          const docs = await provider.search(p, options.signal);
+          for (const d of docs) {
+            if (!found.has(d.id)) s.documents++;
+            addDoc(d);
+          }
+        } catch (err) {
+          if (err instanceof RequestBudgetExceeded) {
+            s.queries--;
+            s.skipped = (s.skipped ?? 0) + 1;
+          } else {
+            s.failures++;
+            if (!firstError.has(provider.name)) firstError.set(provider.name, err);
+          }
         }
-      } catch (err) {
-        if (err instanceof RequestBudgetExceeded) {
-          s.queries--;
-          s.skipped = (s.skipped ?? 0) + 1;
-          options.onProgress?.(++done, jobs.length);
-          return;
-        }
-        s.failures++;
-        if (!firstError.has(provider.name)) firstError.set(provider.name, err);
-      }
-      options.onProgress?.(++done, jobs.length);
+        options.onProgress?.(++done, total);
+      });
+    const plenty = providers.filter((p) => !p.scarce);
+    const scarce = providers.filter((p) => p.scarce);
+    await Promise.all(plenty.map((p) => runProvider(p, byScore, options.concurrency ?? 3)));
+    // Passages a found source already explains need no more searching; scarce services take the rest.
+    const covered = new Uint8Array(tokens.length);
+    for (const e of found.values()) for (const r of e.runs) covered.fill(1, r.start, Math.min(r.end, tokens.length));
+    const open = byScore.filter((p) => {
+      const [a, b] = tokenRange(tokens, p.start, p.end);
+      let c = 0;
+      for (let t = a; t < b; t++) c += covered[t]!;
+      return b <= a || c < 0.5 * (b - a);
     });
+    done += (byScore.length - open.length) * scarce.length;
+    options.onProgress?.(done, total);
+    await Promise.all(scarce.map((p) => runProvider(p, open, 2)));
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
 
-    // Papers found only by their abstract are compared again with their full text, when a free copy exists.
+    // A matched paper or web page is compared as a whole when its full text can be fetched, so every copied
+    // passage from it is found, not only the one the search turned up.
+    const upgrade = async (e: { doc: SourceDoc }, fetch: NonNullable<PlagiarismOptions["fullText"]>) => {
+      try {
+        const full = await fetch(e.doc, options.signal);
+        if (!full || full.text.length <= e.doc.text.length) return;
+        const doc: SourceDoc = { ...e.doc, text: full.text, fullText: full.via };
+        const before = found.get(doc.id);
+        found.delete(doc.id);
+        seen.delete(doc.id);
+        addDoc(doc);
+        if (!found.has(doc.id) && before) found.set(doc.id, before);
+      } catch {
+        // Keep the comparison with what the search returned.
+      }
+    };
+    const matched = (e: { runs: Run[] }) => e.runs.reduce((n, r) => n + r.end - r.start, 0);
+    // Papers found only by their abstract.
     if (options.fullText && !options.signal?.aborted) {
       const short = [...found.values()]
         .filter((e) => e.doc.kind === "scholarly" && e.doc.text.length < 8000 && !e.doc.fullText)
-        .sort((a, b) => b.runs.reduce((n, r) => n + r.end - r.start, 0) - a.runs.reduce((n, r) => n + r.end - r.start, 0))
+        .sort((a, b) => matched(b) - matched(a))
         .slice(0, options.maxFullTexts ?? 5);
-      await mapLimit(short, 3, async (e) => {
-        try {
-          const full = await options.fullText!(e.doc, options.signal);
-          if (!full || full.text.length <= e.doc.text.length) return;
-          const doc: SourceDoc = { ...e.doc, text: full.text, fullText: full.via };
-          found.delete(doc.id);
-          seen.delete(doc.id);
-          addDoc(doc);
-          if (!found.has(doc.id)) found.set(doc.id, e);
-        } catch {
-          // Keep the abstract-only comparison.
-        }
-      });
+      await mapLimit(short, 3, (e) => upgrade(e, options.fullText!));
+    }
+    // Web pages known only by their search snippet: those that matched first, then those several searches led to.
+    if (options.webPage && !options.signal?.aborted) {
+      const isPage = (d: SourceDoc) => d.kind === "web" && Boolean(d.url) && d.text.length < 8000 && !d.fullText && !/wikipedia\.org/i.test(d.url ?? "");
+      const matchedPages = [...found.values()].filter((e) => isPage(e.doc)).sort((a, b) => matched(b) - matched(a));
+      const ledTo = [...seen.values()]
+        .filter((d) => isPage(d) && !found.has(d.id) && (hits.get(d.id) ?? 0) >= 2)
+        .sort((a, b) => (hits.get(b.id) ?? 0) - (hits.get(a.id) ?? 0))
+        .map((doc) => ({ doc }));
+      const pages = [...matchedPages, ...ledTo].slice(0, options.maxWebPages ?? 8);
+      await mapLimit(pages, 4, (e) => upgrade(e, options.webPage!));
     }
     for (const s of stats.values()) {
       if (s.failures > 0) {

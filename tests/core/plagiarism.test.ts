@@ -177,3 +177,41 @@ test("short texts have every sentence searched, with short sentences joined", ()
   }
   assert.ok(ps.every((a, i) => ps.every((b, j) => i === j || a.end <= b.start || b.end <= a.start)), "passages do not overlap");
 });
+
+test("scarce providers search only the passages no source explains yet, most distinctive first", async () => {
+  const other = "Sediment cores from the northern fjord recorded abrupt shifts in diatom assemblages after the volcanic eruption";
+  const paper = `${COPIED[0]?.toUpperCase()}${COPIED.slice(1)} in every experiment we ran this year. ${other} of the late nineteenth century. We describe the methods in the next section of this report.`;
+  const asked: string[] = [];
+  const scarce: SourceProvider = {
+    name: "Scarce",
+    kind: "web",
+    coverage: "test",
+    scarce: true,
+    async search(p) {
+      asked.push(p.text);
+      return [];
+    },
+  };
+  await checkPlagiarism(paper, { providers: [fake([{ id: "a", text: `Earlier ${COPIED} in tanks.` }]), scarce] });
+  assert.ok(asked.length > 0);
+  assert.ok(asked.every((t) => !t.toLowerCase().includes("juvenile cod")), asked.join(" | "));
+  assert.ok(asked.some((t) => t.includes("Sediment cores")));
+});
+
+test("a web page found by its snippet is compared as a whole", async () => {
+  const second = "the hatchery stock grew faster than wild fish when both were fed the same high protein diet";
+  const paper = `${COPIED[0]?.toUpperCase()}${COPIED.slice(1)}, as earlier studies found. Moreover ${second} for six weeks.`;
+  const web: SourceProvider = {
+    name: "Web",
+    kind: "web",
+    coverage: "test",
+    async search() {
+      return [{ id: "https://example.org/fish", title: "Fish page", url: "https://example.org/fish", text: `… ${COPIED} …`, provider: "Web", kind: "web" as const }];
+    },
+  };
+  const page = `Fish growth notes. Earlier ${COPIED} in tanks. ${"Unrelated filler about rivers and lakes. ".repeat(20)} We also saw that ${second} in our trial.`;
+  const withPage = await checkPlagiarism(paper, { providers: [web], webPage: async () => ({ text: page, via: "the whole web page" }) });
+  const without = await checkPlagiarism(paper, { providers: [web] });
+  assert.ok(withPage.matchedWords > without.matchedWords + 10, `${withPage.matchedWords} vs ${without.matchedWords}`);
+  assert.equal(withPage.sources[0]?.fullText, "the whole web page");
+});
