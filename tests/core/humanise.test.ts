@@ -87,3 +87,16 @@ test("a long paragraph is split between sentences", () => {
   assert.ok(pieces.every((p) => p.text.length <= 2600));
   assert.equal(assemble(text, pieces, pieces.map((p) => p.text)), text);
 });
+
+test("text pasted without paragraph breaks is split into paragraphs at sentence ends", async () => {
+  const { reflowParagraphs } = await import("../../src/core/text/reflow.ts");
+  const sentence = "The sensors recorded the river temperature every ten minutes for the whole season. ";
+  const flat = sentence.repeat(50).trim();
+  const out = reflowParagraphs(flat);
+  const paras = out.split("\n\n");
+  assert.ok(paras.length >= 5);
+  assert.ok(paras.every((p) => p.endsWith(".")));
+  assert.equal(out.replace(/\n\n/g, " "), flat);
+  const short = "One short paragraph.\n\nAnother one.";
+  assert.equal(reflowParagraphs(short), short);
+});
