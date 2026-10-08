@@ -12,8 +12,12 @@ export interface NeuralMeta {
   maxTokens: number;
   /** Words per window; a long paragraph is read in several windows and the scores averaged. */
   windowWords: number;
-  /** Raw model probabilities for "likely AI" (about 1% of human paragraphs reach it) and "likely human". */
-  thresholds: { likelyAi: number; likelyHuman: number };
+  /**
+   * The models, each with the raw probabilities that human paragraphs reach at the percentiles in
+   * HUMAN_PERCENTILES (measured on held-out human writing). The last one is the "likely AI" level: with the higher
+   * of the models counting, about 1% of human paragraphs reach it.
+   */
+  models: Array<{ file: string; humanQuantiles: number[] }>;
 }
 
 /** Splits a paragraph into overlapping windows of words for the model. */
@@ -37,27 +41,54 @@ export function isProse(text: string): boolean {
   return words / toks.length >= 0.6;
 }
 
-/** Maps a raw neural probability onto the classifier's scale so one set of thresholds serves both. */
-export function toClassifierScale(p: number, from: NeuralMeta["thresholds"], to: { likelyAi: number; likelyHuman: number }): number {
-  if (p <= from.likelyHuman) return (p / Math.max(from.likelyHuman, 1e-9)) * to.likelyHuman;
-  if (p < from.likelyAi) return to.likelyHuman + ((p - from.likelyHuman) / (from.likelyAi - from.likelyHuman)) * (to.likelyAi - to.likelyHuman);
-  return to.likelyAi + ((p - from.likelyAi) / Math.max(1 - from.likelyAi, 1e-9)) * (1 - to.likelyAi);
-}
+/** The percentiles of human paragraphs at which each model's raw probability is recorded. */
+export const HUMAN_PERCENTILES = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99, 0.994];
 
 /**
- * Combines the neural scores (one list of window scores per paragraph segment, null when the segment was not
- * read) with the detector result: each segment keeps the higher of the two estimates, and the overall score and
- * verdict follow the combined segments.
+ * Maps a raw neural probability onto the classifier's scale through how human paragraphs score: up to the 80th
+ * percentile of human paragraphs it stays at or below "likely human", the top 0.6% reach "likely AI", and in
+ * between it rises gently (squared), so a merely unusual human paragraph is not pushed towards "uncertain".
  */
-export function mergeNeural(result: DetectorResult, scores: Array<number[] | null>, meta: NeuralMeta): DetectorResult {
+export function toClassifierScale(p: number, humanQuantiles: number[], to: { likelyAi: number; likelyHuman: number }): number {
+  const q = humanQuantiles;
+  const last = q[q.length - 1]!;
+  const top = HUMAN_PERCENTILES[HUMAN_PERCENTILES.length - 1]!;
+  if (p >= last) return to.likelyAi + ((p - last) / Math.max(1 - last, 1e-9)) * (1 - to.likelyAi);
+  let pct: number;
+  if (p <= q[0]!) pct = (p / Math.max(q[0]!, 1e-9)) * HUMAN_PERCENTILES[0]!;
+  else {
+    let j = 0;
+    while (j < q.length - 2 && p >= q[j + 1]!) j++;
+    const lo = HUMAN_PERCENTILES[j]!;
+    const hi = HUMAN_PERCENTILES[j + 1]!;
+    pct = lo + ((p - q[j]!) / Math.max(q[j + 1]! - q[j]!, 1e-9)) * (hi - lo);
+  }
+  if (pct <= HUMAN_ANCHOR) return (pct / HUMAN_ANCHOR) * to.likelyHuman;
+  const t = (pct - HUMAN_ANCHOR) / (top - HUMAN_ANCHOR);
+  return to.likelyHuman + t * t * (to.likelyAi - to.likelyHuman);
+}
+
+/** Human paragraphs up to this percentile map to "likely human" or below. */
+const HUMAN_ANCHOR = 0.8;
+
+/**
+ * Combines the neural scores with the detector result. `scores[segment][model]` lists the window scores of each
+ * model for a paragraph segment (null when the segment was not read). A segment that any model rates as likely
+ * AI takes that estimate if it is higher than the classifier's; the overall score and verdict follow the segments.
+ */
+export function mergeNeural(result: DetectorResult, scores: Array<number[][] | null>, meta: NeuralMeta): DetectorResult {
   const segments = result.model.segments;
   if (!segments?.length || scores.length !== segments.length) return result;
   const to = result.model.thresholds;
   const merged = segments.map((s, i) => {
-    const w = scores[i];
-    if (!w?.length) return s;
-    const mean = w.reduce((a, b) => a + b, 0) / w.length;
-    const neural = toClassifierScale(mean, meta.thresholds, to);
+    const perModel = scores[i];
+    if (!perModel?.length) return s;
+    const neural = Math.max(
+      ...perModel.map((w, m) => (w.length && meta.models[m] ? toClassifierScale(w.reduce((a, b) => a + b, 0) / w.length, meta.models[m].humanQuantiles, to) : 0)),
+    );
+    // Only a confident neural opinion (past the 1-in-100 human level) changes a segment; below it the classifier
+    // keeps its say, so borderline paragraphs are not all pushed into "uncertain".
+    if (neural < to.likelyAi) return s;
     return { ...s, probability: Math.round(Math.max(s.probability, neural) * 1000) / 1000 };
   });
   // Sentences inside a paragraph the neural model raised lean with it, as they do with the classifier's windows.
