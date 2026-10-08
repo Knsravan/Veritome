@@ -102,9 +102,23 @@ Held-out results (paragraphs from documents not used in training; human false-po
 | APT-Eval, human text with "major" / "slight major" / 50% / "minor" / "extreme minor" AI polishing (GPT-4o, DeepSeek-V3, Llama) | 76% / 62% / 42% / 25% / 7% |
 | HAP-E AI continuations (GPT-4o, Llama 3) | 39% |
 
-On the two Turnitin-checked papers the full pipeline now reports 15% and 12% AI (Turnitin: 28% and 32%) and covers
-44% and 11% of the words Turnitin highlighted. Light polishing remains hard for every detector, Turnitin's included,
-and these scores should prompt a conversation, not a penalty.
+**Whole-paper check.** One borderline paragraph proves little, but a paper in which paragraph after paragraph scores
+above the human range is unusual. On 300 held-out human research papers (5,249 prose paragraphs), 9% of a typical
+paper's paragraphs score above the 90th percentile of human paragraphs; only 3 of the 300 papers (1%) reach 55% or
+more. When a paper with at least six prose paragraphs reaches that level, its paragraphs above the 90th percentile are
+marked as likely AI. This adds about 0.8% to the paragraphs flagged in human papers. The level was set from the human
+papers alone.
+
+**Two papers whose authors polished every section with Claude** (the only full documents with known truth so far):
+
+| Paper | Turnitin AI score | Veritome before | Veritome now |
+|---|---|---|---|
+| QASS (IEEE format, 13 pages) | 28% | 0% | 77% |
+| QKD (IEEE format, 13 pages) | 32% | 0% | 51% |
+
+Two documents are not a benchmark; more Turnitin-checked papers with known histories are the best way to keep
+measuring. Light polishing remains hard for every detector, and these scores should prompt a conversation, not a
+penalty.
 
 ### What this means in practice
 

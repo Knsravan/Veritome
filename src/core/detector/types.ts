@@ -47,6 +47,11 @@ export interface ModelEvidence {
   /** Words and phrases that pushed the estimate towards model output. */
   topPhrases: Array<{ phrase: string; weight: number }>;
   thresholds: { likelyAi: number; likelyHuman: number };
+  /**
+   * Set when the neural models judged the document as a whole: most of its paragraphs score above the range of
+   * human writing (a pattern about 1 in 100 human papers shows), so paragraphs above that range count as likely AI.
+   */
+  document?: { paragraphs: number; aboveHumanRange: number; share: number };
 }
 
 export interface EvasionSigns {

@@ -1,5 +1,6 @@
 "use client";
 
+import { WholePaperNote } from "./PlagiarismResultView";
 import { useState } from "react";
 import type { DetectorResult, SentenceScore } from "@/core/detector/types";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";
@@ -25,8 +26,9 @@ export function DetectorSummary({ result }: { result: DetectorResult }) {
         high={result.band.high}
         leftLabel="Few patterns"
         rightLabel="Many patterns"
-        caption={`Score ${result.score} out of 100 from ${result.model.version.includes("+") ? "two trained models (a pattern classifier and a neural model that ran in your browser)" : "the trained model"}, plausible range ${result.band.low} to ${result.band.high}, from ${result.words.toLocaleString("en")} words. “Many patterns” needs ${Math.ceil(result.model.thresholds.likelyAi * 100)} or more, a level only about 1 in 100 human texts reached in testing.`}
+        caption={`Score ${result.score} out of 100 from ${result.model.version.includes("+") ? "a pattern classifier and two neural models that ran in your browser" : "the trained model"}, plausible range ${result.band.low} to ${result.band.high}, from ${result.words.toLocaleString("en")} words. “Many patterns” needs ${Math.ceil(result.model.thresholds.likelyAi * 100)} or more, a level only about 1 in 100 human texts reached in testing.`}
       />
+      {result.model.document && <WholePaperNote doc={result.model.document} />}
     </div>
   );
 }

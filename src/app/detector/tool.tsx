@@ -15,16 +15,24 @@ export function DetectorTool() {
   const [useLlm, setUseLlm] = useState(false);
   const hasLlm = useHasLlm();
   const { llmFields } = useSettings();
-  const { result, error, busy, run } = useRun<DetectorResult>();
+  const { result, setResult, error, busy, run } = useRun<DetectorResult>();
+  const [refining, setRefining] = useState(false);
 
   const go = () =>
     run(async (signal) => {
       const r = await postJson<DetectorResult>("/api/detect", { text, useLlm: useLlm && hasLlm, ...llmFields() }, signal);
-      // Second opinion from the neural model, run here in the browser.
-      const { withNeuralOpinion } = await import("@/lib/ai-model/neural");
-      const merged = await withNeuralOpinion(r, text, signal);
       setChecked(text);
-      return merged;
+      // The neural second opinion runs here in the browser and updates the result when it is ready.
+      setRefining(true);
+      void import("@/lib/ai-model/neural")
+        .then(({ withNeuralOpinion }) => withNeuralOpinion(r, text, signal))
+        .then((merged) => {
+          if (!signal.aborted && merged !== r) setResult(merged);
+        })
+        .finally(() => {
+          if (!signal.aborted) setRefining(false);
+        });
+      return r;
     });
 
   return (
@@ -49,6 +57,12 @@ export function DetectorTool() {
       </div>
       {result && checked && (
         <div key={checked} className="animate-fade-up">
+          {refining && (
+            <p role="status" className="mb-3 flex items-center gap-2 text-sm text-ink-soft">
+              <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />
+              Getting a second opinion from the neural models in your browser…
+            </p>
+          )}
           <DetectorResultView text={checked} result={result} />
         </div>
       )}

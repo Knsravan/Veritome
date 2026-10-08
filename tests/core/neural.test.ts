@@ -67,3 +67,27 @@ test("mergeNeural keeps the highest estimate of the classifier and the models pe
   // Mismatched input leaves the result alone.
   assert.equal(mergeNeural(base, [[[0.9]]], meta), base);
 });
+
+test("mergeNeural judges the document as a whole when most paragraphs score above the human range", () => {
+  const segs = Array.from({ length: 8 }, (_, i) => ({ start: i * 100, end: i * 100 + 90, words: 160, probability: 0.1 }));
+  const base = {
+    words: 1280,
+    score: 10,
+    band: { low: 5, high: 15 },
+    verdict: "likely_human",
+    sentences: [],
+    model: { version: "1", probability: 0.1, windows: [], segments: segs, topPhrases: [], thresholds: to },
+  } as unknown as DetectorResult;
+  const docMeta: NeuralMeta = { ...meta, document: { minParagraphs: 6, percentile: 0.9, share: 0.55 } };
+  // 0.93 sits between the 95th and 98th human percentiles of model A: above the human range, below "likely AI".
+  const high = [[0.93], [0.1]];
+  const low = [[0.4], [0.1]];
+  const five = mergeNeural(base, [high, high, high, high, high, low, low, low], docMeta);
+  assert.ok(five.model.document && five.model.document.aboveHumanRange === 5);
+  assert.ok(five.model.segments![0]!.probability > 0.93 && five.model.segments![7]!.probability === 0.1);
+  assert.equal(five.verdict, "likely_ai");
+  // Fewer than 55% above the range: each paragraph is judged on its own.
+  const three = mergeNeural(base, [high, high, high, low, low, low, low, low], docMeta);
+  assert.equal(three.model.document, undefined);
+  assert.equal(three.model.segments![0]!.probability, 0.1);
+});
