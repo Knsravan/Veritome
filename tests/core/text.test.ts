@@ -90,6 +90,30 @@ test("splitReferences handles documents without a reference list", () => {
   assert.equal(r.references, "");
 });
 
+test("splitReferences finds a heading run into its first entry, and IEEE small caps", () => {
+  const body = "Body sentence about methods [1]. ".repeat(40);
+  for (const heading of ["REFERENCES", "R EFERENCES"]) {
+    const text = `${body}\n\n${heading} [1] A. Author, "Title," 2020. [2] B. Author, "Other," 2021.`;
+    const r = splitReferences(text);
+    assert.ok(r.referencesStart > 0, heading);
+    assert.match(r.references, /^\[1\] A\. Author/);
+    assert.ok(!r.body.includes("A. Author"));
+  }
+  const own = splitReferences(`${body}\nR EFERENCES\n[1] A. Author, 2020.`);
+  assert.match(own.references, /A\. Author/);
+});
+
+test("splitReferences finds a numbered list without a heading at the end", () => {
+  const body = "Prior work [1], [2] shows this. Recent studies [3] agree. ".repeat(30);
+  const refs = Array.from({ length: 8 }, (_, i) => `[${i + 1}] A. Writer${i}, "A study of things," in Proc. Conf., 2020.`).join(" ");
+  const text = `${body}\n\n${refs}`;
+  const r = splitReferences(text);
+  assert.equal(r.referencesStart, text.indexOf("[1] A. Writer0"));
+  assert.ok(!r.body.includes("Writer0"));
+  // In-text citations alone are not a reference list.
+  assert.equal(splitReferences(body).referencesStart, -1);
+});
+
 test("blankQuotedText preserves offsets", () => {
   const text = 'He said "this is a long quotation that should be blanked out of the text" and left.';
   const blanked = blankQuotedText(text);

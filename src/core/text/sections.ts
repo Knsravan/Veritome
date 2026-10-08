@@ -8,7 +8,39 @@ export interface SplitDocument {
 }
 
 const HEADING_RE =
-  /^[ \t]*(?:#{1,6}[ \t]+|\\(?:section|chapter)\*?\{)?(?:\d+\.?[ \t]+)?(references|bibliography|works cited|literature cited|reference list)\}?[ \t]*:?[ \t]*$/gim;
+  /^[ \t]*(?:#{1,6}[ \t]+|\\(?:section|chapter)\*?\{)?(?:\d+\.?[ \t]+)?(r ?eferences|b ?ibliography|works cited|literature cited|reference list)\}?[ \t]*:?[ \t]*$/gim;
+
+const INLINE_HEADING_RE = /(^|\n)[ \t]*(?:\d+\.?[ \t]+)?(?:r ?eferences|b ?ibliography|works cited|literature cited|reference list)[ \t]*:?[ \t]+(?=\[1\][ \t]|1\.[ \t]+[A-Z])/gim;
+
+/**
+ * Where a numbered reference list starts when it has no heading: the last "[1] " (or "[2] " when the first entry
+ * was garbled) that begins an entry in the second half of the text and is followed by the next numbers in order,
+ * closely spaced, through to the end. One missing number is tolerated.
+ */
+function numberedListStart(text: string): number {
+  const entry = /\[(\d{1,3})\][ \t]+(?=[A-Z\u00C0-\u024F"“])/g;
+  const hits: Array<{ n: number; at: number }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = entry.exec(text)) !== null) hits.push({ n: Number(m[1]), at: m.index });
+  for (let i = hits.length - 1; i >= 0; i--) {
+    const h = hits[i]!;
+    if (h.n > 2 || h.at < text.length * 0.5) continue;
+    if (h.n === 2 && hits.slice(0, i).some((e) => e.n === 1 && e.at > text.length * 0.5)) continue;
+    let next = h.n + 1;
+    let last = h.at;
+    for (const later of hits.slice(i + 1)) {
+      // One entry may be missing or garbled by extraction.
+      if (later.n === next || later.n === next + 1) {
+        if (later.at - last > 1500) break;
+        next = later.n + 1;
+        last = later.at;
+      }
+    }
+    // At least five entries, and the list reaches (nearly) the end of the text.
+    if (next - h.n >= 5 && text.length - last < 1500) return h.at;
+  }
+  return -1;
+}
 
 /**
  * Finds the reference list so the checkers can leave it out of the body text.
@@ -24,6 +56,25 @@ export function splitReferences(text: string): SplitDocument {
     if (m.index >= text.length * 0.3) {
       chosen = m.index;
       chosenEnd = m.index + m[0].length;
+    }
+  }
+
+  // A heading run into its first entry ("REFERENCES [1] A. Author, …"), as PDF extraction often leaves it.
+  if (chosen < 0) {
+    INLINE_HEADING_RE.lastIndex = 0;
+    while ((m = INLINE_HEADING_RE.exec(text)) !== null) {
+      if (m.index >= text.length * 0.3) {
+        chosen = m.index + m[1]!.length;
+        chosenEnd = m.index + m[0].length;
+      }
+    }
+  }
+  // No heading at all (lost in extraction): a dense numbered list "[1] … [2] … [3] …" that runs to the end.
+  if (chosen < 0) {
+    const list = numberedListStart(text);
+    if (list >= 0) {
+      chosen = list;
+      chosenEnd = list;
     }
   }
 
