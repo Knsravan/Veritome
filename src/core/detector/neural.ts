@@ -18,6 +18,12 @@ export interface NeuralMeta {
    * of the models counting, about 1% of human paragraphs reach it.
    */
   models: Array<{ file: string; humanQuantiles: number[] }>;
+  /**
+   * The whole-document test. In a paper with at least `minParagraphs` prose paragraphs, if `share` or more of them
+   * score above the `percentile` of human paragraphs (about 1 in 100 human papers did), those paragraphs count as
+   * likely AI.
+   */
+  document?: { minParagraphs: number; percentile: number; share: number };
 }
 
 /** Splits a paragraph into overlapping windows of words for the model. */
@@ -44,25 +50,30 @@ export function isProse(text: string): boolean {
 /** The percentiles of human paragraphs at which each model's raw probability is recorded. */
 export const HUMAN_PERCENTILES = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99, 0.994];
 
+/** Where a raw probability falls among human paragraphs (0 to 1), from the recorded percentiles. */
+export function humanPercentile(p: number, humanQuantiles: number[]): number {
+  const q = humanQuantiles;
+  const last = q[q.length - 1]!;
+  const top = HUMAN_PERCENTILES[HUMAN_PERCENTILES.length - 1]!;
+  if (p >= last) return top + ((p - last) / Math.max(1 - last, 1e-9)) * (1 - top);
+  if (p <= q[0]!) return (p / Math.max(q[0]!, 1e-9)) * HUMAN_PERCENTILES[0]!;
+  let j = 0;
+  while (j < q.length - 2 && p >= q[j + 1]!) j++;
+  const lo = HUMAN_PERCENTILES[j]!;
+  const hi = HUMAN_PERCENTILES[j + 1]!;
+  return lo + ((p - q[j]!) / Math.max(q[j + 1]! - q[j]!, 1e-9)) * (hi - lo);
+}
+
 /**
  * Maps a raw neural probability onto the classifier's scale through how human paragraphs score: up to the 80th
  * percentile of human paragraphs it stays at or below "likely human", the top 0.6% reach "likely AI", and in
  * between it rises gently (squared), so a merely unusual human paragraph is not pushed towards "uncertain".
  */
 export function toClassifierScale(p: number, humanQuantiles: number[], to: { likelyAi: number; likelyHuman: number }): number {
-  const q = humanQuantiles;
-  const last = q[q.length - 1]!;
+  const last = humanQuantiles[humanQuantiles.length - 1]!;
   const top = HUMAN_PERCENTILES[HUMAN_PERCENTILES.length - 1]!;
   if (p >= last) return to.likelyAi + ((p - last) / Math.max(1 - last, 1e-9)) * (1 - to.likelyAi);
-  let pct: number;
-  if (p <= q[0]!) pct = (p / Math.max(q[0]!, 1e-9)) * HUMAN_PERCENTILES[0]!;
-  else {
-    let j = 0;
-    while (j < q.length - 2 && p >= q[j + 1]!) j++;
-    const lo = HUMAN_PERCENTILES[j]!;
-    const hi = HUMAN_PERCENTILES[j + 1]!;
-    pct = lo + ((p - q[j]!) / Math.max(q[j + 1]! - q[j]!, 1e-9)) * (hi - lo);
-  }
+  const pct = humanPercentile(p, humanQuantiles);
   if (pct <= HUMAN_ANCHOR) return (pct / HUMAN_ANCHOR) * to.likelyHuman;
   const t = (pct - HUMAN_ANCHOR) / (top - HUMAN_ANCHOR);
   return to.likelyHuman + t * t * (to.likelyAi - to.likelyHuman);
@@ -80,19 +91,29 @@ export function mergeNeural(result: DetectorResult, scores: Array<number[][] | n
   const segments = result.model.segments;
   if (!segments?.length || scores.length !== segments.length) return result;
   const to = result.model.thresholds;
+  const mean = (w: number[]) => w.reduce((a, b) => a + b, 0) / w.length;
+  // Each read segment's highest position among human paragraphs, across the models.
+  const pcts = scores.map((perModel) =>
+    perModel?.length ? Math.max(...perModel.map((w, m) => (w.length && meta.models[m] ? humanPercentile(mean(w), meta.models[m].humanQuantiles) : 0))) : null,
+  );
+  const read = pcts.filter((p): p is number => p !== null);
+  const doc = meta.document;
+  const above = doc ? read.filter((p) => p >= doc.percentile).length : 0;
+  const documentLevel = Boolean(doc && read.length >= doc.minParagraphs && above / read.length >= doc.share);
+  // Just past "likely AI" on the classifier's scale, also for short segments (they need 0.93).
+  const AI_LEVEL = Math.max(to.likelyAi, 0.93) + 0.01;
   const merged = segments.map((s, i) => {
     const perModel = scores[i];
     if (!perModel?.length) return s;
-    const neural = Math.max(
-      ...perModel.map((w, m) => (w.length && meta.models[m] ? toClassifierScale(w.reduce((a, b) => a + b, 0) / w.length, meta.models[m].humanQuantiles, to) : 0)),
-    );
+    if (documentLevel && doc && pcts[i]! >= doc.percentile) return { ...s, probability: Math.max(s.probability, AI_LEVEL) };
+    const neural = Math.max(...perModel.map((w, m) => (w.length && meta.models[m] ? toClassifierScale(mean(w), meta.models[m].humanQuantiles, to) : 0)));
     // Only a confident neural opinion (past the 1-in-100 human level) changes a segment; below it the classifier
     // keeps its say, so borderline paragraphs are not all pushed into "uncertain".
     if (neural < to.likelyAi) return s;
     return { ...s, probability: Math.round(Math.max(s.probability, neural) * 1000) / 1000 };
   });
   // Sentences inside a paragraph the neural model raised lean with it, as they do with the classifier's windows.
-  const NOTE = "The paragraph reads as AI-written to the neural model";
+  const NOTE = "The paragraph reads as AI-written or AI-polished to the neural models";
   const sentences = result.sentences.map((sen) => {
     const i = segments.findIndex((s) => s.start <= sen.start && sen.end <= s.end);
     if (i < 0 || merged[i]!.probability <= segments[i]!.probability) return sen;
@@ -108,8 +129,14 @@ export function mergeNeural(result: DetectorResult, scores: Array<number[][] | n
     ...result,
     score: Math.round(probability * 100),
     band: { low: clamp(result.band.low + shift), high: clamp(result.band.high + shift) },
-    verdict: modelVerdict(result.words, probability, to),
+    verdict: documentLevel && result.verdict !== "insufficient_text" ? "likely_ai" : modelVerdict(result.words, probability, to),
     sentences,
-    model: { ...result.model, version: `${result.model.version}+${meta.version}`, probability: Math.round(probability * 1000) / 1000, segments: merged },
+    model: {
+      ...result.model,
+      version: `${result.model.version}+${meta.version}`,
+      probability: Math.round(probability * 1000) / 1000,
+      segments: merged,
+      ...(documentLevel ? { document: { paragraphs: read.length, aboveHumanRange: above, share: Math.round((above / read.length) * 100) / 100 } } : {}),
+    },
   };
 }

@@ -182,6 +182,17 @@ function FindingDetail({
   );
 }
 
+/** Shown when the neural models judged the paper as a whole. */
+export function WholePaperNote({ doc }: { doc: NonNullable<DetectorResult["model"]["document"]> }) {
+  return (
+    <p className="rounded-md border-l-4 border-[var(--chart-ai)] bg-desk/60 px-3 py-2 text-sm text-ink-soft">
+      <span className="font-semibold text-ink">Whole-paper check: </span>
+      {doc.aboveHumanRange} of {doc.paragraphs} paragraphs ({Math.round(doc.share * 100)}%) score above the range of human writing. Only about 1
+      in 100 human-written papers we tested did this, so those paragraphs are marked as likely AI-written or AI-polished.
+    </p>
+  );
+}
+
 const AI_LABEL = { ai: "Likely AI-written", uncertain: "Unclear", human: "Likely human-written" } as const;
 
 /** The AI-writing score: what share of the text reads as machine-written, with how far to trust it. */
@@ -225,10 +236,12 @@ function AiSummary({ ai, b }: { ai: DetectorResult; b: AiBreakdown }) {
         <div className="rounded-md bg-desk/60 px-3 py-2 text-sm text-ink-soft">
           <p>
             <span className="font-semibold text-ink">How far to trust this: </span>
-            in testing, it wrongly flagged 2 of 764 paragraphs written by people before AI tools existed (0.3%), and caught about half of
-            AI-written texts. A high score is a reason to look again, never proof; edited or paraphrased AI text often passes.
+            in testing on writing it had never seen, it flagged about 1 in 100 human paragraphs and about 1 in 100 human papers. It caught
+            about three in four texts heavily polished by AI and about half of research paragraphs AI tools wrote or polished; light
+            polishing often passes. A high score is a reason to look again, never proof.
           </p>
         </div>
+        {ai.model.document && <WholePaperNote doc={ai.model.document} />}
         {ai.warnings.filter((w) => !w.includes("per-section")).length > 0 && (
           <p className="text-sm text-ink-faint">{ai.warnings.filter((w) => !w.includes("per-section")).join(" ")}</p>
         )}

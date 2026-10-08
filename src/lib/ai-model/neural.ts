@@ -53,10 +53,16 @@ async function score(m: Loaded, session: Loaded["sessions"][number], text: strin
 }
 
 /**
- * Adds the neural model's opinion to a detector result. Only prose paragraphs are read (tables and equation blocks
- * keep the classifier's estimate). Returns the result unchanged if the model cannot be loaded.
+ * Adds the neural models' opinion to a detector result. Only prose paragraphs are read (tables and equation blocks
+ * keep the classifier's estimate). Returns the result unchanged if the models cannot be loaded or take longer than
+ * `timeoutMs`.
  */
-export async function withNeuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal): Promise<DetectorResult> {
+export function withNeuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal, timeoutMs = 90_000): Promise<DetectorResult> {
+  // A slow connection or device never holds the report back for long.
+  return Promise.race([neuralOpinion(result, text, signal), new Promise<DetectorResult>((resolve) => setTimeout(() => resolve(result), timeoutMs))]);
+}
+
+async function neuralOpinion(result: DetectorResult, text: string, signal?: AbortSignal): Promise<DetectorResult> {
   const segments = result.model.segments;
   if (!segments?.length || result.verdict === "insufficient_text") return result;
   try {

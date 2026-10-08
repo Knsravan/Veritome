@@ -32,3 +32,5 @@ Papers and APT originals are split by document, so no held-out text shares a sou
 7. `python calibrate.py es2-onnx calib.json && python report.py calib.json` scores the held-out sets exactly as the
    browser does (180-word windows, 256 tokens, averaged) and prints the thresholds for about 1% and 0.5% false
    positives on human text. They go into `public/models/ai-writing/meta.json`.
+8. The whole-paper test (`document` in `meta.json`) was set on 300 held-out human peS2o papers: share of prose
+   paragraphs above the 90th human percentile, level at the 99th percentile of papers (0.55, minimum six paragraphs).
