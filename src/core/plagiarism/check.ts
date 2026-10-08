@@ -279,12 +279,20 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     const total = passages.length * providers.length;
     let done = 0;
     const firstError = new Map<string, unknown>();
+    // A service that turns us away several times in a row is not asked again in this check.
+    const refusals = new Map<string, number>();
+    const stopped = new Set<string>();
     // The plentiful services get most of the time; the scarce ones search until the budget runs out.
     let deadline = budget * 0.55;
     const runProvider = (provider: SourceProvider, list: typeof passages, concurrency: number) =>
       mapLimit(list, concurrency, async (p) => {
         if (options.signal?.aborted) return;
         const s = stat(provider.name, provider.kind, provider.coverage);
+        if (stopped.has(provider.name)) {
+          s.skipped = (s.skipped ?? 0) + 1;
+          options.onProgress?.(++done, total);
+          return;
+        }
         if (Date.now() - started >= deadline) {
           s.skipped = (s.skipped ?? 0) + 1;
           outOfTime++;
@@ -294,6 +302,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
         s.queries++;
         try {
           const docs = await provider.search(p, options.signal);
+          refusals.set(provider.name, 0);
           for (const d of docs) {
             if (!found.has(d.id)) s.documents++;
             addDoc(d);
@@ -305,6 +314,11 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
           } else {
             s.failures++;
             if (!firstError.has(provider.name)) firstError.set(provider.name, err);
+            if (/busy|slow down/.test(failureReason(err))) {
+              const n = (refusals.get(provider.name) ?? 0) + 1;
+              refusals.set(provider.name, n);
+              if (n >= 4) stopped.add(provider.name);
+            }
           }
         }
         options.onProgress?.(++done, total);
@@ -326,6 +340,7 @@ export async function checkPlagiarism(text: string, options: PlagiarismOptions =
     options.onProgress?.(done, total);
     await Promise.all(scarce.map((p) => runProvider(p, open, 2)));
     if (passages.length === 0) warnings.push("No passage was distinctive enough to search for.");
+    for (const name of stopped) warnings.push(`${name} turned us away several times in a row (it limits how much it can be searched), so it was not asked about the rest of the text.`);
     if (outOfTime) warnings.push("The search took longer than usual, so some services were not asked about every passage. Running the check again later may find more.");
 
     // A matched paper or web page is compared as a whole when its full text can be fetched, so every copied

@@ -71,6 +71,12 @@ function buildClients(cfg: ServerConfig, http: Http) {
     braveHttp: pacedHttp(http, { service: "Brave Search", minIntervalMs: 1100, maxRequests: 30 }),
     // Without a key, Semantic Scholar shares a small allowance among all callers; a paced, budgeted client for the
     // plagiarism search avoids being turned away for every passage.
+    // OpenAlex meters requests: without a key every caller on the server's address shares a small daily budget.
+    // The plagiarism search spends at most 150 requests a check (100 without a key).
+    openalexPaced: createOpenAlex(pacedHttp(http, { service: "OpenAlex", minIntervalMs: 110, maxRequests: cfg.openAlexKey ? 150 : 100 }), {
+      ...mailto,
+      ...(cfg.openAlexKey ? { apiKey: cfg.openAlexKey } : {}),
+    }),
     semanticscholarPaced: createSemanticScholar(
       pacedHttp(http, { service: "Semantic Scholar", minIntervalMs: cfg.semanticScholarKey ? 250 : 1100, maxRequests: cfg.semanticScholarKey ? 120 : 40 }),
       cfg.semanticScholarKey ? { apiKey: cfg.semanticScholarKey } : {},
@@ -91,7 +97,7 @@ export function finderDeps(cfg: ServerConfig, http: Http): FinderDeps {
 export function plagiarismProviders(cfg: ServerConfig, http: Http, options: { web: boolean }): SourceProvider[] {
   const c = scholarlyClients(cfg, http);
   const providers: SourceProvider[] = [
-    openAlexProvider(c.openalex),
+    openAlexProvider(c.openalexPaced),
     crossrefProvider(c.crossref),
     semanticScholarProvider(c.semanticscholarPaced),
     arxivProvider(c.arxiv),
