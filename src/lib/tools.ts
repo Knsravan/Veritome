@@ -25,20 +25,19 @@ export const TOOLS: readonly ToolInfo[] = [
       "Cannot prove who wrote a text. Light AI polishing often passes, and about 1 in 100 human paragraphs is flagged.",
   },
   {
+    href: "/humaniser",
+    name: "Humaniser",
+    does: "Revises stiff, formulaic prose paragraph by paragraph, in your tone or your own voice, with citations, numbers and maths locked and the meaning checked.",
+    cannot:
+      "Does not make text human-written. Disclose AI assistance where your publisher asks.",
+  },
+  {
     href: "/compare",
     soon: true,
     name: "Compare papers",
     does: "For teachers: add a class's papers and see which share text with each other, and where. Runs in your browser.",
     cannot:
       "Finds passages shared word for word (with small edits); reworded or translated sharing between papers is not found.",
-  },
-  {
-    href: "/humaniser",
-    soon: true,
-    name: "Humaniser",
-    does: "Revises stiff, formulaic prose while keeping citations, maths and numbers locked.",
-    cannot:
-      "Does not make text human-written. Disclose AI assistance where your publisher asks.",
   },
   {
     href: "/paraphraser",

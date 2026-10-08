@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/ComingSoon";
+import { HumaniserTool } from "./tool";
 
-export const metadata: Metadata = { title: "Humaniser (coming soon)" };
+export const metadata: Metadata = { title: "Humaniser" };
 
 export default function Page() {
-  return <ComingSoon href="/humaniser" />;
+  return <HumaniserTool />;
 }

@@ -76,9 +76,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         AI detector
                       </Link>
                     </li>
+                    <li>
+                      <Link
+                        href="/humaniser"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Humaniser
+                      </Link>
+                    </li>
                     <li className="text-ink-faint">
-                      Compare, Citations, Grammar, Humaniser and Paraphraser:
-                      coming soon
+                      Compare, Citations, Grammar and Paraphraser: coming soon
                     </li>
                   </ul>
                 </div>

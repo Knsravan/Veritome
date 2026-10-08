@@ -450,7 +450,7 @@ export default function Home() {
             id="tools-title"
             className="mt-2 font-display text-3xl font-bold sm:text-4xl"
           >
-            Two tools ready, five on the way
+            Three tools ready, four on the way
           </h2>
           <p className="mt-3 max-w-2xl text-lg text-ink-soft">
             Use them together in one report, or one at a time. No checker is
