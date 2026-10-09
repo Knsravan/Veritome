@@ -32,20 +32,19 @@ export const TOOLS: readonly ToolInfo[] = [
       "Does not make text human-written. Disclose AI assistance where your publisher asks.",
   },
   {
+    href: "/paraphraser",
+    name: "Paraphraser",
+    does: "Rewords text in seven styles at the strength you choose, with synonyms for any word and other versions of any sentence. Citations, numbers and locked words stay exact, and meaning is checked.",
+    cannot:
+      "Can shift meaning in ways a number check cannot catch. Read every rewrite.",
+  },
+  {
     href: "/compare",
     soon: true,
     name: "Compare papers",
     does: "For teachers: add a class's papers and see which share text with each other, and where. Runs in your browser.",
     cannot:
       "Finds passages shared word for word (with small edits); reworded or translated sharing between papers is not found.",
-  },
-  {
-    href: "/paraphraser",
-    soon: true,
-    name: "Paraphraser",
-    does: "Rewrites passages in academic, simple, concise or expanded form with the same protections.",
-    cannot:
-      "Can shift meaning in ways a number check cannot catch. Read every rewrite.",
   },
   {
     href: "/citations",

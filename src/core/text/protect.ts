@@ -1,6 +1,6 @@
 import type { Span } from "./sentences.ts";
 
-export type ProtectedKind = "math" | "latex" | "url" | "doi" | "cite" | "ref" | "quote";
+export type ProtectedKind = "math" | "latex" | "url" | "doi" | "cite" | "ref" | "quote" | "keep";
 
 export interface ProtectedSpan extends Span {
   id: number;
@@ -16,6 +16,8 @@ export interface ProtectResult {
 export interface ProtectOptions {
   /** Also protect long quotations (default false). */
   quotes?: boolean;
+  /** Words or phrases the author wants kept exactly (matched whole, ignoring case). */
+  keep?: readonly string[];
 }
 
 const NAME = "[A-Z][\\p{L}'’\\-]+";
@@ -57,7 +59,13 @@ interface RawMatch extends Span {
 
 function collect(text: string, options: ProtectOptions): RawMatch[] {
   const matches: RawMatch[] = [];
-  const patterns = options.quotes ? [...PATTERNS, { kind: "quote" as const, re: QUOTE_PATTERN }] : PATTERNS;
+  const patterns = options.quotes ? [...PATTERNS, { kind: "quote" as const, re: QUOTE_PATTERN }] : [...PATTERNS];
+  for (const term of options.keep ?? []) {
+    const t = term.trim();
+    if (!t) continue;
+    const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    patterns.push({ kind: "keep", re: new RegExp(`(?<![\\p{L}\\p{N}])${esc}(?![\\p{L}\\p{N}])`, "giu") });
+  }
   for (const { kind, re } of patterns) {
     re.lastIndex = 0;
     let m: RegExpExecArray | null;

@@ -4,7 +4,7 @@
  * server. Saving can be switched off, and entries deleted one by one or all at once.
  */
 
-export type HistoryTool = "plagiarism" | "detector" | "humaniser";
+export type HistoryTool = "plagiarism" | "detector" | "humaniser" | "paraphraser";
 
 export interface HistorySummary {
   id: string;

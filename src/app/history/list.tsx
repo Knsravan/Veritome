@@ -20,6 +20,7 @@ const TOOL_NAME: Record<HistoryTool, string> = {
   plagiarism: "Plagiarism",
   detector: "AI detector",
   humaniser: "Humaniser",
+  paraphraser: "Paraphraser",
 };
 
 const day = (iso: string) => {
@@ -112,7 +113,7 @@ export function HistoryList() {
             aria-label="Show"
             className="inline-flex flex-wrap rounded-full border border-rule bg-page p-1 text-sm"
           >
-            {(["all", "plagiarism", "detector", "humaniser"] as const).map(
+            {(["all", "plagiarism", "detector", "humaniser", "paraphraser"] as const).map(
               (t) => (
                 <button
                   key={t}
@@ -185,7 +186,7 @@ export function HistoryList() {
           </h2>
           <p className="max-w-md text-ink-soft">
             {enabled
-              ? "Checks you run with the Plagiarism tool, the AI detector or the Humaniser will appear here."
+              ? "Checks you run with the Plagiarism tool, the AI detector, the Humaniser or the Paraphraser will appear here."
               : "Saving is switched off. Switch it on above to keep your checks on this device."}
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
