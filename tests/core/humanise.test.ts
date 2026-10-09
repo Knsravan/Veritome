@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ChatRequest, LlmClient } from "../../src/core/llm/client.ts";
-import { assemble, checkRewrite, humaniseParagraph, humaniseSystemPrompt, paragraphEdits, planParagraphs } from "../../src/core/rewrite/humanise.ts";
+import { assemble, checkRewrite, humaniseParagraph, humaniseSystemPrompt, paragraphEdits, plainCleanup, planParagraphs, styleIssues } from "../../src/core/rewrite/humanise.ts";
 
 /** A fake model: rewrite calls get the next scripted reply; meaning checks answer with `same`. */
 function fake(rewrites: string[], same: boolean | boolean[] = true): LlmClient & { calls: ChatRequest[] } {
@@ -135,4 +135,49 @@ test("paragraphEdits joins the parts of one long paragraph and leaves out unchan
   assert.equal(text.slice(edits[0]!.start, edits[0]!.end), long);
   assert.ok(edits[0]!.text.startsWith("Line number 1 "));
   assert.ok(edits[0]!.text.endsWith("in some detail."));
+});
+
+test("plainCleanup swaps wordy phrases for plain ones without touching the rest", () => {
+  assert.equal(
+    plainCleanup("In order to test this, a large number of samples were taken prior to the trial because it is able to fail."),
+    "To test this, many samples were taken before the trial because it can fail.",
+  );
+  assert.equal(plainCleanup("Accuracy was 94.2% {{P1}}."), "Accuracy was 94.2% {{P1}}.");
+});
+
+test("styleIssues names inflated words, stock openers, flat rhythm and added dashes", () => {
+  const issues = styleIssues(
+    "We used the tool on the data.",
+    "Moreover, we utilized the tool to delve into the data — carefully. Furthermore, it worked on all of the runs. Additionally, it ran fast on one laptop. Overall, the tool is quick and simple.",
+  );
+  assert.equal(issues.length, 4);
+  assert.match(issues[0]!, /"utilized" \(write use\)/);
+  assert.match(issues[0]!, /"delve"/);
+  assert.deepEqual(styleIssues("We used it.", "We used it. It worked."), []);
+});
+
+test("a rewrite that reads stiffly is sent back once more, and the plainer version is kept", async () => {
+  const para = "It is important to note that the method plays a crucial role in the analysis of sediments, with accuracy of 94.2%.";
+  const llm = fake([
+    "The method is pivotal and we utilize it to analyse sediments, with accuracy of 94.2%.",
+    "We use the method to analyse sediments, and it reached an accuracy of 94.2%.",
+  ]);
+  const r = await humaniseParagraph(para, { tone: "academic", strength: "balanced", llm });
+  assert.equal(r.status, "rewritten");
+  assert.equal(r.text, "We use the method to analyse sediments, and it reached an accuracy of 94.2%.");
+  assert.equal(r.attempts, 2);
+  const retry = llm.calls.filter((c) => !/compare an original/.test(c.system ?? "")).at(-1)!;
+  assert.match(retry.user, /inflated words: .*"pivotal"/);
+});
+
+test("when every attempt reads stiffly, the least stiff one that kept the meaning is used, not the original", async () => {
+  const para = "The method plays a crucial role in the analysis of sediments, with accuracy of 94.2% on the samples.";
+  const llm = fake([
+    "We utilize the pivotal method to delve into sediments, with accuracy of 94.2% on the samples.",
+    "We utilize the method on sediments, with accuracy of 94.2% on the samples.",
+    "We utilize the pivotal method for sediments, with accuracy of 94.2% on the samples.",
+  ]);
+  const r = await humaniseParagraph(para, { tone: "academic", strength: "balanced", llm });
+  assert.equal(r.status, "rewritten");
+  assert.equal(r.text, "We utilize the method on sediments, with accuracy of 94.2% on the samples.");
 });

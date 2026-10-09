@@ -9,7 +9,7 @@ import { extractJson } from "../llm/client.ts";
 import { checkNumbersPreserved, protect, restore } from "../text/protect.ts";
 import { countWords } from "../text/tokens.ts";
 import { cleanReply } from "./prompts.ts";
-import type { HumaniseTone } from "./humanise.ts";
+import { plainCleanup, type HumaniseTone } from "./humanise.ts";
 
 export interface MakeYoursQuestion {
   /** The generic sentence or phrase the question is about, quoted from the paragraph. */
@@ -116,7 +116,7 @@ export async function makeYoursWeave(
       problems.push(err instanceof Error ? err.message : "The model call failed.");
       break;
     }
-    const output = cleanReply(reply);
+    const output = plainCleanup(cleanReply(reply));
     const mechanical: string[] = [];
     const want = [...masked.matchAll(/\{\{P(\d+)\}\}/g)].map((m) => m[1]);
     const got = [...output.matchAll(/\{\{P(\d+)\}\}/g)].map((m) => m[1]);
