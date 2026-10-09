@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "@/components/DiffView";
 import {
@@ -486,6 +487,14 @@ export function FileResult({
         <blockquote className="rounded-lg border-l-4 border-action bg-action-soft px-4 py-3 font-serif">
           {HUMANISE_DISCLOSURE}
         </blockquote>
+        <p className="text-sm">
+          <Link href="/ai-rules" className="font-semibold text-action underline">
+            What journals and universities allow
+          </Link>{" "}
+          <span className="text-ink-soft">
+            — each publisher&apos;s AI rules in plain words.
+          </span>
+        </p>
       </section>
     </div>
   );
