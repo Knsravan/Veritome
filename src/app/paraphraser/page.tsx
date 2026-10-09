@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/ComingSoon";
+import { ParaphraserTool } from "./tool";
 
-export const metadata: Metadata = { title: "Paraphraser (coming soon)" };
+export const metadata: Metadata = { title: "Paraphraser" };
 
 export default function Page() {
-  return <ComingSoon href="/paraphraser" />;
+  return <ParaphraserTool />;
 }

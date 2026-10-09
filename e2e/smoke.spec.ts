@@ -157,7 +157,6 @@ test("tools that are not ready yet say they are coming soon", async ({
 }) => {
   for (const path of [
     "/compare",
-    "/paraphraser",
     "/citations",
     "/grammar",
   ]) {
@@ -254,6 +253,51 @@ test("humaniser file mode humanises the whole document and gives back the same k
     await page.getByRole("tab", { name: `Preview the ${label}` }).click();
     await expect(page.getByLabel("Preview of the humanised file")).toBeVisible({ timeout: 30_000 });
   }
+});
+
+test("paraphraser rewords each paragraph, offers synonyms and other sentences, and keeps locked words", async ({
+  page,
+}) => {
+  await page.route("**/api/status", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ json: { ...(await res.json()), llm: true, llmModel: "test-model" } });
+  });
+  const bodies: Array<Record<string, unknown>> = [];
+  await page.route("**/api/paraphrase", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown> & { action: string; text?: string };
+    bodies.push(body);
+    if (body.action === "paraphrase") {
+      const text = String(body.text).replace("The method plays a crucial role in", "The method drives").replace("We measured", "We recorded");
+      await route.fulfill({ json: { original: body.text, text, status: "rewritten", attempts: 1, problems: [], meaningChecked: true, changed: 0.3 } });
+    } else if (body.action === "synonyms") {
+      await route.fulfill({ json: { options: ["guides", "shapes"] } });
+    } else {
+      await route.fulfill({ json: { options: ["The analysis of river sediments depends on this method."] } });
+    }
+  });
+  await page.goto("/paraphraser");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Say it another way, and keep what it means");
+  await page.getByRole("radio", { name: "Academic" }).click();
+  await page.getByLabel(/Words to keep/).fill("river sediments");
+  await page.getByLabel(/Words to keep/).press("Enter");
+  await page
+    .getByRole("textbox", { name: "Your text" })
+    .fill("The method plays a crucial role in the analysis of river sediments (Smith et al., 2020).\n\nWe measured 120 cores over two years.");
+  await page.getByRole("button", { name: /^Paraphrase/ }).click();
+  await expect(page.getByText("The method drives the analysis of river sediments (Smith et al., 2020).")).toBeVisible();
+  await expect(page.getByText("We recorded 120 cores over two years.")).toBeVisible();
+  expect(bodies.filter((b) => b.action === "paraphrase")).toHaveLength(2);
+  expect(bodies[0]).toMatchObject({ style: "academic", strength: "medium", keep: ["river sediments"] });
+  await expect(page.getByText("30% reworded")).toBeVisible();
+  await page.getByRole("button", { name: "Sentence 1: other ways to say it" }).first().press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Suggestions" });
+  await expect(dialog).toBeVisible();
+  await axe(page);
+  await dialog.getByRole("button", { name: "The analysis of river sediments depends on this method." }).click();
+  await expect(page.getByText("The analysis of river sediments depends on this method.")).toBeVisible();
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Word file" }).click();
+  expect((await dl).suggestedFilename()).toBe("paraphrase.docx");
 });
 
 test("checks are saved in this browser's history, reopen without checking again, and repeats are pointed out", async ({

@@ -279,3 +279,55 @@ export function MorphArt() {
     </div>
   );
 }
+
+const PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ["The results demonstrate a significant improvement in accuracy.", "Accuracy improved markedly, as the results show."],
+  ["Participants were asked to complete the survey twice.", "Each participant filled in the survey on two occasions."],
+  ["This approach reduces the cost of training by half.", "Training costs half as much with this approach."],
+];
+
+/** The Paraphraser's picture: a sentence, and below it the same idea typed out in new words. */
+export function ParaphraseArt() {
+  const reduce = useReducedMotion();
+  const [k, setK] = useState(0);
+  const [n, setN] = useState(0);
+  const [before, after] = PAIRS[k]!;
+  useEffect(() => {
+    if (reduce) {
+      setN(after.length);
+      return;
+    }
+    if (n < after.length) {
+      const t = setTimeout(() => setN((x) => x + 1), 28);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => {
+      setK((x) => (x + 1) % PAIRS.length);
+      setN(0);
+    }, 2600);
+    return () => clearTimeout(t);
+  }, [n, after.length, reduce]);
+  return (
+    <div aria-hidden className="relative w-80 select-none">
+      <div className="animate-fade-up space-y-3 rounded-2xl border border-rule bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+        <div>
+          <p className="text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase">Original</p>
+          <p key={k} className="animate-swap mt-1 font-serif text-[0.95rem] leading-relaxed text-ink-soft">
+            {before}
+          </p>
+        </div>
+        <div className="h-px bg-rule" />
+        <div>
+          <p className="text-[0.68rem] font-semibold tracking-wide text-action uppercase">Paraphrased</p>
+          <p className="mt-1 min-h-[3.2rem] font-serif text-[0.95rem] leading-relaxed text-ink">
+            {after.slice(0, n)}
+            {n < after.length && <span className="ml-px inline-block h-4 w-0.5 translate-y-0.5 animate-pulse bg-action" />}
+          </p>
+        </div>
+      </div>
+      <div className="animate-pop absolute -right-3 -bottom-4 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md" style={{ animationDelay: "1.2s" }}>
+        Same meaning, checked
+      </div>
+    </div>
+  );
+}

@@ -12,7 +12,7 @@ export function spendHumaniseWords(visitor: string, text: string): void {
   if (use.size > 50_000) use.clear();
   const used = use.get(k) ?? 0;
   if (used + words > DAILY_WORDS) {
-    throw new BadRequest(`The daily limit of ${DAILY_WORDS.toLocaleString("en")} words for the Humaniser has been reached. Try again tomorrow.`, 429);
+    throw new BadRequest(`The daily limit of ${DAILY_WORDS.toLocaleString("en")} words for the Humaniser and Paraphraser has been reached. Try again tomorrow.`, 429);
   }
   use.set(k, used + words);
 }
