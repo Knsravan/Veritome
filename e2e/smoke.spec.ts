@@ -278,6 +278,8 @@ test("paraphraser rewords each paragraph, offers synonyms and other sentences, a
   await page.goto("/paraphraser");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Say it another way, and keep what it means");
   await page.getByRole("radio", { name: "Academic" }).click();
+  await page.getByRole("slider", { name: "Strength" }).press("ArrowRight");
+  await expect(page.getByRole("slider", { name: "Strength" })).toHaveAttribute("aria-valuetext", "Strong");
   await page.getByLabel(/Words to keep/).fill("river sediments");
   await page.getByLabel(/Words to keep/).press("Enter");
   await page
@@ -287,7 +289,7 @@ test("paraphraser rewords each paragraph, offers synonyms and other sentences, a
   await expect(page.getByText("The method drives the analysis of river sediments (Smith et al., 2020).")).toBeVisible();
   await expect(page.getByText("We recorded 120 cores over two years.")).toBeVisible();
   expect(bodies.filter((b) => b.action === "paraphrase")).toHaveLength(2);
-  expect(bodies[0]).toMatchObject({ style: "academic", strength: "medium", keep: ["river sediments"] });
+  expect(bodies[0]).toMatchObject({ style: "academic", strength: "strong", keep: ["river sediments"] });
   await expect(page.getByText("30% reworded")).toBeVisible();
   await page.getByRole("button", { name: "Sentence 1: other ways to say it" }).first().press("Enter");
   const dialog = page.getByRole("dialog", { name: "Suggestions" });

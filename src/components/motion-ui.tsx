@@ -331,3 +331,122 @@ export function ParaphraseArt() {
     </div>
   );
 }
+
+/**
+ * A slider with a few fixed steps: a gradient track, a dot at each step and a knob that glides to the chosen one.
+ * Drag it, click a step or its label, or use the arrow keys.
+ */
+export function StepSlider<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+  id,
+}: {
+  value: T;
+  options: ReadonlyArray<{ id: T; label: string }>;
+  onChange: (v: T) => void;
+  label: string;
+  id?: string;
+}) {
+  const track = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const index = Math.max(0, options.findIndex((o) => o.id === value));
+  const last = options.length - 1;
+  const pct = (i: number) => (last ? (i / last) * 100 : 0);
+  const at = (clientX: number) => {
+    const r = track.current?.getBoundingClientRect();
+    if (!r || !r.width) return index;
+    return Math.round(Math.min(1, Math.max(0, (clientX - r.left) / r.width)) * last);
+  };
+  const set = (i: number) => {
+    const o = options[Math.min(last, Math.max(0, i))];
+    if (o && o.id !== value) onChange(o.id);
+  };
+  return (
+    <div className="select-none">
+      <div
+        id={id}
+        role="slider"
+        tabIndex={0}
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={last}
+        aria-valuenow={index}
+        aria-valuetext={options[index]?.label}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            e.preventDefault();
+            set(index + 1);
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            e.preventDefault();
+            set(index - 1);
+          } else if (e.key === "Home") {
+            e.preventDefault();
+            set(0);
+          } else if (e.key === "End") {
+            e.preventDefault();
+            set(last);
+          }
+        }}
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDragging(true);
+          set(at(e.clientX));
+        }}
+        onPointerMove={(e) => dragging && set(at(e.clientX))}
+        onPointerUp={() => setDragging(false)}
+        onPointerCancel={() => setDragging(false)}
+        className="step-slider group relative cursor-pointer touch-none rounded-full px-2.5 py-3"
+      >
+        <div ref={track} className="relative h-2 rounded-full bg-desk-deep">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-action/70 to-action transition-[width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]"
+            style={{ width: `${pct(index)}%` }}
+          />
+          {options.map((o, i) => (
+            <span
+              key={o.id}
+              aria-hidden
+              className={cx(
+                "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-page transition-colors duration-300",
+                i <= index ? "bg-action" : "bg-ink-faint/40",
+              )}
+              style={{ left: `${pct(i)}%` }}
+            />
+          ))}
+          <span
+            aria-hidden
+            className={cx(
+              "absolute top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-page shadow-[0_2px_8px_rgb(15_23_42/0.25)] ring-2 ring-action transition-[left,transform] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
+              dragging ? "scale-110" : "group-hover:scale-105",
+              "group-focus-visible:shadow-[0_0_0_6px_color-mix(in_srgb,var(--focus)_35%,transparent)]",
+            )}
+            style={{ left: `${pct(index)}%` }}
+          >
+            <span className="size-2 rounded-full bg-action" />
+          </span>
+        </div>
+      </div>
+      <div className="relative mt-0.5 h-5 px-2.5 text-xs font-semibold">
+        {options.map((o, i) => (
+          <button
+            key={o.id}
+            type="button"
+            tabIndex={-1}
+            onClick={() => set(i)}
+            className={cx(
+              "absolute -translate-x-1/2 transition-colors duration-300",
+              i === 0 && "translate-x-0",
+              i === last && "-translate-x-full",
+              i === index ? "text-action" : "text-ink-faint hover:text-ink",
+            )}
+            style={{ left: `calc(0.625rem + (100% - 1.25rem) * ${pct(i) / 100})` }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -15,7 +15,7 @@ import {
   SparkIcon,
   XIcon,
 } from "@/components/icons";
-import { ParaphraseArt, SlidingChoice } from "@/components/motion-ui";
+import { ParaphraseArt, SlidingChoice, StepSlider } from "@/components/motion-ui";
 import { Button, Notice, cx } from "@/components/ui";
 import {
   PARAPHRASE_STRENGTHS,
@@ -299,22 +299,15 @@ export function ParaphraserTool() {
         </div>
         <div className="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:items-center">
           <div>
-            <div className="flex items-baseline justify-between text-sm">
-              <label htmlFor="pp-strength" className="font-semibold">
-                Strength
-              </label>
-              <span className="font-semibold text-action">{PARAPHRASE_STRENGTHS.find((s) => s.id === strength)?.label}</span>
-            </div>
-            <input
+            <p className="text-sm font-semibold" id="pp-strength-label">
+              Strength
+            </p>
+            <StepSlider
               id="pp-strength"
-              type="range"
-              min={0}
-              max={2}
-              step={1}
-              value={PARAPHRASE_STRENGTHS.findIndex((s) => s.id === strength)}
-              onChange={(e) => setStrength(PARAPHRASE_STRENGTHS[Number(e.target.value)]!.id)}
-              aria-valuetext={PARAPHRASE_STRENGTHS.find((s) => s.id === strength)?.label}
-              className="mt-2 w-full accent-[var(--action)]"
+              label="Strength"
+              value={strength}
+              onChange={setStrength}
+              options={PARAPHRASE_STRENGTHS.map((s) => ({ id: s.id, label: s.label }))}
             />
             <p key={strength} className="animate-swap text-xs text-ink-soft">
               {PARAPHRASE_STRENGTHS.find((s) => s.id === strength)?.description}
