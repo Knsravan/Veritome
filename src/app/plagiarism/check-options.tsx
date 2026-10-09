@@ -10,7 +10,6 @@ import {
   PenIcon,
   SparkIcon,
   TypeIcon,
-  UserIcon,
 } from "@/components/icons";
 import { cx } from "@/components/ui";
 
@@ -21,41 +20,48 @@ const CHECKS: Array<{
   id: Extra | "plagiarism";
   label: string;
   hint: string;
+  /** The longer description, shown on hover and read by screen readers. */
+  full: string;
   hue: string;
   Icon: (p: { size?: number }) => ReactNode;
 }> = [
   {
     id: "plagiarism",
     label: "Plagiarism",
-    hint: "Copied and reworded passages in published papers, the web and your documents.",
+    hint: "Copied and reworded text",
+    full: "Copied and reworded passages in published papers, the web and your documents.",
     hue: "var(--u-copied)",
     Icon: CompareIcon,
   },
   {
     id: "detector",
     label: "AI writing",
-    hint: "How much of the text reads as AI-written, paragraph by paragraph.",
+    hint: "AI-written paragraphs",
+    full: "How much of the text reads as AI-written, paragraph by paragraph.",
     hue: "var(--u-ai)",
     Icon: SparkIcon,
   },
   {
     id: "citations",
     label: "References and citations",
-    hint: "Looks up every reference, flags retractions and finds claims without a citation.",
+    hint: "References, retractions, uncited claims",
+    full: "Looks up every reference, flags retractions and finds claims without a citation.",
     hue: "var(--u-cite)",
     Icon: BookIcon,
   },
   {
     id: "grammar",
     label: "Grammar and spelling",
-    hint: "Grammar, spelling, academic style and readability.",
+    hint: "Grammar, spelling and style",
+    full: "Grammar, spelling, academic style and readability.",
     hue: "var(--u-grammar)",
     Icon: TypeIcon,
   },
   {
     id: "rewrites",
     label: "Rewrite suggestions",
-    hint: "Suggested rewrites for copied passages and formulaic paragraphs.",
+    hint: "Fixes for flagged passages",
+    full: "Suggested rewrites for copied passages and formulaic paragraphs.",
     hue: "var(--action)",
     Icon: PenIcon,
   },
@@ -63,17 +69,19 @@ const CHECKS: Array<{
 
 const hue = (h: string) => ({ ["--hue" as string]: h }) as CSSProperties;
 
-/** An on/off switch drawn over a real checkbox, so it works with the keyboard and screen readers. */
+/** A small on/off switch drawn over a real checkbox, so it works with the keyboard and screen readers. */
 function Switch({
   checked,
   disabled,
   onChange,
   label,
+  describedBy,
 }: {
   checked: boolean;
   disabled?: boolean;
   onChange?: (v: boolean) => void;
   label: string;
+  describedBy?: string;
 }) {
   return (
     <span className="relative inline-flex shrink-0 items-center">
@@ -81,6 +89,7 @@ function Switch({
         type="checkbox"
         role="switch"
         aria-label={label}
+        {...(describedBy ? { "aria-describedby": describedBy } : {})}
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange?.(e.target.checked)}
@@ -89,7 +98,7 @@ function Switch({
       <span
         aria-hidden
         className={cx(
-          "h-6 w-11 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
+          "h-5 w-9 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
           checked ? "bg-[var(--hue)]" : "bg-desk-deep ring-1 ring-rule ring-inset",
           disabled && !checked && "opacity-50",
         )}
@@ -97,25 +106,29 @@ function Switch({
       <span
         aria-hidden
         className={cx(
-          "pointer-events-none absolute top-1 left-1 size-4 rounded-full bg-white shadow-sm transition-transform duration-200",
-          checked && "translate-x-5",
+          "pointer-events-none absolute top-[3px] left-[3px] size-3.5 rounded-full bg-white shadow-sm transition-transform duration-200",
+          checked && "translate-x-4",
         )}
       />
     </span>
   );
 }
 
-function CheckTile({
+function CheckRow({
+  id,
   label,
   hint,
+  full,
   color,
   Icon,
   checked,
   locked,
   onChange,
 }: {
+  id: string;
   label: string;
   hint: string;
+  full: string;
   color: string;
   Icon: (p: { size?: number }) => ReactNode;
   checked: boolean;
@@ -125,99 +138,89 @@ function CheckTile({
   return (
     <label
       style={hue(color)}
+      title={full}
       className={cx(
-        "group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border p-3 transition-[background-color,border-color,box-shadow,transform] duration-200",
-        locked ? "cursor-default" : "hover:-translate-y-px hover:shadow-md",
+        "group relative flex items-center gap-2.5 overflow-hidden rounded-xl border py-1.5 pr-2.5 pl-3 transition-[background-color,border-color] duration-200",
+        locked ? "cursor-default" : "cursor-pointer",
         checked
-          ? "border-[color-mix(in_srgb,var(--hue)_45%,transparent)] bg-[color-mix(in_srgb,var(--hue)_9%,var(--page))]"
-          : "border-rule bg-page",
+          ? "border-[color-mix(in_srgb,var(--hue)_40%,transparent)] bg-[color-mix(in_srgb,var(--hue)_8%,var(--page))]"
+          : "border-rule bg-page hover:bg-desk",
       )}
     >
-      {/* A thin bar of the check's colour along the left edge when it is on. */}
       <span
         aria-hidden
         className={cx(
-          "absolute inset-y-2 left-0 w-1 rounded-r-full bg-[var(--hue)] transition-opacity duration-200",
+          "absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-[var(--hue)] transition-opacity duration-200",
           checked ? "opacity-100" : "opacity-0",
         )}
       />
       <span
         aria-hidden
         className={cx(
-          "grid size-10 shrink-0 place-items-center rounded-xl transition-[background-color,color,transform] duration-200",
-          checked
-            ? "bg-[color-mix(in_srgb,var(--hue)_18%,var(--page))] text-[var(--hue)] group-hover:scale-105"
-            : "bg-desk-deep text-ink-faint",
+          "grid size-8 shrink-0 place-items-center rounded-lg transition-colors duration-200",
+          checked ? "bg-[color-mix(in_srgb,var(--hue)_16%,var(--page))] text-[var(--hue)]" : "bg-desk-deep text-ink-faint",
         )}
       >
-        <Icon size={20} />
+        <Icon size={17} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className={cx("font-semibold", !checked && "text-ink-soft")}>{label}</span>
-          {locked && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink px-2 py-px text-[0.68rem] font-semibold text-page">
-              <LockIcon size={11} /> Always on
-            </span>
-          )}
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="flex items-center gap-1.5">
+          <span className={cx("truncate text-sm font-semibold", !checked && "text-ink-soft")}>{label}</span>
+          {locked && <LockIcon size={12} className="shrink-0 text-ink-faint" />}
         </span>
-        <span className="mt-0.5 block text-[0.83rem] leading-snug text-ink-soft">{hint}</span>
+        <span className="block truncate text-xs text-ink-soft">{hint}</span>
+        <span id={`${id}-d`} className="sr-only">
+          {full}
+          {locked ? " Always on." : ""}
+        </span>
       </span>
-      <Switch
-        checked={checked}
-        disabled={locked}
-        onChange={onChange}
-        label={locked ? `${label} (always on)` : label}
-      />
+      <Switch checked={checked} disabled={locked} onChange={onChange} label={label} describedBy={`${id}-d`} />
     </label>
   );
 }
 
-function SourceTile({
+function SourceChip({
   label,
-  hint,
+  name,
   Icon,
   checked,
   disabled,
   onChange,
+  title,
 }: {
   label: string;
-  hint: string;
+  /** The full name the switch is announced with. */
+  name: string;
   Icon: (p: { size?: number }) => ReactNode;
   checked: boolean;
   disabled?: boolean;
   onChange: (v: boolean) => void;
+  title: string;
 }) {
+  const on = checked && !disabled;
   return (
     <label
       style={hue("var(--action)")}
+      title={title}
       className={cx(
-        "flex items-center gap-3 rounded-2xl border p-3 transition-[background-color,border-color] duration-200",
+        "flex min-w-0 items-center gap-2 rounded-xl border py-2 pr-2 pl-2.5 transition-[background-color,border-color] duration-200",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-        checked && !disabled ? "border-action/40 bg-action-soft/60" : "border-rule bg-page",
+        on ? "border-action/40 bg-action-soft/70" : "border-rule bg-page",
       )}
     >
-      <span
-        aria-hidden
-        className={cx(
-          "grid size-9 shrink-0 place-items-center rounded-xl",
-          checked && !disabled ? "bg-action text-action-ink" : "bg-desk-deep text-ink-faint",
-        )}
-      >
-        <Icon size={18} />
+      <span aria-hidden className={cx("shrink-0", on ? "text-action" : "text-ink-faint")}>
+        <Icon size={17} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold">{label}</span>
-        <span className="block text-[0.8rem] leading-snug text-ink-soft">{hint}</span>
-      </span>
-      <Switch checked={checked && !disabled} disabled={disabled} onChange={onChange} label={label} />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{label}</span>
+      <Switch checked={on} disabled={disabled} onChange={onChange} label={name} />
     </label>
   );
 }
 
 /**
- * The "What to check" and "Compare against" choices for the full paper check: one tile per check in the colour it
- * is marked with in the report, with switches, a count, and one-click presets.
+ * The "What to check" and "Compare against" choices for the full paper check, kept compact so the card sits level
+ * with the upload box: one slim row per check in the colour it is marked with in the report, presets, and the
+ * sources as two switches.
  */
 export function CheckOptions({
   extras,
@@ -228,8 +231,6 @@ export function CheckOptions({
   webOn,
   onWeb,
   sources,
-  author,
-  onAuthor,
 }: {
   extras: Record<Extra, boolean>;
   onExtras: (next: Record<Extra, boolean>) => void;
@@ -239,77 +240,62 @@ export function CheckOptions({
   webOn: boolean;
   onWeb: (v: boolean) => void;
   sources: readonly string[];
-  author: string;
-  onAuthor: (v: string) => void;
 }) {
   const on = 1 + Object.values(extras).filter(Boolean).length;
-  const all = on === CHECKS.length;
   const set = (v: boolean) => onExtras({ detector: v, citations: v, grammar: v, rewrites: v });
+  const preset = (active: boolean) =>
+    cx(
+      "rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+      active ? "border-ink bg-ink text-page" : "border-rule text-ink-soft hover:text-ink",
+    );
 
   return (
     <>
-      <fieldset className="space-y-3">
+      <fieldset className="min-w-0 space-y-2">
         {/* Floated so the legend lays out like a normal block inside the fieldset. */}
-        <legend className="float-left mb-3 w-full">
-          <span className="flex items-end justify-between gap-3">
-            <span>
-              <span className="block font-display text-lg font-semibold">What to check</span>
-              <span className="block text-sm text-ink-soft">Everything lands in one report.</span>
-            </span>
-            <span className="rounded-full bg-desk-deep px-2.5 py-0.5 text-xs font-semibold tabular-nums text-ink-soft">
-              {on} of {CHECKS.length} on
+        <legend className="float-left w-full">
+          <span className="flex items-center justify-between gap-2">
+            <span className="font-display text-lg font-semibold">What to check</span>
+            <span className="flex gap-1.5">
+              <button type="button" onClick={() => set(true)} aria-pressed={on === CHECKS.length} className={preset(on === CHECKS.length)}>
+                All
+              </button>
+              <button type="button" onClick={() => set(false)} aria-pressed={on === 1} className={preset(on === 1)}>
+                Plagiarism only
+              </button>
             </span>
           </span>
         </legend>
         {/* One segment per check, lit in its colour when on. */}
-        <div className="clear-both flex gap-1 pt-1" aria-hidden>
-          {CHECKS.map((c) => {
-            const lit = c.id === "plagiarism" || extras[c.id];
-            return (
-              <span
-                key={c.id}
-                style={hue(c.hue)}
-                className={cx(
-                  "h-1.5 flex-1 rounded-full transition-colors duration-300",
-                  lit ? "bg-[var(--hue)]" : "bg-desk-deep",
-                )}
-              />
-            );
-          })}
+        <div className="clear-both flex items-center gap-1 pt-1" aria-hidden>
+          {CHECKS.map((c) => (
+            <span
+              key={c.id}
+              style={hue(c.hue)}
+              className={cx(
+                "h-1 flex-1 rounded-full transition-colors duration-300",
+                c.id === "plagiarism" || extras[c.id] ? "bg-[var(--hue)]" : "bg-desk-deep",
+              )}
+            />
+          ))}
+          <span className="ml-1.5 text-xs font-semibold tabular-nums text-ink-soft">
+            {on}/{CHECKS.length}
+          </span>
         </div>
-        <div className="flex gap-2 text-sm">
-          <button
-            type="button"
-            onClick={() => set(true)}
-            aria-pressed={all}
-            className={cx(
-              "rounded-full border px-3 py-1 font-semibold transition-colors",
-              all ? "border-ink bg-ink text-page" : "border-rule text-ink-soft hover:text-ink",
-            )}
-          >
-            Everything
-          </button>
-          <button
-            type="button"
-            onClick={() => set(false)}
-            aria-pressed={on === 1}
-            className={cx(
-              "rounded-full border px-3 py-1 font-semibold transition-colors",
-              on === 1 ? "border-ink bg-ink text-page" : "border-rule text-ink-soft hover:text-ink",
-            )}
-          >
-            Plagiarism only
-          </button>
-        </div>
-        <div className="space-y-2">
+        <p className="sr-only" aria-live="polite">
+          {on} of {CHECKS.length} checks on
+        </p>
+        <div className="space-y-1.5">
           {CHECKS.map((c) =>
             c.id === "plagiarism" ? (
-              <CheckTile key={c.id} label={c.label} hint={c.hint} color={c.hue} Icon={c.Icon} checked locked />
+              <CheckRow key={c.id} id={`chk-${c.id}`} label={c.label} hint={c.hint} full={c.full} color={c.hue} Icon={c.Icon} checked locked />
             ) : (
-              <CheckTile
+              <CheckRow
                 key={c.id}
+                id={`chk-${c.id}`}
                 label={c.label}
                 hint={c.hint}
+                full={c.full}
                 color={c.hue}
                 Icon={c.Icon}
                 checked={extras[c.id]}
@@ -320,50 +306,30 @@ export function CheckOptions({
         </div>
       </fieldset>
 
-      <fieldset className="space-y-2">
-        <legend className="mb-2 font-display text-lg font-semibold">Compare against</legend>
-        <SourceTile
-          label="Scholarly databases"
-          hint={`${sources.join(", ")}. Asks before sending anything.`}
-          Icon={DatabaseIcon}
-          checked={external}
-          onChange={onExternal}
-        />
-        <SourceTile
-          label="The open web"
-          hint={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
-          Icon={GlobeIcon}
-          checked={webOn}
-          disabled={!external || web.length === 0}
-          onChange={onWeb}
-        />
-        <label
-          className={cx(
-            "block rounded-2xl border border-rule bg-page p-3 transition-opacity",
-            !external && "opacity-60",
-          )}
-        >
-          <span className="flex items-center gap-3">
-            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-xl bg-desk-deep text-ink-faint">
-              <UserIcon size={18} />
-            </span>
-            <span>
-              <span className="block font-semibold">Your earlier papers</span>
-              <span className="block text-[0.8rem] leading-snug text-ink-soft">
-                Optional. Finds text reused from your own published work.
-              </span>
-            </span>
-          </span>
-          <input
-            type="text"
-            value={author}
-            onChange={(e) => onAuthor(e.target.value)}
-            disabled={!external}
-            placeholder="ORCID iD or your full name"
-            autoComplete="name"
-            className="mt-2.5 w-full rounded-lg border border-rule bg-desk/60 px-3 py-2 text-sm transition-colors focus:border-action"
+      <fieldset className="min-w-0 space-y-2">
+        <legend className="float-left w-full font-display text-lg font-semibold">Compare against</legend>
+        <div className="clear-both grid grid-cols-2 gap-1.5 pt-1">
+          <SourceChip
+            label="Databases"
+            name="Scholarly databases"
+            title={`Scholarly databases: ${sources.join(", ")}.`}
+            Icon={DatabaseIcon}
+            checked={external}
+            onChange={onExternal}
           />
-        </label>
+          <SourceChip
+            label="Open web"
+            name="The open web"
+            title={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
+            Icon={GlobeIcon}
+            checked={webOn}
+            disabled={!external || web.length === 0}
+            onChange={onWeb}
+          />
+        </div>
+        <p className="truncate text-xs text-ink-soft" title={sources.join(", ")}>
+          {sources.slice(0, 3).join(", ")} and more. Asks first.
+        </p>
       </fieldset>
     </>
   );

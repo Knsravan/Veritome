@@ -228,13 +228,25 @@ export function PlagiarismTool() {
         </Notice>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <section aria-label="Your paper" className="card animate-fade-up p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
-          <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} {...(wantSample ? { initialFile: sampleDocx } : {})} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23.5rem]">
+        <section aria-label="Your paper" className="card animate-fade-up flex flex-col gap-4 p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
+          <div className="flex flex-1 flex-col">
+            <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} fill {...(wantSample ? { initialFile: sampleDocx } : {})} />
+          </div>
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1.5 border-t border-rule pt-4 text-sm text-ink-soft">
+            <li className="flex items-center gap-2">
+              <ShieldIcon size={17} className="shrink-0 text-ok" />
+              Never stored on our servers; history stays in this browser.
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckIcon size={17} className="shrink-0 text-ok" />
+              Only short passages are searched, after you agree.
+            </li>
+          </ul>
         </section>
 
-        <div className="animate-fade-up space-y-4 lg:sticky lg:top-24" style={{ ["--i" as string]: 3 }}>
-          <section aria-label="Options" className="card space-y-6 p-4 sm:p-6">
+        <div className="animate-fade-up flex flex-col" style={{ ["--i" as string]: 3 }}>
+          <section aria-label="Options" className="card flex-1 space-y-4 p-4 sm:p-5">
             <CheckOptions
               extras={extras}
               onExtras={setExtras}
@@ -244,8 +256,6 @@ export function PlagiarismTool() {
               webOn={external && settings.webSearch && web.length > 0}
               onWeb={(v) => update({ webSearch: v })}
               sources={status?.plagiarismSources ?? ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "Europe PMC", "Wikipedia"]}
-              author={author}
-              onAuthor={setAuthor}
             />
 
             <details className="group rounded-xl border border-rule">
@@ -256,6 +266,19 @@ export function PlagiarismTool() {
                 </span>
               </summary>
               <div className="animate-fade-in space-y-4 border-t border-rule px-3 py-3">
+                <label className={cx("block", !external && "opacity-60")}>
+                  <span className="font-semibold">Your earlier papers</span>
+                  <span className="block text-sm text-ink-faint">Optional. Checks for text reused from your own published work (self-plagiarism).</span>
+                  <input
+                    type="text"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    disabled={!external}
+                    placeholder="ORCID iD or your full name"
+                    autoComplete="name"
+                    className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm transition-colors focus:border-action"
+                  />
+                </label>
                 <fieldset className="space-y-3">
                   <legend className="font-semibold">Leave out of the score</legend>
                   <Checkbox checked={excludeQuotes} onChange={setExcludeQuotes} label="Quotations" hint="Quoted passages of 40 characters or more. They are still checked for a citation." />
@@ -283,16 +306,6 @@ export function PlagiarismTool() {
             )}
           </section>
 
-          <ul className="space-y-1.5 px-1 text-sm text-ink-soft">
-            <li className="flex items-start gap-2">
-              <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Your paper is processed in memory and never stored on our servers. Your history stays in this browser.
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Only short passages are sent to search services, and only after you agree.
-            </li>
-          </ul>
         </div>
       </div>
     </div>
