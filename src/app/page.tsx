@@ -245,7 +245,7 @@ export default function Home() {
           className="bg-grid pointer-events-none absolute top-[-7rem] left-1/2 -z-10 h-[46rem] w-screen -translate-x-1/2"
         />
         <div>
-          <p className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-rule bg-page/80 px-3 py-1 text-sm font-medium text-ink-soft shadow-sm backdrop-blur">
+          <p className="animate-fade-up inline-flex items-center gap-2 neu-sm rounded-full border border-[var(--neu-edge)] px-3 py-1 text-sm font-medium text-ink-soft">
             <span
               className="animate-pulse-ring size-2 rounded-full bg-ok"
               aria-hidden
@@ -293,14 +293,14 @@ export default function Home() {
           >
             <Link
               href="/plagiarism"
-              className="group inline-flex h-12 items-center gap-2 rounded-xl bg-action px-6 font-semibold text-action-ink shadow-[0_10px_24px_-10px_var(--action)] transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="group inline-flex h-12 items-center gap-2 rounded-xl bg-action px-6 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--shadow-card)] active:scale-[0.98] active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]"
             >
               Check your paper{" "}
               <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-1" />
             </Link>
             <Link
               href="/plagiarism?sample=1"
-              className="inline-flex h-12 items-center rounded-xl border border-rule bg-page px-6 font-semibold shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
+              className="inline-flex h-12 items-center rounded-xl border border-[var(--neu-edge)] bg-page px-6 font-semibold shadow-[var(--neu-sm)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] active:shadow-[var(--neu-in)]"
             >
               Try it with a sample
             </Link>
@@ -338,7 +338,7 @@ export default function Home() {
           {SOURCES.map((s, i) => (
             <li
               key={s}
-              className="animate-fade-up rounded-full border border-rule bg-page px-4 py-1.5 text-sm font-medium text-ink-soft shadow-sm"
+              className="animate-fade-up neu-sm rounded-full border border-[var(--neu-edge)] px-4 py-1.5 text-sm font-medium text-ink-soft"
               style={{ ["--i" as string]: i }}
             >
               {s}
@@ -556,7 +556,7 @@ export default function Home() {
         </p>
         <Link
           href="/plagiarism"
-          className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-action px-7 font-semibold text-action-ink shadow-[0_10px_24px_-10px_var(--action)] transition-transform duration-200 hover:-translate-y-0.5"
+          className="group mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-action px-7 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]"
         >
           Check your paper{" "}
           <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-1" />

@@ -19,7 +19,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       type="button"
       onClick={(e) => setTheme(dark ? "light" : "dark", center(e))}
       className={cx(
-        "relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink",
+        "nb nb-round",
         className,
       )}
       title={dark ? "Switch to light mode" : "Switch to dark mode"}
@@ -45,7 +45,7 @@ const CHOICES: Array<{ id: ThemePref; label: string; icon: typeof SunIcon }> = [
 export function ThemeChoice() {
   const { pref } = useTheme();
   return (
-    <div role="radiogroup" aria-label="Appearance" className="inline-flex flex-wrap gap-1 rounded-2xl border border-rule bg-desk p-1">
+    <div role="radiogroup" aria-label="Appearance" className="inline-flex flex-wrap gap-1 neu-in rounded-2xl p-1">
       {CHOICES.map((c) => {
         const on = pref === c.id;
         const I = c.icon;
@@ -58,7 +58,7 @@ export function ThemeChoice() {
             onClick={(e) => setTheme(c.id, center(e))}
             className={cx(
               "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200",
-              on ? "bg-page text-ink shadow-[var(--shadow-card)]" : "text-ink-soft hover:text-ink",
+              on ? "neu-on" : "text-ink-soft hover:text-ink",
             )}
           >
             <I size={16} /> {c.label}

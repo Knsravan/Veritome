@@ -129,7 +129,7 @@ export function QualityCard({
                 <button
                   type="button"
                   onClick={() => onMakeYours(i)}
-                  className="group block w-full rounded-lg border border-rule bg-page px-3 py-2 text-left text-sm hover:border-action/50"
+                  className="group block w-full neu-sm rounded-lg border border-[var(--neu-edge)] px-3 py-2 text-left text-sm transition-[box-shadow,color] hover:text-action active:shadow-[var(--neu-in)]"
                 >
                   <span className="line-clamp-2 font-serif text-ink-soft">
                     {finalOf(job.items[i]!)}

@@ -16,7 +16,7 @@ import {
   XIcon,
 } from "@/components/icons";
 import { ParaphraseArt, SlidingChoice, StepSlider } from "@/components/motion-ui";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import {
   PARAPHRASE_STRENGTHS,
   PARAPHRASE_STYLES,
@@ -299,7 +299,7 @@ export function ParaphraserTool() {
         </div>
         <div className="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:items-center">
           <div>
-            <p className="text-sm font-semibold" id="pp-strength-label">
+            <p className="mb-1.5 text-sm font-semibold" id="pp-strength-label">
               Strength
             </p>
             <StepSlider
@@ -309,7 +309,7 @@ export function ParaphraserTool() {
               onChange={setStrength}
               options={PARAPHRASE_STRENGTHS.map((s) => ({ id: s.id, label: s.label }))}
             />
-            <p key={strength} className="animate-swap text-xs text-ink-soft">
+            <p key={strength} className="animate-swap mt-1.5 text-xs text-ink-soft">
               {PARAPHRASE_STRENGTHS.find((s) => s.id === strength)?.description}
             </p>
           </div>
@@ -317,7 +317,7 @@ export function ParaphraserTool() {
             <label htmlFor="pp-keep" className="text-sm font-semibold">
               Words to keep as they are <span className="font-normal text-ink-faint">(optional)</span>
             </label>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-xl border border-rule bg-page px-2 py-1.5 focus-within:border-action">
+            <div className="neu-in mt-1.5 flex flex-wrap items-center gap-1.5 rounded-xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-action/40">
               {keep.map((k) => (
                 <span key={k} className="animate-pop inline-flex items-center gap-1 rounded-full bg-action-soft px-2.5 py-0.5 text-sm font-medium text-action">
                   {k}
@@ -339,7 +339,7 @@ export function ParaphraserTool() {
                   } else if (e.key === "Backspace" && !keepDraft && keep.length) setKeep((ks) => ks.slice(0, -1));
                 }}
                 placeholder={keep.length ? "Add another" : "e.g. quantum key distribution, BB84 — press Enter"}
-                className="min-w-[10rem] flex-1 bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="min-w-[10rem] flex-1 bg-transparent px-1 py-0.5 text-sm shadow-none focus:outline-none"
               />
             </div>
           </div>
@@ -399,7 +399,7 @@ export function ParaphraserTool() {
             {run && (
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 <label className="flex items-center gap-1.5 font-medium">
-                  <input type="checkbox" checked={showChanges} onChange={(e) => setShowChanges(e.target.checked)} className="size-4 accent-[var(--action)]" />
+                  <Switch checked={showChanges} onChange={setShowChanges} label="Show changes" />
                   Show changes
                 </label>
                 <span className="rounded-full bg-action-soft px-2.5 py-0.5 font-semibold tabular-nums text-action" aria-live="polite">
@@ -496,10 +496,10 @@ export function ParaphraserTool() {
                 {note ?? `${countWords(output).toLocaleString("en")} words`}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => void copy()}>
+                <Button variant="glow" onClick={() => void copy()}>
                   <CopyIcon size={16} /> Copy
                 </Button>
-                <Button variant="secondary" onClick={() => void download()}>
+                <Button variant="pillow" onClick={() => void download()}>
                   <DownloadIcon size={16} /> Word file
                 </Button>
               </div>
@@ -617,7 +617,7 @@ function Suggestions({
       ref={box}
       role="dialog"
       aria-label="Suggestions"
-      className="animate-pop absolute z-30 w-[min(24rem,calc(100%-1.5rem))] space-y-3 rounded-2xl border border-rule bg-page p-4 font-sans text-sm shadow-[var(--shadow-lift)]"
+      className="animate-pop absolute z-30 w-[min(24rem,calc(100%-1.5rem))] space-y-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-4 font-sans text-sm shadow-[var(--shadow-lift)]"
       style={{ left: `clamp(0.75rem, ${pick.x - 160}px, calc(100% - min(24rem, 100% - 1.5rem) - 0.75rem))`, top: pick.y }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -633,7 +633,7 @@ function Suggestions({
           ) : synonyms.length ? (
             <div className="flex flex-wrap gap-1.5">
               {synonyms.map((w) => (
-                <button key={w} type="button" onClick={() => onWord(w)} className="rounded-full border border-rule px-2.5 py-1 font-medium hover:border-action hover:bg-action-soft hover:text-action">
+                <button key={w} type="button" onClick={() => onWord(w)} className="neu-sm rounded-full px-2.5 py-1 font-medium transition-[box-shadow,color] hover:text-action active:shadow-[var(--neu-in)]">
                   {w}
                 </button>
               ))}

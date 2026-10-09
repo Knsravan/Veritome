@@ -287,11 +287,11 @@ export function CompareTool() {
           <label className="block">
             <span className="font-semibold">Text to leave out</span>
             <span className="block text-sm text-ink-faint">Optional. Paste the assignment&rsquo;s questions or any text every student was given.</span>
-            <textarea value={ignore} onChange={(e) => setIgnore(e.target.value)} rows={4} className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm" />
+            <textarea value={ignore} onChange={(e) => setIgnore(e.target.value)} rows={4} className="mt-1.5 w-full rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2 text-sm" />
           </label>
           <label className="flex items-center justify-between gap-2 text-sm">
             <span className="font-semibold">Shortest shared passage</span>
-            <select value={minRun} onChange={(e) => setMinRun(Number(e.target.value))} className="rounded-md border border-rule bg-page px-2 py-1">
+            <select value={minRun} onChange={(e) => setMinRun(Number(e.target.value))} className="neu-sm rounded-lg border border-[var(--neu-edge)] px-2.5 py-1">
               <option value={6}>6 words</option>
               <option value={8}>8 words</option>
               <option value={12}>12 words</option>

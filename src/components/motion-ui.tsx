@@ -68,7 +68,7 @@ export function SlidingChoice<T extends string>({
       {...(label ? { "aria-label": label } : {})}
       {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
       className={cx(
-        "relative isolate border border-rule bg-page p-1 shadow-sm",
+        "neu-in relative isolate p-1",
         size === "md" ? "inline-flex rounded-full" : "grid rounded-xl",
         className,
       )}
@@ -86,7 +86,7 @@ export function SlidingChoice<T extends string>({
       <span
         aria-hidden
         className={cx(
-          "absolute top-1 bottom-1 -z-10 bg-ink shadow-sm transition-[transform,width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
+          "neu-on absolute top-1 bottom-1 -z-10 transition-[transform,width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
           round,
           !pill && "opacity-0",
         )}
@@ -108,7 +108,7 @@ export function SlidingChoice<T extends string>({
               "inline-flex items-center justify-center gap-2 font-semibold transition-colors duration-300",
               round,
               size === "md" ? "px-5 py-2 text-sm" : "px-3 py-2 text-sm",
-              on ? "text-page" : "text-ink-soft hover:text-ink",
+              on ? "text-action" : "text-ink-soft hover:text-ink",
             )}
           >
             {o.label}
@@ -119,56 +119,7 @@ export function SlidingChoice<T extends string>({
   );
 }
 
-/** A small on/off switch drawn over a real checkbox, so it works with the keyboard and screen readers. */
-export function Switch({
-  checked,
-  disabled,
-  onChange,
-  label,
-  describedBy,
-  hue,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange?: (v: boolean) => void;
-  label: string;
-  describedBy?: string;
-  /** The colour when on; by default the surrounding --hue, or the action colour. */
-  hue?: string;
-}) {
-  return (
-    <span
-      className="relative inline-flex shrink-0 items-center"
-      style={hue ? ({ ["--hue" as string]: hue } as CSSProperties) : undefined}
-    >
-      <input
-        type="checkbox"
-        role="switch"
-        aria-label={label}
-        {...(describedBy ? { "aria-describedby": describedBy } : {})}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange?.(e.target.checked)}
-        className="peer absolute inset-0 z-10 m-0 cursor-pointer opacity-0 disabled:cursor-default"
-      />
-      <span
-        aria-hidden
-        className={cx(
-          "h-5 w-9 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
-          checked ? "bg-[var(--hue,var(--action))]" : "bg-desk-deep ring-1 ring-rule ring-inset",
-          disabled && !checked && "opacity-50",
-        )}
-      />
-      <span
-        aria-hidden
-        className={cx(
-          "pointer-events-none absolute top-[3px] left-[3px] size-3.5 rounded-full bg-white shadow-sm transition-transform duration-200",
-          checked && "translate-x-4",
-        )}
-      />
-    </span>
-  );
-}
+export { Switch } from "./ui";
 
 /** Whether the visitor asked for less motion. */
 export function useReducedMotion(): boolean {
@@ -189,8 +140,8 @@ export function ScanArt() {
   const ai = new Set([1, 2, 5]);
   return (
     <div aria-hidden className="relative h-56 w-64 select-none">
-      <div className="absolute top-6 left-8 h-48 w-48 rotate-[6deg] rounded-xl border border-rule bg-page/70 shadow-sm" />
-      <div className="animate-fade-up absolute top-2 left-2 h-52 w-52 -rotate-[3deg] overflow-hidden rounded-xl border border-rule bg-page p-4 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="absolute top-6 left-8 h-48 w-48 rotate-[6deg] rounded-xl border border-[var(--neu-edge)] bg-page/70 shadow-sm" />
+      <div className="animate-fade-up absolute top-2 left-2 h-52 w-52 -rotate-[3deg] overflow-hidden rounded-xl border border-[var(--neu-edge)] bg-page p-4 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <div className="mb-3 h-2.5 w-1/2 rounded-full bg-ink/80" />
         <div className="space-y-2.5">
           {lines.map((w, k) => (
@@ -208,7 +159,7 @@ export function ScanArt() {
         <div className="scan-beam" />
       </div>
       <div
-        className="animate-pop absolute right-0 bottom-3 flex items-center gap-2 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md"
+        className="animate-pop absolute right-0 bottom-3 flex items-center gap-2 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]"
         style={{ animationDelay: "1.6s" }}
       >
         <span className="size-2 rounded-full bg-[var(--u-ai)]" /> 3 of 8 read as AI
@@ -246,7 +197,7 @@ export function MorphArt() {
   const [stiff, easy] = SWAPS[k]!;
   return (
     <div aria-hidden className="relative h-56 w-72 select-none">
-      <div className="animate-fade-up absolute inset-x-0 top-3 rounded-2xl border border-rule bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="animate-fade-up absolute inset-x-0 top-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <p className="mb-3 text-xs font-semibold tracking-wide text-ink-faint uppercase">Your sentence</p>
         <p className="min-h-[4.5rem] font-serif text-[1.05rem] leading-relaxed">
           We{" "}
@@ -271,7 +222,7 @@ export function MorphArt() {
         </div>
       </div>
       <div
-        className="animate-pop absolute right-2 bottom-2 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md"
+        className="animate-pop absolute right-2 bottom-2 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]"
         style={{ animationDelay: "1.2s" }}
       >
         Citations and numbers locked
@@ -309,7 +260,7 @@ export function ParaphraseArt() {
   }, [n, after.length, reduce]);
   return (
     <div aria-hidden className="relative w-80 select-none">
-      <div className="animate-fade-up space-y-3 rounded-2xl border border-rule bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="animate-fade-up space-y-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <div>
           <p className="text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase">Original</p>
           <p key={k} className="animate-swap mt-1 font-serif text-[0.95rem] leading-relaxed text-ink-soft">
@@ -325,7 +276,7 @@ export function ParaphraseArt() {
           </p>
         </div>
       </div>
-      <div className="animate-pop absolute -right-3 -bottom-4 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md" style={{ animationDelay: "1.2s" }}>
+      <div className="animate-pop absolute -right-3 -bottom-4 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]" style={{ animationDelay: "1.2s" }}>
         Same meaning, checked
       </div>
     </div>
@@ -333,8 +284,8 @@ export function ParaphraseArt() {
 }
 
 /**
- * A slider with a few fixed steps: a gradient track, a dot at each step and a knob that glides to the chosen one.
- * Drag it, click a step or its label, or use the arrow keys.
+ * A capsule slider with a few fixed steps: a pressed-in well that fills with a raised colour bar up to the chosen step,
+ * with each step's name inside. Drag it, click a step, or use the arrow keys.
  */
 export function StepSlider<T extends string>({
   value,
@@ -349,104 +300,67 @@ export function StepSlider<T extends string>({
   label: string;
   id?: string;
 }) {
-  const track = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   const index = Math.max(0, options.findIndex((o) => o.id === value));
   const last = options.length - 1;
-  const pct = (i: number) => (last ? (i / last) * 100 : 0);
   const at = (clientX: number) => {
-    const r = track.current?.getBoundingClientRect();
+    const r = box.current?.getBoundingClientRect();
     if (!r || !r.width) return index;
-    return Math.round(Math.min(1, Math.max(0, (clientX - r.left) / r.width)) * last);
+    return Math.min(last, Math.max(0, Math.floor(((clientX - r.left) / r.width) * options.length)));
   };
   const set = (i: number) => {
     const o = options[Math.min(last, Math.max(0, i))];
     if (o && o.id !== value) onChange(o.id);
   };
   return (
-    <div className="select-none">
-      <div
-        id={id}
-        role="slider"
-        tabIndex={0}
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={last}
-        aria-valuenow={index}
-        aria-valuetext={options[index]?.label}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-            e.preventDefault();
-            set(index + 1);
-          } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-            e.preventDefault();
-            set(index - 1);
-          } else if (e.key === "Home") {
-            e.preventDefault();
-            set(0);
-          } else if (e.key === "End") {
-            e.preventDefault();
-            set(last);
-          }
-        }}
-        onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          setDragging(true);
-          set(at(e.clientX));
-        }}
-        onPointerMove={(e) => dragging && set(at(e.clientX))}
-        onPointerUp={() => setDragging(false)}
-        onPointerCancel={() => setDragging(false)}
-        className="step-slider group relative cursor-pointer touch-none rounded-full px-2.5 py-3"
-      >
-        <div ref={track} className="relative h-2 rounded-full bg-desk-deep">
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-action/70 to-action transition-[width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]"
-            style={{ width: `${pct(index)}%` }}
-          />
-          {options.map((o, i) => (
-            <span
-              key={o.id}
-              aria-hidden
-              className={cx(
-                "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-page transition-colors duration-300",
-                i <= index ? "bg-action" : "bg-ink-faint/40",
-              )}
-              style={{ left: `${pct(i)}%` }}
-            />
-          ))}
-          <span
-            aria-hidden
-            className={cx(
-              "absolute top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-page shadow-[0_2px_8px_rgb(15_23_42/0.25)] ring-2 ring-action transition-[left,transform] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
-              dragging ? "scale-110" : "group-hover:scale-105",
-              "group-focus-visible:shadow-[0_0_0_6px_color-mix(in_srgb,var(--focus)_35%,transparent)]",
-            )}
-            style={{ left: `${pct(index)}%` }}
-          >
-            <span className="size-2 rounded-full bg-action" />
-          </span>
-        </div>
-      </div>
-      <div className="relative mt-0.5 h-5 px-2.5 text-xs font-semibold">
+    <div
+      ref={box}
+      id={id}
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={last}
+      aria-valuenow={index}
+      aria-valuetext={options[index]?.label}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+          e.preventDefault();
+          set(index + 1);
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+          e.preventDefault();
+          set(index - 1);
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          set(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          set(last);
+        }
+      }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+        set(at(e.clientX));
+      }}
+      onPointerMove={(e) => dragging && set(at(e.clientX))}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      className="cap"
+    >
+      <span
+        aria-hidden
+        className="fill"
+        style={{ width: `calc((100% - 0.5rem) * ${(index + 1) / options.length})` }}
+      />
+      <span aria-hidden className="steps">
         {options.map((o, i) => (
-          <button
-            key={o.id}
-            type="button"
-            tabIndex={-1}
-            onClick={() => set(i)}
-            className={cx(
-              "absolute -translate-x-1/2 transition-colors duration-300",
-              i === 0 && "translate-x-0",
-              i === last && "-translate-x-full",
-              i === index ? "text-action" : "text-ink-faint hover:text-ink",
-            )}
-            style={{ left: `calc(0.625rem + (100% - 1.25rem) * ${pct(i) / 100})` }}
-          >
+          <span key={o.id} className={i <= index ? "on" : undefined}>
             {o.label}
-          </button>
+          </span>
         ))}
-      </div>
+      </span>
     </div>
   );
 }

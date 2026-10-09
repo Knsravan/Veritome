@@ -9,13 +9,13 @@
  */
 :root {
   color-scheme: light;
-  --desk: #f4f5f8;
-  --desk-deep: #e8ebf0;
-  --page: #ffffff;
+  --desk: #e9ecf2;
+  --desk-deep: #dde1e9;
+  --page: #eff1f6;
   --ink: #0e1320;
   --ink-soft: #434b5a;
   --ink-faint: #5b6474;
-  --rule: #e1e4ea;
+  --rule: #d9dde6;
   --action: #4f46e5;
   --action-ink: #ffffff;
   --action-soft: #eef0fe;
@@ -60,10 +60,15 @@
   --src-5-line: #5a3aa6;
   --src-6: #fbd9bf;
   --src-6-line: #9a4b10;
-  --shadow-card:
-    0 1px 2px rgb(15 23 42 / 0.04), 0 6px 20px -10px rgb(15 23 42 / 0.14);
-  --shadow-lift:
-    0 2px 4px rgb(15 23 42 / 0.05), 0 18px 40px -18px rgb(15 23 42 / 0.28);
+  /* Neumorphism: surfaces are lit from the top left, so raised things cast a dark shadow down-right and a
+     light one up-left; pressed-in things show the same shadows inside. */
+  --neu-dark: rgb(163 174 194 / 0.6);
+  --neu-light: rgb(255 255 255 / 0.95);
+  --neu-edge: rgb(255 255 255 / 0.75);
+  --shadow-card: 7px 7px 16px var(--neu-dark), -7px -7px 16px var(--neu-light);
+  --shadow-lift: 12px 12px 26px var(--neu-dark), -10px -10px 24px var(--neu-light);
+  --neu-sm: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
+  --neu-in: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
   /* Chart colours (validated for colour-blind separation and 3:1 contrast on the page surface). */
   --chart-seq: #2a78d6;
   --chart-human: #2a78d6;
@@ -78,13 +83,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --desk: #0a0c11;
-    --desk-deep: #161a23;
-    --page: #11141b;
+    --desk: #191c23;
+    --desk-deep: #14171d;
+    --page: #1d2129;
     --ink: #eceef3;
     --ink-soft: #b0b7c3;
     --ink-faint: #8f98a6;
-    --rule: #262b36;
+    --rule: #2b303b;
     --action: #9a9bff;
     --action-ink: #0a0c11;
     --action-soft: #1d1f3d;
@@ -127,10 +132,13 @@
     --src-5-line: #b9a3f2;
     --src-6: #5a300f;
     --src-6-line: #f0a56a;
-    --shadow-card:
-      0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-    --shadow-lift:
-      0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
+    --neu-dark: rgb(0 0 0 / 0.55);
+    --neu-light: rgb(255 255 255 / 0.045);
+    --neu-edge: rgb(255 255 255 / 0.05);
+    --shadow-card: 7px 7px 16px var(--neu-dark), -6px -6px 14px var(--neu-light);
+    --shadow-lift: 12px 12px 26px var(--neu-dark), -10px -10px 22px var(--neu-light);
+    --neu-sm: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
+    --neu-in: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
     --chart-seq: #3987e5;
     --chart-human: #3987e5;
     --chart-ai: #d55181;
@@ -151,13 +159,13 @@
   --u-grammar: #ff6b70;
   --u-cite: #34d1bf;
   --u-flag: #f87171;
-  --desk: #0a0c11;
-  --desk-deep: #161a23;
-  --page: #11141b;
+  --desk: #191c23;
+  --desk-deep: #14171d;
+  --page: #1d2129;
   --ink: #eceef3;
   --ink-soft: #b0b7c3;
   --ink-faint: #8f98a6;
-  --rule: #262b36;
+  --rule: #2b303b;
   --action: #9a9bff;
   --action-ink: #0a0c11;
   --action-soft: #1d1f3d;
@@ -189,9 +197,13 @@
   --src-5-line: #b9a3f2;
   --src-6: #5a300f;
   --src-6-line: #f0a56a;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-  --shadow-lift:
-    0 2px 6px rgb(0 0 0 / 0.5), 0 22px 44px -18px rgb(0 0 0 / 0.75);
+  --neu-dark: rgb(0 0 0 / 0.55);
+  --neu-light: rgb(255 255 255 / 0.045);
+  --neu-edge: rgb(255 255 255 / 0.05);
+  --shadow-card: 7px 7px 16px var(--neu-dark), -6px -6px 14px var(--neu-light);
+  --shadow-lift: 12px 12px 26px var(--neu-dark), -10px -10px 22px var(--neu-light);
+  --neu-sm: 3px 3px 8px var(--neu-dark), -3px -3px 8px var(--neu-light);
+  --neu-in: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
   --chart-seq: #3987e5;
   --chart-human: #3987e5;
   --chart-ai: #d55181;
@@ -388,8 +400,8 @@ h3,
 }
 
 .card {
-  border: 1px solid var(--rule);
-  border-radius: 1rem;
+  border: 1px solid var(--neu-edge);
+  border-radius: 1.25rem;
   background: var(--page);
   box-shadow: var(--shadow-card);
 }
@@ -676,8 +688,8 @@ h3,
   inset: auto 0 -3px 0;
   height: 5px;
   background: var(--pdf-line, #e0a100);
-  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E\") repeat-x;
-  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E\") repeat-x;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") repeat-x;
   transition: opacity 0.15s ease;
 }
 .pdf-hl[data-src="1"] {
@@ -700,32 +712,32 @@ h3,
 }
 .pdf-hl.mark-para::after {
   opacity: 0.75;
-  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E\");
-  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E\");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.0'/%3E%3C/svg%3E");
 }
 .pdf-hl.mark-grammar::after {
   --pdf-line: #e5484d;
-  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E\");
-  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E\");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='0.8'/%3E%3C/svg%3E");
 }
 .pdf-hl.mark-grammar.is-info::after {
   opacity: 0.55;
 }
 .pdf-hl.mark-cite::after {
   --pdf-line: #0f9f8f;
-  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E\");
-  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E\");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.2'/%3E%3C/svg%3E");
 }
 .pdf-hl.mark-flag::after {
   --pdf-line: #dc2626;
-  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E\");
-  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E\");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='2.0'/%3E%3C/svg%3E");
 }
 .pdf-hl.mark-ai::after,
 .pdf-hl.mark-ai-medium::after {
   --pdf-line: #8b5cf6;
-  -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E\");
-  mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E\");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 2.5 Q2 0.5 4 2.5 T8 2.5' fill='none' stroke='black' stroke-width='1.3'/%3E%3C/svg%3E");
 }
 .pdf-hl.mark-ai-medium::after {
   opacity: 0.6;
@@ -828,18 +840,15 @@ h3,
   inherits: false;
 }
 .drop-glow {
-  border: 2px solid transparent;
-  background:
-    linear-gradient(var(--page), var(--page)) padding-box,
-    conic-gradient(
-        from var(--angle),
-        color-mix(in srgb, var(--action) 15%, transparent),
-        var(--action),
-        color-mix(in srgb, var(--u-src-2) 70%, transparent),
-        color-mix(in srgb, var(--action) 15%, transparent)
-      )
-      border-box;
-  animation: border-flow 6s linear infinite;
+  /* A well pressed into the card, with a dashed edge in the brand colour that brightens on hover. */
+  border: 2px dashed color-mix(in srgb, var(--action) 32%, transparent);
+  background: var(--desk);
+  box-shadow: var(--neu-in);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.drop-glow:hover {
+  border-color: color-mix(in srgb, var(--action) 65%, transparent);
+  box-shadow: var(--neu-in), 0 0 0 4px var(--glow);
 }
 @media (prefers-reduced-motion: reduce) {
   .file-shine,
@@ -1152,7 +1161,36 @@ h3,
     animation: none !important;
   }
 }
-/* The step slider shows focus as a halo around its knob instead of a box. */
-.step-slider:focus-visible {
-  outline: none;
+
+/* Neumorphism helpers: raised surfaces, small raised controls, pressed-in wells and the chosen item in a track. */
+@layer components {
+  .neu-raised {
+    background: var(--page);
+    border: 1px solid var(--neu-edge);
+    box-shadow: var(--shadow-card);
+  }
+  .neu-sm {
+    background: var(--page);
+    box-shadow: var(--neu-sm);
+  }
+  .neu-in {
+    background: var(--desk);
+    box-shadow: var(--neu-in);
+  }
+  .neu-on {
+    background: var(--page);
+    box-shadow: var(--neu-sm);
+    color: var(--action);
+  }
+}
+/* Text fields are pressed into the surface (in the base layer, so a field can opt out with shadow-none). */
+@layer base {
+  textarea,
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="url"],
+  input:not([type]) {
+    box-shadow: var(--neu-in);
+  }
 }

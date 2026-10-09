@@ -12,7 +12,7 @@ import {
   RepeatIcon,
   XIcon,
 } from "@/components/icons";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import { HUMANISE_DISCLOSURE } from "@/core/rewrite/humanise";
 import { MakeYours } from "./make-yours";
 import { QualityCard } from "./quality-card";
@@ -144,7 +144,7 @@ export function FileResult({
           )}
           {kind === "docx" && (
             <Button
-              variant="secondary"
+              variant="pillow"
               disabled={running || busy !== null}
               busy={busy === "tracked"}
               onClick={() => void get(true)}
@@ -153,6 +153,7 @@ export function FileResult({
             </Button>
           )}
           <Button
+            variant="pillow"
             disabled={running || busy !== null}
             busy={busy === "file"}
             onClick={() => void get(false)}
@@ -197,7 +198,7 @@ export function FileResult({
         <div
           role="tablist"
           aria-label="View"
-          className="inline-flex rounded-full border border-rule bg-page p-1 shadow-sm"
+          className="neu-in inline-flex rounded-full p-1"
         >
           {(
             [
@@ -215,7 +216,7 @@ export function FileResult({
               className={cx(
                 "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-40",
                 tab === t
-                  ? "bg-ink text-page"
+                  ? "neu-on"
                   : "text-ink-soft hover:bg-desk-deep hover:text-ink",
               )}
             >
@@ -226,12 +227,7 @@ export function FileResult({
         {tab === "document" && (
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={showChanges}
-                onChange={(e) => setShowChanges(e.target.checked)}
-                className="size-4 accent-[var(--action)]"
-              />
+              <Switch checked={showChanges} onChange={setShowChanges} label="Highlight what changed" />
               Highlight what changed
             </label>
             <button
@@ -372,7 +368,7 @@ export function FileResult({
                           <div
                             role="radiogroup"
                             aria-label="Which version to keep"
-                            className="inline-flex rounded-lg border border-rule p-0.5 text-sm"
+                            className="neu-in inline-flex rounded-lg p-1 text-sm"
                           >
                             {(
                               [
@@ -389,7 +385,7 @@ export function FileResult({
                                 className={cx(
                                   "rounded-md px-2.5 py-1 font-semibold",
                                   it.use === v
-                                    ? "bg-ink text-page"
+                                    ? "neu-on"
                                     : "text-ink-soft hover:text-ink",
                                 )}
                               >
@@ -432,7 +428,7 @@ export function FileResult({
                         aria-label="Edit this paragraph"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        className="block h-40 w-full resize-y rounded-lg border border-rule bg-page p-3 font-serif leading-[1.7]"
+                        className="block h-40 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk p-3 font-serif leading-[1.7]"
                       />
                       <div className="flex gap-2">
                         <Button

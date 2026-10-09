@@ -19,7 +19,7 @@ import {
   SparkIcon,
   XIcon,
 } from "@/components/icons";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import {
   HUMANISE_DISCLOSURE,
   HUMANISE_STRENGTHS,
@@ -463,7 +463,7 @@ export function HumaniserTool() {
                       value={voice}
                       onChange={(e) => setVoice(e.target.value.slice(0, 12_000))}
                       placeholder="Paste 150 to 1,500 words you wrote yourself, before any AI tool touched it. The rewrite copies its style, not its content."
-                      className="block h-36 w-full resize-y rounded-lg border border-rule bg-page px-3 py-2 text-sm"
+                      className="block h-36 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2 text-sm"
                     />
                     <p className="text-xs text-ink-faint">
                       Used only for this check and never stored.
@@ -580,13 +580,13 @@ function Result({
             </Button>
           )}
           <Button
-            variant="secondary"
+            variant="glow"
             disabled={running}
             onClick={() => void copy(finalText, "The revised text")}
           >
             <CopyIcon size={16} /> Copy text
           </Button>
-          <Button disabled={running} onClick={() => void downloadWord()}>
+          <Button variant="pillow" disabled={running} onClick={() => void downloadWord()}>
             <DownloadIcon /> Download Word file
           </Button>
         </div>
@@ -631,12 +631,7 @@ function Result({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={showChanges}
-            onChange={(e) => setShowChanges(e.target.checked)}
-            className="size-4 accent-[var(--action)]"
-          />
+          <Switch checked={showChanges} onChange={setShowChanges} label="Show what changed" />
           Show what changed
         </label>
         <p className="text-sm text-ink-soft">
@@ -708,7 +703,7 @@ function Result({
                         aria-label="Edit this paragraph"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        className="block h-40 w-full resize-y rounded-lg border border-rule bg-page p-3 font-serif leading-[1.7]"
+                        className="block h-40 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk p-3 font-serif leading-[1.7]"
                       />
                       <div className="flex gap-2">
                         <Button
@@ -777,7 +772,7 @@ function Result({
                         <div
                           role="radiogroup"
                           aria-label="Which version to keep"
-                          className="inline-flex rounded-lg border border-rule p-0.5 text-sm"
+                          className="neu-in inline-flex rounded-lg p-1 text-sm"
                         >
                           {(
                             [
@@ -794,7 +789,7 @@ function Result({
                               className={cx(
                                 "rounded-md px-2.5 py-1 font-semibold",
                                 it.use === v
-                                  ? "bg-ink text-page"
+                                  ? "neu-on"
                                   : "text-ink-soft hover:text-ink",
                               )}
                             >
@@ -879,7 +874,7 @@ function Result({
           </span>
         </p>
         <Button
-          variant="secondary"
+          variant="glow"
           onClick={() => void copy(HUMANISE_DISCLOSURE, "The statement")}
         >
           <CopyIcon size={16} /> Copy statement

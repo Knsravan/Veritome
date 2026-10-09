@@ -736,7 +736,7 @@ export function LayoutToggle({
     <div
       role="radiogroup"
       aria-label="How to show your paper"
-      className="mb-4 ml-auto flex w-fit rounded-lg border border-rule p-0.5 text-sm print:hidden"
+      className="neu-in mb-4 ml-auto flex w-fit rounded-lg p-1 text-sm print:hidden"
     >
       {(
         [
@@ -752,7 +752,7 @@ export function LayoutToggle({
           onClick={() => onChange(v)}
           className={cx(
             "rounded-md px-3 py-1.5 font-semibold transition-colors",
-            value === v ? "bg-ink text-page" : "text-ink-soft hover:bg-desk",
+            value === v ? "neu-on" : "text-ink-soft hover:bg-desk",
           )}
         >
           {label}

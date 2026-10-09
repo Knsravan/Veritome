@@ -96,11 +96,11 @@ function CheckRow({
       style={hue(color)}
       title={full}
       className={cx(
-        "group relative flex items-center gap-2.5 overflow-hidden rounded-xl border py-1.5 pr-2.5 pl-3 transition-[background-color,border-color] duration-200",
+        "group relative flex items-center gap-2.5 overflow-hidden rounded-xl border py-1.5 pr-2.5 pl-3 transition-[background-color,border-color,box-shadow] duration-200",
         locked ? "cursor-default" : "cursor-pointer",
         checked
-          ? "border-[color-mix(in_srgb,var(--hue)_40%,transparent)] bg-[color-mix(in_srgb,var(--hue)_8%,var(--page))]"
-          : "border-rule bg-page hover:bg-desk",
+          ? "border-transparent bg-[color-mix(in_srgb,var(--hue)_7%,var(--desk))] shadow-[var(--neu-in)]"
+          : "border-[var(--neu-edge)] bg-page shadow-[var(--neu-sm)]",
       )}
     >
       <span
@@ -159,15 +159,15 @@ function SourceChip({
       style={hue("var(--action)")}
       title={title}
       className={cx(
-        "flex min-w-0 items-center gap-2 rounded-xl border py-2 pr-2 pl-2.5 transition-[background-color,border-color] duration-200",
+        "flex min-w-0 items-center gap-1.5 rounded-xl border py-2 pr-1.5 pl-2 transition-[background-color,border-color,box-shadow] duration-200",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-        on ? "border-action/40 bg-action-soft/70" : "border-rule bg-page",
+        on ? "border-transparent bg-[color-mix(in_srgb,var(--action)_7%,var(--desk))] shadow-[var(--neu-in)]" : "border-[var(--neu-edge)] bg-page shadow-[var(--neu-sm)]",
       )}
     >
       <span aria-hidden className={cx("shrink-0", on ? "text-action" : "text-ink-faint")}>
         <Icon size={17} />
       </span>
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">{label}</span>
       <Switch checked={on} disabled={disabled} onChange={onChange} label={name} />
     </label>
   );
@@ -199,11 +199,7 @@ export function CheckOptions({
 }) {
   const on = 1 + Object.values(extras).filter(Boolean).length;
   const set = (v: boolean) => onExtras({ detector: v, citations: v, grammar: v, rewrites: v });
-  const preset = (active: boolean) =>
-    cx(
-      "rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
-      active ? "border-ink bg-ink text-page" : "border-rule text-ink-soft hover:text-ink",
-    );
+  const preset = (active: boolean) => cx("nb nb-latch min-h-0 rounded-full px-2.5 py-0.5 text-xs", !active && "text-ink-soft");
 
   return (
     <>

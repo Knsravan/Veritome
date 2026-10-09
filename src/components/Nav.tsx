@@ -38,7 +38,7 @@ export function SiteHeader() {
       className={cx(
         "sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow] duration-300 print:hidden",
         scrolled || open
-          ? "border-rule bg-page/80 shadow-[0_8px_30px_-18px_rgb(15_23_42/0.35)] backdrop-blur-xl supports-[backdrop-filter]:bg-page/70"
+          ? "border-[var(--neu-edge)] bg-desk/85 shadow-[0_8px_18px_-8px_var(--neu-dark)] backdrop-blur-xl supports-[backdrop-filter]:bg-desk/75"
           : "border-transparent bg-transparent",
       )}
     >
@@ -65,7 +65,7 @@ export function SiteHeader() {
           aria-label="Tools"
           className="hidden flex-1 justify-center lg:flex"
         >
-          <ul className="flex items-center gap-1 rounded-full border border-rule bg-page/70 p-1 shadow-sm">
+          <ul className="neu-in flex items-center gap-1 rounded-full p-1">
             {LINKS.map((l) => {
               const active = path === l.href;
               return (
@@ -77,7 +77,7 @@ export function SiteHeader() {
                     className={cx(
                       "block rounded-full px-3 py-1.5 xl:px-3.5 text-[0.9rem] font-medium whitespace-nowrap transition-[background-color,color,transform] duration-300 active:scale-95",
                       active
-                        ? "bg-ink text-page shadow-sm"
+                        ? "neu-on"
                         : l.soon
                           ? "text-ink-faint hover:bg-desk-deep hover:text-ink-soft"
                           : "text-ink-soft hover:bg-desk-deep hover:text-ink",
@@ -103,7 +103,7 @@ export function SiteHeader() {
           <Link
             href="/history"
             aria-current={path === "/history" ? "page" : undefined}
-            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink sm:inline-flex"
+            className="nb nb-round hidden sm:inline-flex"
             title="History"
           >
             <HistoryIcon />
@@ -112,7 +112,7 @@ export function SiteHeader() {
           <Link
             href="/settings"
             aria-current={path === "/settings" ? "page" : undefined}
-            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-desk-deep hover:text-ink sm:inline-flex"
+            className="nb nb-round hidden sm:inline-flex"
             title="Settings"
           >
             <SettingsIcon />
@@ -121,7 +121,7 @@ export function SiteHeader() {
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-desk-deep lg:hidden"
+            className="nb nb-round text-ink lg:hidden"
             aria-expanded={open}
             aria-controls={menuId}
             onClick={() => setOpen((o) => !o)}
@@ -136,7 +136,7 @@ export function SiteHeader() {
         id={menuId}
         aria-label="Menu"
         hidden={!open}
-        className="animate-fade-in border-t border-rule bg-page lg:hidden"
+        className="animate-fade-in border-t border-[var(--neu-edge)] bg-desk lg:hidden"
       >
         <ul className="mx-auto grid max-w-7xl gap-1 px-4 py-3 sm:grid-cols-2 sm:px-6">
           {[
@@ -154,10 +154,10 @@ export function SiteHeader() {
                 href={l.href}
                 aria-current={path === l.href ? "page" : undefined}
                 className={cx(
-                  "block rounded-xl px-3 py-2.5 font-medium",
+                  "block rounded-xl px-3 py-2.5 font-medium transition-shadow duration-200",
                   path === l.href
-                    ? "bg-action-soft text-action"
-                    : "hover:bg-desk",
+                    ? "neu-on"
+                    : "hover:shadow-[var(--neu-sm)]",
                   l.soon && "text-ink-faint",
                 )}
               >

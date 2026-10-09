@@ -107,7 +107,7 @@ export function SettingsForm() {
                   placeholder={ph}
                   autoComplete="off"
                   onChange={(e) => setLlm({ ...llm, [k]: e.target.value })}
-                  className="mt-1 block w-full rounded border border-rule bg-page px-3 py-2"
+                  className="mt-1 block w-full rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2"
                 />
               </label>
             ))}

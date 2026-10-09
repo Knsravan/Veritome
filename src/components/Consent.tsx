@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
+import { Switch } from "./ui";
 
 type Ask = (purpose: ConsentPurpose) => Promise<boolean>;
 export type ConsentPurpose = "plagiarism" | "citations" | "report" | "grammar";
@@ -56,7 +57,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
           e.preventDefault();
           finish(false);
         }}
-        className="m-auto w-[min(34rem,calc(100vw-2rem))] rounded-md border border-rule bg-page p-0 text-ink shadow-2xl backdrop:bg-black/40"
+        className="m-auto w-[min(34rem,calc(100vw-2rem))] rounded-2xl border border-[var(--neu-edge)] bg-page p-0 text-ink shadow-[var(--shadow-lift)] backdrop:bg-black/40"
       >
         {pending && (
           <div className="p-6">
@@ -78,14 +79,14 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
             </p>
             <p className="mt-3 text-ink-soft">If your manuscript is confidential, cancel and use the offline checks instead.</p>
             <label className="mt-4 flex items-center gap-2">
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-4 accent-[var(--action)]" />
+              <Switch checked={remember} onChange={setRemember} label="Remember my answer on this device" />
               Remember my answer on this device
             </label>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button type="button" onClick={() => finish(false)} className="rounded border border-rule px-4 py-2 font-medium hover:bg-desk">
+              <button type="button" onClick={() => finish(false)} className="neu-sm rounded-lg border border-[var(--neu-edge)] px-4 py-2 font-medium transition-shadow hover:shadow-[var(--shadow-card)] active:shadow-[var(--neu-in)]">
                 Cancel
               </button>
-              <button type="button" onClick={() => finish(true)} className="rounded bg-action px-4 py-2 font-semibold text-action-ink hover:opacity-90">
+              <button type="button" onClick={() => finish(true)} className="rounded-lg bg-action px-4 py-2 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[box-shadow,transform] hover:-translate-y-px active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]">
                 Send and run the check
               </button>
             </div>

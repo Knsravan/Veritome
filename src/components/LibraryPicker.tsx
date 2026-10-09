@@ -44,7 +44,7 @@ export function LibraryPicker({ items, onChange, serverCount }: { items: Library
       {items.length > 0 && (
         <ul className="space-y-1 text-sm">
           {items.map((d, i) => (
-            <li key={`${d.title}-${i}`} className="flex items-center justify-between gap-2 rounded border border-rule bg-page px-3 py-1.5">
+            <li key={`${d.title}-${i}`} className="flex items-center justify-between gap-2 neu-sm rounded-lg px-3 py-1.5">
               <span className="truncate">{d.title}</span>
               <button type="button" className="text-ink-faint underline-offset-4 hover:underline" onClick={() => onChange(items.filter((_, j) => j !== i))} aria-label={`Remove ${d.title}`}>
                 Remove

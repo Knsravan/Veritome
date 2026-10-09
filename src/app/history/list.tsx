@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HistoryIcon, ShieldIcon, TrashIcon } from "@/components/icons";
-import { Button, cx } from "@/components/ui";
+import { Button, Switch, cx } from "@/components/ui";
 import {
   clearChecks,
   deleteCheck,
@@ -96,12 +96,7 @@ export function HistoryList() {
           Anyone who uses this browser can see it.
         </p>
         <label className="flex items-center gap-2 text-sm font-semibold">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setHistoryEnabled(e.target.checked)}
-            className="size-4 accent-[var(--action)]"
-          />
+          <Switch checked={enabled} onChange={setHistoryEnabled} label="Save my checks on this device" />
           Save my checks on this device
         </label>
       </section>
@@ -111,7 +106,7 @@ export function HistoryList() {
           <div
             role="radiogroup"
             aria-label="Show"
-            className="inline-flex flex-wrap rounded-full border border-rule bg-page p-1 text-sm"
+            className="neu-in inline-flex flex-wrap rounded-full p-1 text-sm"
           >
             {(["all", "plagiarism", "detector", "humaniser", "paraphraser"] as const).map(
               (t) => (
@@ -124,7 +119,7 @@ export function HistoryList() {
                   className={cx(
                     "rounded-full px-3.5 py-1.5 font-semibold",
                     filter === t
-                      ? "bg-ink text-page"
+                      ? "neu-on"
                       : "text-ink-soft hover:text-ink",
                   )}
                 >
@@ -140,7 +135,7 @@ export function HistoryList() {
               placeholder="Search by name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 w-56 rounded-lg border border-rule bg-page px-3 text-sm"
+              className="h-10 w-56 rounded-lg border border-[var(--neu-edge)] bg-desk px-3 text-sm"
             />
             {confirmClear ? (
               <>
@@ -192,13 +187,13 @@ export function HistoryList() {
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <Link
               href="/plagiarism"
-              className="rounded-full bg-action px-5 py-2 font-semibold text-action-ink"
+              className="rounded-full bg-action px-5 py-2 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[box-shadow,transform] hover:-translate-y-px active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]"
             >
               Check a paper
             </Link>
             <Link
               href="/detector"
-              className="rounded-full border border-rule px-5 py-2 font-semibold"
+              className="neu-sm rounded-full border border-[var(--neu-edge)] px-5 py-2 font-semibold transition-[box-shadow,transform] hover:-translate-y-px active:shadow-[var(--neu-in)]"
             >
               AI detector
             </Link>
@@ -249,7 +244,7 @@ export function HistoryList() {
                     type="button"
                     onClick={() => void deleteCheck(i.id)}
                     aria-label={`Delete ${i.title} from history`}
-                    className="relative z-10 rounded-lg p-2 text-ink-soft hover:bg-desk-deep hover:text-ink"
+                    className="relative z-10 nb nb-round size-9"
                   >
                     <TrashIcon size={18} />
                   </button>

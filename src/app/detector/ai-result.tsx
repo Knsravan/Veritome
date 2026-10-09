@@ -137,7 +137,7 @@ export function AiResult({
             </Button>
             {doc && (doc.kind === "pdf" || doc.kind === "docx") && (
               <Button
-                variant="secondary"
+                variant="pillow"
                 onClick={() => void downloadMarked()}
                 busy={busy === "file"}
               >
@@ -148,6 +148,7 @@ export function AiResult({
               </Button>
             )}
             <Button
+              variant="pillow"
               onClick={() => void downloadReport()}
               busy={busy === "report"}
             >

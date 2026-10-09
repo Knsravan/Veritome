@@ -5,7 +5,7 @@ import type { CitationCrossCheck } from "@/core/citations/intext";
 import { formatBibtex, formatReferenceText } from "@/core/citations/format";
 import { CITATION_STYLES, type CitationStyle, type Work } from "@/core/citations/types";
 import type { ReferenceCheck, VerifyListResult, VerifyStatus } from "@/core/citations/verify";
-import { cx } from "./ui";
+import { Switch, cx } from "./ui";
 
 export const STATUS_TEXT: Record<VerifyStatus, { label: string; tone: string; help: string }> = {
   verified: { label: "Verified", tone: "border-ok text-ok", help: "Matches a database record closely." },
@@ -30,7 +30,7 @@ export function StylePicker({ value, onChange }: { value: CitationStyle; onChang
   return (
     <label className="flex items-center gap-2 text-sm">
       Citation style
-      <select value={value} onChange={(e) => onChange(e.target.value as CitationStyle)} className="rounded border border-rule bg-page px-2 py-1">
+      <select value={value} onChange={(e) => onChange(e.target.value as CitationStyle)} className="neu-sm rounded-lg border border-[var(--neu-edge)] px-2.5 py-1">
         {CITATION_STYLES.map((s) => (
           <option key={s.id} value={s.id}>
             {s.label}
@@ -144,7 +144,7 @@ export function VerifyView({ result, crossCheck }: { result: VerifyListResult; c
       {crossCheck && <CrossCheckView check={crossCheck} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} className="size-4 accent-[var(--action)]" />
+          <Switch checked={only} onChange={setOnly} label="Only show entries that need attention" />
           Only show entries that need attention
         </label>
         <StylePicker value={style} onChange={setStyle} />
@@ -164,7 +164,7 @@ export function CrossCheckView({ check }: { check: CitationCrossCheck }) {
   for (const r of check.uncitedReferences) items.push(`Entry ${r.index} is never cited in the text: ${r.raw.slice(0, 120)}${r.raw.length > 120 ? "…" : ""}`);
   if (check.numbersOutOfOrder) items.push("Numbered citations do not first appear in order 1, 2, 3, …");
   return (
-    <section aria-labelledby="xc-h" className="rounded border border-rule bg-page px-4 py-3 text-sm">
+    <section aria-labelledby="xc-h" className="neu-raised rounded-xl px-4 py-3 text-sm">
       <h3 id="xc-h" className="font-semibold">
         Text and reference list ({check.citations.length} in-text citation{check.citations.length === 1 ? "" : "s"}, {check.style === "none" ? "no style detected" : `${check.style} style`})
       </h3>

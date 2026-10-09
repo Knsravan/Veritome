@@ -26,14 +26,14 @@ export function RewriteResultView({ result, compact = false }: { result: Rewrite
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="How to show the rewrite" className="inline-flex rounded border border-rule bg-page p-0.5">
+        <div role="group" aria-label="How to show the rewrite" className="neu-in inline-flex rounded-full p-1">
           {(["changes", "clean"] as const).map((v) => (
             <button
               key={v}
               type="button"
               aria-pressed={view === v}
               onClick={() => setView(v)}
-              className={cx("rounded px-3 py-1.5 text-sm", view === v ? "bg-action text-action-ink" : "text-ink-soft hover:text-ink")}
+              className={cx("rounded-full px-3.5 py-1.5 text-sm font-semibold transition-[box-shadow,color] duration-200", view === v ? "neu-on" : "text-ink-soft hover:text-ink")}
             >
               {v === "changes" ? "Show changes" : "Clean text"}
             </button>
@@ -43,7 +43,7 @@ export function RewriteResultView({ result, compact = false }: { result: Rewrite
           <span className="text-sm text-ink-faint">
             {Math.round(result.changed * 100)}% of words changed, {result.method === "llm" ? `rewritten by ${result.model}` : "rule-based edits only"}
           </span>
-          <Button variant="secondary" onClick={copy}>
+          <Button variant="glow" onClick={copy}>
             {copied ? "Copied" : "Copy text"}
           </Button>
         </div>
@@ -54,7 +54,7 @@ export function RewriteResultView({ result, compact = false }: { result: Rewrite
       <Sheet label="Rewritten text">{view === "changes" ? <DiffView before={result.original} after={result.text} /> : <div className="sheet-text">{result.text}</div>}</Sheet>
       <Warnings items={result.warnings} />
       {failed.length > 0 && !compact && (
-        <details className="rounded border border-rule bg-page px-4 py-3 text-sm">
+        <details className="neu-raised rounded-xl px-4 py-3 text-sm">
           <summary className="cursor-pointer font-semibold">Why {failed.length === 1 ? "one passage was" : `${failed.length} passages were`} left unchanged</summary>
           <ul className="mt-2 space-y-2">
             {failed.map((c, i) => (
@@ -77,7 +77,7 @@ export function RewriteResultView({ result, compact = false }: { result: Rewrite
         ].map(([label, s]) => {
           const snap = s as typeof before;
           return (
-            <div key={label as string} className="rounded border border-rule bg-page px-4 py-3">
+            <div key={label as string} className="neu-raised rounded-xl px-4 py-3">
               <p className="text-sm font-semibold">
                 {label as string}: {VERDICT_TEXT[snap.verdict]}
               </p>
