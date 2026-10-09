@@ -1,11 +1,28 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "quiet"; busy?: boolean };
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  /**
+   * primary: the brand colour, for the main action. secondary: soft and raised. pillow: a cushion, for downloads.
+   * glow: a breathing halo on hover, for copy and quick actions. quiet: a text link.
+   */
+  variant?: "primary" | "secondary" | "pillow" | "glow" | "quiet";
+  busy?: boolean;
+};
 
+const BUTTON_STYLES = {
+  primary: "nb nb-brand",
+  secondary: "nb nb-soft",
+  pillow: "nb nb-pillow",
+  glow: "nb nb-glow",
+  quiet:
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 py-2 font-semibold text-action underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60",
+} as const;
+
+/** A button. While `busy` it presses into the page with colour sweeping through it. */
 export function Button({ variant = "primary", busy, className, children, disabled, ...rest }: ButtonProps) {
   return (
     <button
@@ -13,15 +30,7 @@ export function Button({ variant = "primary", busy, className, children, disable
       {...rest}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
-      className={cx(
-        "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 font-semibold transition-[transform,background-color,box-shadow,opacity] duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
-        variant === "primary" &&
-          "bg-action text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] hover:-translate-y-px hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--shadow-card)] active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]",
-        variant === "secondary" &&
-          "border border-[var(--neu-edge)] bg-page text-ink shadow-[var(--neu-sm)] hover:-translate-y-px hover:shadow-[var(--shadow-card)] active:shadow-[var(--neu-in)]",
-        variant === "quiet" && "rounded-lg px-2 text-action underline-offset-4 hover:underline",
-        className,
-      )}
+      className={cx(BUTTON_STYLES[variant], className)}
     >
       {busy && <span aria-hidden className="inline-block size-3 animate-spin rounded-full border-2 border-current border-r-transparent" />}
       {children}
@@ -78,6 +87,51 @@ export function ToolHeader({ title, intro, children }: { title: string; intro: R
   );
 }
 
+/**
+ * The site's on/off toggle, drawn over a real checkbox so it works with the keyboard and screen readers. The knob
+ * stretches while pressed and its cross turns into a tick when on.
+ */
+export function Switch({
+  checked,
+  disabled,
+  onChange,
+  label,
+  describedBy,
+  hue,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange?: (v: boolean) => void;
+  label: string;
+  describedBy?: string;
+  /** The colour when on; by default the surrounding --hue, or the action colour. */
+  hue?: string;
+}) {
+  return (
+    <span className="sw" style={hue ? ({ ["--hue" as string]: hue } as CSSProperties) : undefined}>
+      <input
+        type="checkbox"
+        role="switch"
+        aria-label={label}
+        {...(describedBy ? { "aria-describedby": describedBy } : {})}
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange?.(e.target.checked)}
+      />
+      <span aria-hidden className="tr">
+        <span className="kn">
+          <svg className="no" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+          <svg className="yes" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12.5l4.5 4.5L19 7.5" />
+          </svg>
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export function Checkbox({
   checked,
   onChange,
@@ -92,14 +146,10 @@ export function Checkbox({
   disabled?: boolean;
 }) {
   return (
-    <label className={cx("flex items-start gap-2", disabled && "opacity-60")}>
-      <input
-        type="checkbox"
-        className="mt-1 size-4 shrink-0 accent-[var(--action)]"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+    <label className={cx("flex cursor-pointer items-start gap-3", disabled && "cursor-default opacity-60")}>
+      <span className="mt-0.5">
+        <Switch checked={checked} disabled={disabled} onChange={onChange} label={label} />
+      </span>
       <span>
         {label}
         {hint && <span className="block text-sm text-ink-faint">{hint}</span>}

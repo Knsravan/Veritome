@@ -16,7 +16,7 @@ import {
   XIcon,
 } from "@/components/icons";
 import { ParaphraseArt, SlidingChoice, StepSlider } from "@/components/motion-ui";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import {
   PARAPHRASE_STRENGTHS,
   PARAPHRASE_STYLES,
@@ -299,7 +299,7 @@ export function ParaphraserTool() {
         </div>
         <div className="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:items-center">
           <div>
-            <p className="text-sm font-semibold" id="pp-strength-label">
+            <p className="mb-1.5 text-sm font-semibold" id="pp-strength-label">
               Strength
             </p>
             <StepSlider
@@ -309,7 +309,7 @@ export function ParaphraserTool() {
               onChange={setStrength}
               options={PARAPHRASE_STRENGTHS.map((s) => ({ id: s.id, label: s.label }))}
             />
-            <p key={strength} className="animate-swap text-xs text-ink-soft">
+            <p key={strength} className="animate-swap mt-1.5 text-xs text-ink-soft">
               {PARAPHRASE_STRENGTHS.find((s) => s.id === strength)?.description}
             </p>
           </div>
@@ -399,7 +399,7 @@ export function ParaphraserTool() {
             {run && (
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 <label className="flex items-center gap-1.5 font-medium">
-                  <input type="checkbox" checked={showChanges} onChange={(e) => setShowChanges(e.target.checked)} className="size-4 accent-[var(--action)]" />
+                  <Switch checked={showChanges} onChange={setShowChanges} label="Show changes" />
                   Show changes
                 </label>
                 <span className="rounded-full bg-action-soft px-2.5 py-0.5 font-semibold tabular-nums text-action" aria-live="polite">
@@ -496,10 +496,10 @@ export function ParaphraserTool() {
                 {note ?? `${countWords(output).toLocaleString("en")} words`}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => void copy()}>
+                <Button variant="glow" onClick={() => void copy()}>
                   <CopyIcon size={16} /> Copy
                 </Button>
-                <Button variant="secondary" onClick={() => void download()}>
+                <Button variant="pillow" onClick={() => void download()}>
                   <DownloadIcon size={16} /> Word file
                 </Button>
               </div>

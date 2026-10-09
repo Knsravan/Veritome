@@ -5,7 +5,7 @@ import type { CitationCrossCheck } from "@/core/citations/intext";
 import { formatBibtex, formatReferenceText } from "@/core/citations/format";
 import { CITATION_STYLES, type CitationStyle, type Work } from "@/core/citations/types";
 import type { ReferenceCheck, VerifyListResult, VerifyStatus } from "@/core/citations/verify";
-import { cx } from "./ui";
+import { Switch, cx } from "./ui";
 
 export const STATUS_TEXT: Record<VerifyStatus, { label: string; tone: string; help: string }> = {
   verified: { label: "Verified", tone: "border-ok text-ok", help: "Matches a database record closely." },
@@ -144,7 +144,7 @@ export function VerifyView({ result, crossCheck }: { result: VerifyListResult; c
       {crossCheck && <CrossCheckView check={crossCheck} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} className="size-4 accent-[var(--action)]" />
+          <Switch checked={only} onChange={setOnly} label="Only show entries that need attention" />
           Only show entries that need attention
         </label>
         <StylePicker value={style} onChange={setStyle} />

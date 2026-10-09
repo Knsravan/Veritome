@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
+import { Switch } from "./ui";
 
 type Ask = (purpose: ConsentPurpose) => Promise<boolean>;
 export type ConsentPurpose = "plagiarism" | "citations" | "report" | "grammar";
@@ -78,7 +79,7 @@ export function ConsentProvider({ children }: { children: ReactNode }) {
             </p>
             <p className="mt-3 text-ink-soft">If your manuscript is confidential, cancel and use the offline checks instead.</p>
             <label className="mt-4 flex items-center gap-2">
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-4 accent-[var(--action)]" />
+              <Switch checked={remember} onChange={setRemember} label="Remember my answer on this device" />
               Remember my answer on this device
             </label>
             <div className="mt-6 flex flex-wrap justify-end gap-3">

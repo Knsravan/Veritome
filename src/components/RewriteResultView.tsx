@@ -43,7 +43,7 @@ export function RewriteResultView({ result, compact = false }: { result: Rewrite
           <span className="text-sm text-ink-faint">
             {Math.round(result.changed * 100)}% of words changed, {result.method === "llm" ? `rewritten by ${result.model}` : "rule-based edits only"}
           </span>
-          <Button variant="secondary" onClick={copy}>
+          <Button variant="glow" onClick={copy}>
             {copied ? "Copied" : "Copy text"}
           </Button>
         </div>

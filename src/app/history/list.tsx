@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HistoryIcon, ShieldIcon, TrashIcon } from "@/components/icons";
-import { Button, cx } from "@/components/ui";
+import { Button, Switch, cx } from "@/components/ui";
 import {
   clearChecks,
   deleteCheck,
@@ -96,12 +96,7 @@ export function HistoryList() {
           Anyone who uses this browser can see it.
         </p>
         <label className="flex items-center gap-2 text-sm font-semibold">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setHistoryEnabled(e.target.checked)}
-            className="size-4 accent-[var(--action)]"
-          />
+          <Switch checked={enabled} onChange={setHistoryEnabled} label="Save my checks on this device" />
           Save my checks on this device
         </label>
       </section>
@@ -249,7 +244,7 @@ export function HistoryList() {
                     type="button"
                     onClick={() => void deleteCheck(i.id)}
                     aria-label={`Delete ${i.title} from history`}
-                    className="relative z-10 rounded-lg p-2 text-ink-soft transition-[color,box-shadow] hover:text-ink hover:shadow-[var(--neu-sm)] active:shadow-[var(--neu-in)]"
+                    className="relative z-10 nb nb-round size-9"
                   >
                     <TrashIcon size={18} />
                   </button>

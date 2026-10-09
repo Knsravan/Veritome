@@ -12,7 +12,7 @@ import {
   RepeatIcon,
   XIcon,
 } from "@/components/icons";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import { HUMANISE_DISCLOSURE } from "@/core/rewrite/humanise";
 import { MakeYours } from "./make-yours";
 import { QualityCard } from "./quality-card";
@@ -144,7 +144,7 @@ export function FileResult({
           )}
           {kind === "docx" && (
             <Button
-              variant="secondary"
+              variant="pillow"
               disabled={running || busy !== null}
               busy={busy === "tracked"}
               onClick={() => void get(true)}
@@ -153,6 +153,7 @@ export function FileResult({
             </Button>
           )}
           <Button
+            variant="pillow"
             disabled={running || busy !== null}
             busy={busy === "file"}
             onClick={() => void get(false)}
@@ -226,12 +227,7 @@ export function FileResult({
         {tab === "document" && (
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={showChanges}
-                onChange={(e) => setShowChanges(e.target.checked)}
-                className="size-4 accent-[var(--action)]"
-              />
+              <Switch checked={showChanges} onChange={setShowChanges} label="Highlight what changed" />
               Highlight what changed
             </label>
             <button

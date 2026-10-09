@@ -103,7 +103,7 @@ export function SiteHeader() {
           <Link
             href="/history"
             aria-current={path === "/history" ? "page" : undefined}
-            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-[color,box-shadow] duration-200 hover:text-action hover:shadow-[var(--neu-sm)] active:shadow-[var(--neu-in)] sm:inline-flex"
+            className="nb nb-round hidden sm:inline-flex"
             title="History"
           >
             <HistoryIcon />
@@ -112,7 +112,7 @@ export function SiteHeader() {
           <Link
             href="/settings"
             aria-current={path === "/settings" ? "page" : undefined}
-            className="hidden size-10 items-center justify-center rounded-full text-ink-soft transition-[color,box-shadow] duration-200 hover:text-action hover:shadow-[var(--neu-sm)] active:shadow-[var(--neu-in)] sm:inline-flex"
+            className="nb nb-round hidden sm:inline-flex"
             title="Settings"
           >
             <SettingsIcon />
@@ -121,7 +121,7 @@ export function SiteHeader() {
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-shadow hover:shadow-[var(--neu-sm)] active:shadow-[var(--neu-in)] lg:hidden"
+            className="nb nb-round text-ink lg:hidden"
             aria-expanded={open}
             aria-controls={menuId}
             onClick={() => setOpen((o) => !o)}

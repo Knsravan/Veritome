@@ -19,7 +19,7 @@ import {
   SparkIcon,
   XIcon,
 } from "@/components/icons";
-import { Button, Notice, cx } from "@/components/ui";
+import { Button, Notice, Switch, cx } from "@/components/ui";
 import {
   HUMANISE_DISCLOSURE,
   HUMANISE_STRENGTHS,
@@ -580,13 +580,13 @@ function Result({
             </Button>
           )}
           <Button
-            variant="secondary"
+            variant="glow"
             disabled={running}
             onClick={() => void copy(finalText, "The revised text")}
           >
             <CopyIcon size={16} /> Copy text
           </Button>
-          <Button disabled={running} onClick={() => void downloadWord()}>
+          <Button variant="pillow" disabled={running} onClick={() => void downloadWord()}>
             <DownloadIcon /> Download Word file
           </Button>
         </div>
@@ -631,12 +631,7 @@ function Result({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={showChanges}
-            onChange={(e) => setShowChanges(e.target.checked)}
-            className="size-4 accent-[var(--action)]"
-          />
+          <Switch checked={showChanges} onChange={setShowChanges} label="Show what changed" />
           Show what changed
         </label>
         <p className="text-sm text-ink-soft">
@@ -879,7 +874,7 @@ function Result({
           </span>
         </p>
         <Button
-          variant="secondary"
+          variant="glow"
           onClick={() => void copy(HUMANISE_DISCLOSURE, "The statement")}
         >
           <CopyIcon size={16} /> Copy statement

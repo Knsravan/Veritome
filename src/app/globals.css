@@ -1161,10 +1161,6 @@ h3,
     animation: none !important;
   }
 }
-/* The step slider shows focus as a halo around its knob instead of a box. */
-.step-slider:focus-visible {
-  outline: none;
-}
 
 /* Neumorphism helpers: raised surfaces, small raised controls, pressed-in wells and the chosen item in a track. */
 @layer components {

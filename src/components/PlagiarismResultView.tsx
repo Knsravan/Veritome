@@ -586,7 +586,7 @@ export function PlagiarismResultView({
               use your browser&rsquo;s Print and choose Save as PDF.
             </Notice>
           )}
-          <Button onClick={() => void downloadPdf()} busy={pdf === "busy"}>
+          <Button variant="pillow" onClick={() => void downloadPdf()} busy={pdf === "busy"}>
             <DownloadIcon />{" "}
             {pdf === "busy" ? "Making the PDF" : "Download PDF report"}
           </Button>

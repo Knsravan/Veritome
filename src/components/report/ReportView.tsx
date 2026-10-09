@@ -856,7 +856,7 @@ export function ReportView({
           {paperDoc &&
             (paperDoc.kind === "pdf" || paperDoc.kind === "docx") && (
               <Button
-                variant="secondary"
+                variant="pillow"
                 onClick={() => void downloadMarked()}
                 busy={pdf === "file"}
               >
@@ -867,7 +867,7 @@ export function ReportView({
               </Button>
             )}
           <Button
-            variant="primary"
+            variant="pillow"
             onClick={() => void downloadPdf()}
             busy={pdf === "busy"}
           >

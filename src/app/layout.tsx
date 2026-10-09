@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/Nav";
 import { SettingsProvider } from "@/lib/settings";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
+import "./controls.css";
 
 export const metadata: Metadata = {
   title: {
@@ -84,8 +85,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         Humaniser
                       </Link>
                     </li>
+                    <li>
+                      <Link
+                        href="/paraphraser"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Paraphraser
+                      </Link>
+                    </li>
                     <li className="text-ink-faint">
-                      Compare, Citations, Grammar and Paraphraser: coming soon
+                      Compare, Citations and Grammar: coming soon
                     </li>
                   </ul>
                 </div>
