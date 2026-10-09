@@ -9,6 +9,7 @@ import { saveCheck, titleFor } from "@/lib/history";
 import {
   ArrowRightIcon,
   CheckIcon,
+  ChevronDownIcon,
   CopyIcon,
   DownloadIcon,
   FileIcon,
@@ -35,6 +36,7 @@ import { useSettings } from "@/lib/settings";
 import { tidyPasted } from "../detector/tool";
 import { FileResult } from "./file-result";
 import { MakeYours } from "./make-yours";
+import { MorphArt, SlidingChoice } from "@/components/motion-ui";
 import { QualityCard } from "./quality-card";
 import {
   buildFile,
@@ -67,31 +69,20 @@ function Segmented<T extends string>({
       <p className="mb-2 text-sm font-semibold" id={`${label}-label`}>
         {label}
       </p>
-      <div
-        role="radiogroup"
-        aria-labelledby={`${label}-label`}
-        className="grid grid-cols-3 gap-1 rounded-xl border border-rule bg-page p-1"
-      >
-        {options.map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            role="radio"
-            aria-checked={value === o.id}
-            onClick={() => onChange(o.id)}
-            className={cx(
-              "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-              value === o.id
-                ? "bg-ink text-page shadow-sm"
-                : "text-ink-soft hover:bg-desk-deep hover:text-ink",
-            )}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
+      <SlidingChoice
+        kind="radios"
+        size="sm"
+        equal
+        labelledBy={`${label}-label`}
+        value={value}
+        onChange={onChange}
+        options={options.map((o) => ({ id: o.id, label: o.label }))}
+        className="w-full shadow-none"
+      />
       {current && (
-        <p className="mt-1.5 text-xs text-ink-soft">{current.description}</p>
+        <p key={current.id} className="animate-swap mt-1.5 text-xs text-ink-soft">
+          {current.description}
+        </p>
       )}
     </div>
   );
@@ -303,25 +294,41 @@ export function HumaniserTool() {
 
   return (
     <div className="space-y-8">
-      <header className="max-w-3xl">
-        <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">
-          Humaniser
-        </p>
-        <h1
-          className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]"
-          style={{ ["--i" as string]: 1 }}
-        >
-          Make stiff writing read like you wrote it
-        </h1>
-        <p
-          className="animate-fade-up mt-3 text-lg text-ink-soft"
-          style={{ ["--i" as string]: 2 }}
-        >
-          Each paragraph is revised by an expert-level editor model: stock
-          phrases go, sentences vary, and your citations, numbers and equations
-          stay exactly as they are. You review every change before you keep it.
-        </p>
-      </header>
+      <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <header className="max-w-3xl">
+          <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">
+            Humaniser
+          </p>
+          <h1
+            className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]"
+            style={{ ["--i" as string]: 1 }}
+          >
+            Make stiff writing read like you wrote it
+          </h1>
+          <p
+            className="animate-fade-up mt-3 text-lg text-ink-soft"
+            style={{ ["--i" as string]: 2 }}
+          >
+            Each paragraph is revised by an expert-level editor model: stock
+            phrases go, sentences vary, and your citations, numbers and equations
+            stay exactly as they are. You review every change before you keep it.
+          </p>
+          <div className="animate-fade-up mt-6" style={{ ["--i" as string]: 3 }}>
+            <SlidingChoice
+              label="How to add your text"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "text", label: <><PenIcon size={16} /> Text mode</> },
+                { id: "file", label: <><FileIcon size={16} /> File mode</> },
+              ]}
+            />
+          </div>
+        </header>
+        <div className="hidden pr-4 lg:block">
+          <MorphArt />
+        </div>
+      </div>
 
       {opening === "missing" && (
         <Notice kind="warn" title="That saved result is no longer here">
@@ -339,35 +346,6 @@ export function HumaniserTool() {
         </Notice>
       )}
 
-      <div
-        role="tablist"
-        aria-label="How to add your text"
-        className="animate-fade-up inline-flex rounded-full border border-rule bg-page p-1 shadow-sm"
-        style={{ ["--i" as string]: 3 }}
-      >
-        {(
-          [
-            ["text", "Text mode", PenIcon],
-            ["file", "File mode", FileIcon],
-          ] as const
-        ).map(([m, label, Icon]) => (
-          <button
-            key={m}
-            type="button"
-            role="tab"
-            aria-selected={mode === m}
-            onClick={() => setMode(m)}
-            className={cx(
-              "inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-[background-color,color] duration-200",
-              mode === m
-                ? "bg-ink text-page shadow-sm"
-                : "text-ink-soft hover:bg-desk-deep hover:text-ink",
-            )}
-          >
-            <Icon size={16} /> {label}
-          </button>
-        ))}
-      </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
         {mode === "text" ? (
@@ -388,7 +366,7 @@ export function HumaniserTool() {
                       : "bg-desk-deep text-ink-soft",
                   )}
                 >
-                  {words.toLocaleString("en")} words
+                  {words.toLocaleString("en")} {words === 1 ? "word" : "words"}
                 </span>
                 <button
                   type="button"
@@ -458,30 +436,44 @@ export function HumaniserTool() {
                 onClick={() => setVoiceOpen((v) => !v)}
                 className="flex w-full items-center justify-between text-sm font-semibold"
               >
-                Match my own voice{" "}
+                <span className="inline-flex items-center gap-1.5">
+                  <ChevronDownIcon
+                    size={16}
+                    className={cx("transition-transform duration-300", voiceOpen ? "rotate-0" : "-rotate-90")}
+                  />
+                  Match my own voice
+                </span>
                 <span className="text-xs font-medium text-ink-soft">
                   {voice.trim()
                     ? `${countWords(voice)} words added`
                     : "optional"}
                 </span>
               </button>
-              {voiceOpen && (
-                <div className="mt-2 space-y-1.5">
-                  <textarea
-                    aria-label="A sample of your own writing"
-                    value={voice}
-                    onChange={(e) => setVoice(e.target.value.slice(0, 12_000))}
-                    placeholder="Paste 150 to 1,500 words you wrote yourself, before any AI tool touched it. The rewrite copies its style, not its content."
-                    className="block h-36 w-full resize-y rounded-lg border border-rule bg-page px-3 py-2 text-sm"
-                  />
-                  <p className="text-xs text-ink-faint">
-                    Used only for this check and never stored.
-                  </p>
+              <div
+                inert={!voiceOpen}
+                className={cx(
+                  "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+                  voiceOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="space-y-1.5 pt-2">
+                    <textarea
+                      aria-label="A sample of your own writing"
+                      value={voice}
+                      onChange={(e) => setVoice(e.target.value.slice(0, 12_000))}
+                      placeholder="Paste 150 to 1,500 words you wrote yourself, before any AI tool touched it. The rewrite copies its style, not its content."
+                      className="block h-36 w-full resize-y rounded-lg border border-rule bg-page px-3 py-2 text-sm"
+                    />
+                    <p className="text-xs text-ink-faint">
+                      Used only for this check and never stored.
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
             <Button
-              className="h-12 w-full text-base"
+              className="btn-shine h-12 w-full text-base"
               disabled={!hasModel || (mode === "file" ? !paper : words < 30)}
               onClick={() =>
                 mode === "file"
@@ -740,7 +732,7 @@ function Result({
                   ) : revisedText ? (
                     <div
                       className={cx(
-                        "font-serif leading-[1.7]",
+                        "animate-reveal font-serif leading-[1.7]",
                         it.use === "original" &&
                           "rounded-md border border-dashed border-rule p-2",
                       )}

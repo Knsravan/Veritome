@@ -11,6 +11,7 @@ import {
   SparkIcon,
   TypeIcon,
 } from "@/components/icons";
+import { Switch } from "@/components/motion-ui";
 import { cx } from "@/components/ui";
 
 export type Extra = "detector" | "citations" | "grammar" | "rewrites";
@@ -68,51 +69,6 @@ const CHECKS: Array<{
 ];
 
 const hue = (h: string) => ({ ["--hue" as string]: h }) as CSSProperties;
-
-/** A small on/off switch drawn over a real checkbox, so it works with the keyboard and screen readers. */
-function Switch({
-  checked,
-  disabled,
-  onChange,
-  label,
-  describedBy,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange?: (v: boolean) => void;
-  label: string;
-  describedBy?: string;
-}) {
-  return (
-    <span className="relative inline-flex shrink-0 items-center">
-      <input
-        type="checkbox"
-        role="switch"
-        aria-label={label}
-        {...(describedBy ? { "aria-describedby": describedBy } : {})}
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange?.(e.target.checked)}
-        className="peer absolute inset-0 z-10 m-0 cursor-pointer opacity-0 disabled:cursor-default"
-      />
-      <span
-        aria-hidden
-        className={cx(
-          "h-5 w-9 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
-          checked ? "bg-[var(--hue)]" : "bg-desk-deep ring-1 ring-rule ring-inset",
-          disabled && !checked && "opacity-50",
-        )}
-      />
-      <span
-        aria-hidden
-        className={cx(
-          "pointer-events-none absolute top-[3px] left-[3px] size-3.5 rounded-full bg-white shadow-sm transition-transform duration-200",
-          checked && "translate-x-4",
-        )}
-      />
-    </span>
-  );
-}
 
 function CheckRow({
   id,

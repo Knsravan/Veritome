@@ -17,7 +17,8 @@ import {
   ReportProgress,
   type ProgressState,
 } from "@/components/report/ReportProgress";
-import { Button, Checkbox, Notice, cx } from "@/components/ui";
+import { ScanArt, SlidingChoice, Switch } from "@/components/motion-ui";
+import { Button, Notice, cx } from "@/components/ui";
 import type { DetectorResult } from "@/core/detector/types";
 import type { PaperReport, ReportEvent, ToolId } from "@/core/report/report";
 import { reflowParagraphs } from "@/core/text/reflow";
@@ -59,6 +60,43 @@ function stats(text: string) {
     paragraphs,
     minutes: Math.max(1, Math.round(words / 230)),
   };
+}
+
+/** Words so far against the 80-word minimum and the 300 words that give the steadiest result. */
+function WordMeter({ words }: { words: number }) {
+  const MAX = 400;
+  const at = (n: number) => `${(n / MAX) * 100}%`;
+  const tone = words >= 300 ? "var(--ok)" : words >= 80 ? "var(--action)" : "var(--ink-faint)";
+  return (
+    <div aria-hidden className="relative pb-4">
+      <div className="relative h-2 overflow-hidden rounded-full bg-desk-deep">
+        <div
+          className={cx("h-full rounded-full transition-[width,background-color] duration-500", words > 0 && words < MAX && "progress-shimmer")}
+          style={{ width: at(Math.min(words, MAX)), backgroundColor: tone }}
+        />
+      </div>
+      {(
+        [
+          [80, "80 minimum"],
+          [300, "300 best"],
+        ] as const
+      ).map(([n, label]) => (
+        <span key={n} className="absolute top-0 flex -translate-x-1/2 flex-col items-center" style={{ left: at(n) }}>
+          <span className={cx("h-2 w-0.5 rounded-full", words >= n ? "bg-page/80" : "bg-ink-faint/50")} />
+          <span className={cx("mt-1 text-[0.68rem] font-semibold whitespace-nowrap", words >= n ? "text-ink" : "text-ink-faint")}>{label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function LlmSwitch({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+      <Switch checked={on} onChange={onChange} label="Also ask the language model" />
+      Also ask the language model
+    </label>
+  );
 }
 
 /**
@@ -245,55 +283,40 @@ export function DetectorTool() {
   const s = stats(text);
   return (
     <div className="space-y-8">
-      <header className="max-w-3xl">
-        <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">
-          AI detector
-        </p>
-        <h1
-          className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]"
-          style={{ ["--i" as string]: 1 }}
-        >
-          Find the parts that read as AI-written
-        </h1>
-        <p
-          className="animate-fade-up mt-3 text-lg text-ink-soft"
-          style={{ ["--i" as string]: 2 }}
-        >
-          Trained models read every paragraph, including text written by a
-          person and then polished with an AI tool. Upload your paper to see it
-          in its own layout with those parts underlined, or paste some text.
-        </p>
-      </header>
-
-      <div
-        role="tablist"
-        aria-label="How to check"
-        className="animate-fade-up inline-flex rounded-full border border-rule bg-page p-1 shadow-sm"
-        style={{ ["--i" as string]: 3 }}
-      >
-        {(
-          [
-            ["text", "Text", "Paste text", PenIcon],
-            ["file", "File", "Upload a paper", FileIcon],
-          ] as const
-        ).map(([m, label, hint, Icon]) => (
-          <button
-            key={m}
-            type="button"
-            role="tab"
-            aria-selected={mode === m}
-            onClick={() => setMode(m)}
-            className={cx(
-              "inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-[background-color,color] duration-200",
-              mode === m
-                ? "bg-ink text-page shadow-sm"
-                : "text-ink-soft hover:bg-desk-deep hover:text-ink",
-            )}
-            title={hint}
+      <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <header className="max-w-3xl">
+          <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">
+            AI detector
+          </p>
+          <h1
+            className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]"
+            style={{ ["--i" as string]: 1 }}
           >
-            <Icon size={16} /> {label} mode
-          </button>
-        ))}
+            Find the parts that read as AI-written
+          </h1>
+          <p
+            className="animate-fade-up mt-3 text-lg text-ink-soft"
+            style={{ ["--i" as string]: 2 }}
+          >
+            Trained models read every paragraph, including text written by a
+            person and then polished with an AI tool. Upload your paper to see it
+            in its own layout with those parts underlined, or paste some text.
+          </p>
+          <div className="animate-fade-up mt-6" style={{ ["--i" as string]: 3 }}>
+            <SlidingChoice
+              label="How to check"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { id: "text", title: "Paste text", label: <><PenIcon size={16} /> Text mode</> },
+                { id: "file", title: "Upload a paper", label: <><FileIcon size={16} /> File mode</> },
+              ]}
+            />
+          </div>
+        </header>
+        <div className="hidden pr-6 lg:block">
+          <ScanArt />
+        </div>
       </div>
 
       {opening === "missing" && (
@@ -330,7 +353,7 @@ export function DetectorTool() {
                 )}
                 aria-live="polite"
               >
-                {s.words.toLocaleString("en")} words
+                {s.words.toLocaleString("en")} {s.words === 1 ? "word" : "words"}
               </span>
               <button
                 type="button"
@@ -363,22 +386,7 @@ export function DetectorTool() {
             className="block min-h-[22rem] w-full resize-y bg-page px-5 py-4 font-serif text-[1.05rem] leading-[1.75] text-ink placeholder:font-sans placeholder:text-base placeholder:text-ink-faint focus:outline-none sm:px-6"
           />
           <div className="space-y-3 border-t border-rule bg-desk/40 px-5 py-4 sm:px-6">
-            <div
-              className="h-1.5 overflow-hidden rounded-full bg-desk-deep"
-              aria-hidden
-            >
-              <div
-                className={cx(
-                  "h-full rounded-full transition-[width] duration-500",
-                  s.words >= 300
-                    ? "bg-ok"
-                    : s.words >= 80
-                      ? "bg-warn"
-                      : "bg-ink-faint",
-                )}
-                style={{ width: `${Math.min(100, (s.words / 300) * 100)}%` }}
-              />
-            </div>
+            <WordMeter words={s.words} />
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="text-sm text-ink-soft">
                 <p className="font-medium text-ink">
@@ -395,15 +403,9 @@ export function DetectorTool() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-4">
-                {hasLlm && (
-                  <Checkbox
-                    checked={useLlm}
-                    onChange={setUseLlm}
-                    label="Also ask the language model"
-                  />
-                )}
+                {hasLlm && <LlmSwitch on={useLlm} onChange={setUseLlm} />}
                 <Button
-                  className="h-12 px-6 text-base"
+                  className="btn-shine h-12 px-6 text-base"
                   disabled={s.words < 80}
                   onClick={() => void check(reflowParagraphs(tidyPasted(text)), null)}
                 >
@@ -420,15 +422,9 @@ export function DetectorTool() {
         >
           <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} />
           <div className="flex flex-wrap items-center justify-end gap-4">
-            {hasLlm && (
-              <Checkbox
-                checked={useLlm}
-                onChange={setUseLlm}
-                label="Also ask the language model"
-              />
-            )}
+            {hasLlm && <LlmSwitch on={useLlm} onChange={setUseLlm} />}
             <Button
-              className="h-12 px-6 text-base"
+              className="btn-shine h-12 px-6 text-base"
               disabled={!paper}
               onClick={() => paper && void check(paper.text, paper)}
             >
@@ -457,8 +453,12 @@ export function DetectorTool() {
               "About 1 in 100 human paragraphs is flagged. Read each flag in context.",
             ],
           ] as const
-        ).map(([Icon, title, body]) => (
-          <li key={title} className="card flex gap-3 p-4">
+        ).map(([Icon, title, body], k) => (
+          <li
+            key={title}
+            className="card animate-fade-up flex gap-3 p-4 transition-transform duration-300 hover:-translate-y-0.5"
+            style={{ ["--i" as string]: k + 4 }}
+          >
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-action-soft text-action">
               <Icon size={18} />
             </span>

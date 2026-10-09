@@ -332,7 +332,7 @@ export function FileResult({
                     ) : showChanges && shown !== it.piece.text ? (
                       <DiffView before={it.piece.text} after={shown} />
                     ) : (
-                      <span className="block">{shown}</span>
+                      <span className="animate-reveal block">{shown}</span>
                     )}
                   </button>
                   {isNotInFile(it) && (
