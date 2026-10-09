@@ -65,7 +65,7 @@ export function SiteHeader() {
           aria-label="Tools"
           className="hidden flex-1 justify-center lg:flex"
         >
-          <ul className="flex items-center gap-1 rounded-full border border-rule bg-page/70 p-1 shadow-sm">
+          <ul className="neu-in flex items-center gap-1 rounded-full p-1">
             {LINKS.map((l) => {
               const active = path === l.href;
               return (
@@ -77,7 +77,7 @@ export function SiteHeader() {
                     className={cx(
                       "block rounded-full px-3 py-1.5 xl:px-3.5 text-[0.9rem] font-medium whitespace-nowrap transition-[background-color,color,transform] duration-300 active:scale-95",
                       active
-                        ? "bg-ink text-page shadow-sm"
+                        ? "neu-on"
                         : l.soon
                           ? "text-ink-faint hover:bg-desk-deep hover:text-ink-soft"
                           : "text-ink-soft hover:bg-desk-deep hover:text-ink",

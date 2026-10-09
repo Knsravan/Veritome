@@ -777,7 +777,7 @@ function Result({
                         <div
                           role="radiogroup"
                           aria-label="Which version to keep"
-                          className="inline-flex rounded-lg border border-rule p-0.5 text-sm"
+                          className="neu-in inline-flex rounded-lg p-1 text-sm"
                         >
                           {(
                             [
@@ -794,7 +794,7 @@ function Result({
                               className={cx(
                                 "rounded-md px-2.5 py-1 font-semibold",
                                 it.use === v
-                                  ? "bg-ink text-page"
+                                  ? "neu-on"
                                   : "text-ink-soft hover:text-ink",
                               )}
                             >

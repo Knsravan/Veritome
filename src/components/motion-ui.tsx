@@ -68,7 +68,7 @@ export function SlidingChoice<T extends string>({
       {...(label ? { "aria-label": label } : {})}
       {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
       className={cx(
-        "relative isolate border border-rule bg-page p-1 shadow-sm",
+        "neu-in relative isolate p-1",
         size === "md" ? "inline-flex rounded-full" : "grid rounded-xl",
         className,
       )}
@@ -86,7 +86,7 @@ export function SlidingChoice<T extends string>({
       <span
         aria-hidden
         className={cx(
-          "absolute top-1 bottom-1 -z-10 bg-ink shadow-sm transition-[transform,width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
+          "neu-on absolute top-1 bottom-1 -z-10 transition-[transform,width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
           round,
           !pill && "opacity-0",
         )}
@@ -108,7 +108,7 @@ export function SlidingChoice<T extends string>({
               "inline-flex items-center justify-center gap-2 font-semibold transition-colors duration-300",
               round,
               size === "md" ? "px-5 py-2 text-sm" : "px-3 py-2 text-sm",
-              on ? "text-page" : "text-ink-soft hover:text-ink",
+              on ? "text-action" : "text-ink-soft hover:text-ink",
             )}
           >
             {o.label}
@@ -155,14 +155,14 @@ export function Switch({
         aria-hidden
         className={cx(
           "h-5 w-9 rounded-full transition-colors duration-200 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus)]",
-          checked ? "bg-[var(--hue,var(--action))]" : "bg-desk-deep ring-1 ring-rule ring-inset",
+          checked ? "bg-[var(--hue,var(--action))] shadow-[inset_2px_2px_4px_rgb(0_0_0/0.18)]" : "neu-in",
           disabled && !checked && "opacity-50",
         )}
       />
       <span
         aria-hidden
         className={cx(
-          "pointer-events-none absolute top-[3px] left-[3px] size-3.5 rounded-full bg-white shadow-sm transition-transform duration-200",
+          "pointer-events-none absolute top-[3px] left-[3px] size-3.5 rounded-full bg-white shadow-[1px_1px_3px_rgb(0_0_0/0.3)] transition-transform duration-200",
           checked && "translate-x-4",
         )}
       />
@@ -399,7 +399,7 @@ export function StepSlider<T extends string>({
         onPointerCancel={() => setDragging(false)}
         className="step-slider group relative cursor-pointer touch-none rounded-full px-2.5 py-3"
       >
-        <div ref={track} className="relative h-2 rounded-full bg-desk-deep">
+        <div ref={track} className="neu-in relative h-2.5 rounded-full">
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-action/70 to-action transition-[width] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]"
             style={{ width: `${pct(index)}%` }}
@@ -418,13 +418,13 @@ export function StepSlider<T extends string>({
           <span
             aria-hidden
             className={cx(
-              "absolute top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-page shadow-[0_2px_8px_rgb(15_23_42/0.25)] ring-2 ring-action transition-[left,transform] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
+              "neu-sm absolute top-1/2 grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full transition-[left,transform] duration-300 ease-[cubic-bezier(0.3,0.7,0.2,1)]",
               dragging ? "scale-110" : "group-hover:scale-105",
               "group-focus-visible:shadow-[0_0_0_6px_color-mix(in_srgb,var(--focus)_35%,transparent)]",
             )}
             style={{ left: `${pct(index)}%` }}
           >
-            <span className="size-2 rounded-full bg-action" />
+            <span className="size-2.5 rounded-full bg-action" />
           </span>
         </div>
       </div>

@@ -317,7 +317,7 @@ export function ParaphraserTool() {
             <label htmlFor="pp-keep" className="text-sm font-semibold">
               Words to keep as they are <span className="font-normal text-ink-faint">(optional)</span>
             </label>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-xl border border-rule bg-page px-2 py-1.5 focus-within:border-action">
+            <div className="neu-in mt-1.5 flex flex-wrap items-center gap-1.5 rounded-xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-action/40">
               {keep.map((k) => (
                 <span key={k} className="animate-pop inline-flex items-center gap-1 rounded-full bg-action-soft px-2.5 py-0.5 text-sm font-medium text-action">
                   {k}
@@ -339,7 +339,7 @@ export function ParaphraserTool() {
                   } else if (e.key === "Backspace" && !keepDraft && keep.length) setKeep((ks) => ks.slice(0, -1));
                 }}
                 placeholder={keep.length ? "Add another" : "e.g. quantum key distribution, BB84 — press Enter"}
-                className="min-w-[10rem] flex-1 bg-transparent px-1 py-0.5 text-sm focus:outline-none"
+                className="min-w-[10rem] flex-1 bg-transparent px-1 py-0.5 text-sm shadow-none focus:outline-none"
               />
             </div>
           </div>

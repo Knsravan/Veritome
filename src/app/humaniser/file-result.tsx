@@ -197,7 +197,7 @@ export function FileResult({
         <div
           role="tablist"
           aria-label="View"
-          className="inline-flex rounded-full border border-rule bg-page p-1 shadow-sm"
+          className="neu-in inline-flex rounded-full p-1"
         >
           {(
             [
@@ -215,7 +215,7 @@ export function FileResult({
               className={cx(
                 "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors disabled:opacity-40",
                 tab === t
-                  ? "bg-ink text-page"
+                  ? "neu-on"
                   : "text-ink-soft hover:bg-desk-deep hover:text-ink",
               )}
             >
@@ -372,7 +372,7 @@ export function FileResult({
                           <div
                             role="radiogroup"
                             aria-label="Which version to keep"
-                            className="inline-flex rounded-lg border border-rule p-0.5 text-sm"
+                            className="neu-in inline-flex rounded-lg p-1 text-sm"
                           >
                             {(
                               [
@@ -389,7 +389,7 @@ export function FileResult({
                                 className={cx(
                                   "rounded-md px-2.5 py-1 font-semibold",
                                   it.use === v
-                                    ? "bg-ink text-page"
+                                    ? "neu-on"
                                     : "text-ink-soft hover:text-ink",
                                 )}
                               >

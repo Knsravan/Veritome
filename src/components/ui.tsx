@@ -16,8 +16,9 @@ export function Button({ variant = "primary", busy, className, children, disable
       className={cx(
         "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 font-semibold transition-[transform,background-color,box-shadow,opacity] duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
         variant === "primary" &&
-          "bg-action text-action-ink shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_6px_16px_-6px_var(--action)] hover:-translate-y-px hover:shadow-[0_1px_0_rgb(255_255_255/0.15)_inset,0_10px_22px_-8px_var(--action)]",
-        variant === "secondary" && "border border-rule bg-page text-ink shadow-sm hover:-translate-y-px hover:border-ink-faint/40 hover:shadow-md",
+          "bg-action text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] hover:-translate-y-px hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--shadow-card)] active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]",
+        variant === "secondary" &&
+          "border border-[var(--neu-edge)] bg-page text-ink shadow-[var(--neu-sm)] hover:-translate-y-px hover:shadow-[var(--shadow-card)] active:shadow-[var(--neu-in)]",
         variant === "quiet" && "rounded-lg px-2 text-action underline-offset-4 hover:underline",
         className,
       )}

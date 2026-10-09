@@ -202,7 +202,7 @@ export function CheckOptions({
   const preset = (active: boolean) =>
     cx(
       "rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
-      active ? "border-ink bg-ink text-page" : "border-rule text-ink-soft hover:text-ink",
+      active ? "neu-on border-transparent" : "border-[var(--neu-edge)] text-ink-soft shadow-[var(--neu-sm)] hover:text-ink",
     );
 
   return (

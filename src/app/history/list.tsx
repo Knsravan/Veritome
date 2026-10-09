@@ -111,7 +111,7 @@ export function HistoryList() {
           <div
             role="radiogroup"
             aria-label="Show"
-            className="inline-flex flex-wrap rounded-full border border-rule bg-page p-1 text-sm"
+            className="neu-in inline-flex flex-wrap rounded-full p-1 text-sm"
           >
             {(["all", "plagiarism", "detector", "humaniser", "paraphraser"] as const).map(
               (t) => (
@@ -124,7 +124,7 @@ export function HistoryList() {
                   className={cx(
                     "rounded-full px-3.5 py-1.5 font-semibold",
                     filter === t
-                      ? "bg-ink text-page"
+                      ? "neu-on"
                       : "text-ink-soft hover:text-ink",
                   )}
                 >
