@@ -32,9 +32,10 @@ export const HUMANISE_STRENGTHS: ReadonlyArray<{ id: HumaniseStrength; label: st
 const TONE: Record<HumaniseTone, string> = {
   academic:
     "Academic, but the way good researchers actually write: plain, exact words and direct statements, not ornate or formal-sounding phrasing. Use the first person (we/I) only where the original does.",
-  natural: "Clear, direct prose, the way a thoughtful expert explains their work to a colleague.",
+  natural:
+    "Clear, direct prose, the way a thoughtful expert explains their work to a colleague. Contractions (it's, don't, we've) are fine where they sound natural.",
   simple:
-    "Plain language with short sentences, so a reader outside the field can follow. Keep technical terms that have no plain equivalent and explain nothing that the original does not.",
+    "Plain language with short sentences, so a reader outside the field can follow. Contractions are fine. Keep technical terms that have no plain equivalent and explain nothing that the original does not.",
 };
 
 const STRENGTH: Record<HumaniseStrength, string> = {
@@ -53,7 +54,131 @@ const PLAIN_STYLE = [
   "Prefer verbs to nouns made from verbs ('we measured', not 'the measurement of ... was performed').",
   "Let sentence length vary naturally: some short and direct, some longer. Do not polish every sentence to the same smooth rhythm or make each one a perfect summary.",
   "Keep the author's own words and quirks wherever they are already clear; a revision should sound like the same person on a good day, not like a different, more formal writer.",
+  "Prefer the active voice with a clear subject ('we tested', 'the model predicts') where the original's meaning allows it.",
+  "Say things once and directly. Cut words that add nothing ('in order to' → 'to', 'due to the fact that' → 'because', 'a large number of' → 'many').",
+  "Do not start neighbouring sentences the same way, and do not open sentences with linking words such as 'Moreover', 'Furthermore' or 'Additionally'; most sentences need no link word at all.",
+  "Prefer short, common words that a reader in a hurry understands at once. Use a technical term only when it is the right term.",
+  "Write it the way the author would explain it out loud to a colleague: concrete and specific, with no grand opening line ('In recent years...', 'In today's world...') and no closing line that sums up or praises the work.",
+  "Real writing is a little uneven: a short sentence after a long one, an occasional sentence that starts with 'But' or 'So', a plain 'we' or 'this' instead of a long noun phrase. Do not make every sentence balanced and complete-sounding.",
 ];
+
+/**
+ * Inflated words and phrases with the plain words people use instead. The rewrite must not contain these; the
+ * prompt lists them and a check sends the paragraph back when one slips through.
+ */
+export const PLAIN_WORDS: ReadonlyArray<readonly [RegExp, string, string]> = [
+  [/\butili[sz](?:e|es|ed|ing|ation)\b/gi, "utilize, utilization", "use"],
+  [/\bleverag(?:e|es|ed|ing)\b/gi, "leverage", "use"],
+  [/\bfacilitat(?:e|es|ed|ing)\b/gi, "facilitate", "help, allow"],
+  [/\bdelv(?:e|es|ed|ing)\b/gi, "delve", "look at, study"],
+  [/\b(?:pivotal|paramount)\b/gi, "pivotal, paramount", "main, key, or say why it matters"],
+  [/\bunderscor(?:e|es|ed|ing)\b/gi, "underscore", "show"],
+  [/\bshowcas(?:e|es|ed|ing)\b/gi, "showcase", "show"],
+  [/\bcommenc(?:e|es|ed|ing)\b/gi, "commence", "start"],
+  [/\bendeavou?rs?\b/gi, "endeavour", "try, work"],
+  [/\b(?:myriad|plethora)\b/gi, "myriad, plethora", "many"],
+  [/\btapestry\b/gi, "tapestry", "mix"],
+  [/\brealm\b/gi, "realm", "field, area"],
+  [/\bholistic(?:ally)?\b/gi, "holistic", "whole, complete"],
+  [/\bseamless(?:ly)?\b/gi, "seamless(ly)", "smooth, easy"],
+  [/\bmultifaceted\b/gi, "multifaceted", "complex, with several sides"],
+  [/\b(?:ever-evolving|rapidly evolving|ever-changing) landscape\b/gi, "ever-evolving landscape", "field"],
+  [/\btestament to\b/gi, "a testament to", "shows"],
+  [/\bit is (?:important|worth|crucial) (?:to note|noting)(?: that)?\b/gi, "it is important to note that", "(just say it)"],
+  [/\bshed(?:s|ding)? light on\b/gi, "shed light on", "explain, show"],
+  [/\bpav(?:e|es|ed|ing) the way\b/gi, "pave the way", "make possible"],
+  [/\bnavigat(?:e|es|ed|ing) the complexities\b/gi, "navigate the complexities", "deal with"],
+  [/\bin the realm of\b/gi, "in the realm of", "in"],
+  [/\baforementioned\b/gi, "aforementioned", "this, these"],
+  [/\bnotwithstanding\b/gi, "notwithstanding", "despite"],
+  [/\bheretofore\b/gi, "heretofore", "until now"],
+  [/\bwherein\b/gi, "wherein", "where, in which"],
+  [/\bbolster(?:s|ed|ing)?\b/gi, "bolster", "support, strengthen"],
+  [/\bstreamlin(?:e|es|ed|ing)\b/gi, "streamline", "simplify"],
+  [/\bascertain(?:s|ed|ing)?\b/gi, "ascertain", "find out"],
+  [/\bharness(?:es|ed|ing)?\b/gi, "harness", "use"],
+  [/\bfoster(?:s|ed|ing)?\b/gi, "foster", "encourage, build"],
+  [/\bcutting-edge\b/gi, "cutting-edge", "new, latest"],
+  [/\bgame-chang(?:er|ing)\b/gi, "game-changer", "major"],
+];
+
+/**
+ * Wordy phrases with a plain equivalent that means exactly the same, replaced after the rewrite. Only phrases whose
+ * swap can never change the meaning or the grammar are here.
+ */
+const WORDY: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bin order to\b/gi, "to"],
+  [/\bdue to the fact that\b/gi, "because"],
+  [/\bowing to the fact that\b/gi, "because"],
+  [/\bin spite of the fact that\b/gi, "although"],
+  [/\bdespite the fact that\b/gi, "although"],
+  [/\bat this point in time\b/gi, "now"],
+  [/\bat the present time\b/gi, "now"],
+  [/\bin the event that\b/gi, "if"],
+  [/\bprior to\b/gi, "before"],
+  [/\bsubsequent to\b/gi, "after"],
+  [/\ba (?:large|great) number of\b/gi, "many"],
+  [/\bthe (?:vast )?majority of\b/gi, "most"],
+  [/\ba small number of\b/gi, "a few"],
+  [/\bis able to\b/gi, "can"],
+  [/\bare able to\b/gi, "can"],
+  [/\bhas the ability to\b/gi, "can"],
+  [/\bhave the ability to\b/gi, "can"],
+  [/\bfor the purpose of\b/gi, "for"],
+  [/\bwith the exception of\b/gi, "except"],
+  [/\bin close proximity to\b/gi, "near"],
+  [/\ba total of (?=\d)/gi, ""],
+];
+
+const keepCase = (match: string, plain: string) =>
+  plain && match[0] === match[0]!.toUpperCase() && match[0] !== match[0]!.toLowerCase() ? plain[0]!.toUpperCase() + plain.slice(1) : plain;
+
+/** Replaces wordy phrases with their plain equivalents (only swaps that keep the meaning and the grammar). */
+export function plainCleanup(text: string): string {
+  let out = text;
+  for (const [re, plain] of WORDY) out = out.replace(re, (m) => keepCase(m, plain));
+  return out.replace(/ {2,}/g, " ");
+}
+
+const sentencesOf = (text: string) =>
+  text
+    .split(/(?<=[.!?])\s+(?=[A-Z{"“(])/)
+    .map((s) => s.trim())
+    .filter((s) => countWords(s) >= 3);
+
+/** How many inflated words a text uses. */
+export function inflatedCount(text: string): number {
+  return PLAIN_WORDS.reduce((n, [re]) => n + (text.match(re)?.length ?? 0), 0);
+}
+
+/**
+ * Style problems in a rewrite, as feedback for another attempt: inflated words, stock sentence openers the original
+ * did not use, every sentence the same length, and dashes the original did not have. None of these is a reason to
+ * keep the original; the attempt with the fewest is used.
+ */
+export function styleIssues(original: string, output: string): string[] {
+  const issues: string[] = [];
+  const inflated: string[] = [];
+  for (const [re, , plain] of PLAIN_WORDS) {
+    const found = output.match(re);
+    if (found) inflated.push(`"${found[0]}" (write ${plain})`);
+  }
+  if (inflated.length) issues.push(`it uses inflated words: ${inflated.join(", ")}`);
+  const opener = /^(?:Moreover|Furthermore|Additionally|In addition|Notably|Importantly|Overall|In conclusion|Ultimately|Consequently),/;
+  const openers = sentencesOf(output).filter((s) => opener.test(s)).length;
+  const before = sentencesOf(original).filter((s) => opener.test(s)).length;
+  if (openers > 0 && openers >= before) issues.push("sentences still open with connectors such as 'Moreover', 'Furthermore' or 'Additionally'; drop them or join the sentences");
+  const lengths = sentencesOf(output).map(countWords);
+  if (lengths.length >= 4) {
+    const mean = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+    const sd = Math.sqrt(lengths.reduce((a, b) => a + (b - mean) ** 2, 0) / lengths.length);
+    if (sd / mean < 0.22) issues.push("every sentence is about the same length; make some shorter and let others run longer");
+  }
+  const dashes = (s: string) => (s.match(/—|\s–\s/g) ?? []).length;
+  if (dashes(output) > dashes(original)) issues.push("it adds dashes; use commas or full stops instead");
+  if (/\bnot only\b[^.]*\bbut also\b/i.test(output) && !/\bnot only\b/i.test(original)) issues.push("it adds a 'not only ... but also' construction");
+  return issues;
+}
 
 /** Accepted ratio of output to input words, by strength. */
 export const HUMANISE_LENGTH: Record<HumaniseStrength, readonly [number, number]> = {
@@ -86,6 +211,9 @@ How much to change: ${STRENGTH[strength]}
 
 How to write:
 ${PLAIN_STYLE.map((h) => `- ${h}`).join("\n")}
+
+Never use these inflated words; write the plain word instead:
+${PLAIN_WORDS.map(([, word, plain]) => `- ${word} → ${plain}`).join("\n")}
 
 Remove these habits wherever they appear:
 ${STIFF_HABITS.map((h) => `- ${h}`).join("\n")}
@@ -204,6 +332,20 @@ export async function humaniseParagraph(paragraph: string, options: HumanisePara
   const retries = Math.max(0, options.retries ?? 2);
   const feedback: string[] = [];
   const problems: string[] = [];
+  // The best attempt that passed every hard check, kept in case later attempts only differ in style.
+  let best: { output: string; attempt: number; meaningChecked: boolean; issues: string[]; score: number } | null = null;
+  const done = (b: NonNullable<typeof best>): HumaniseParagraphResult => {
+    const text = restore(b.output, spans).text;
+    return {
+      original: paragraph,
+      text,
+      status: "rewritten",
+      attempts: b.attempt,
+      problems,
+      meaningChecked: b.meaningChecked,
+      changed: Math.round(changedShare(diffWords(paragraph, text)) * 100) / 100,
+    };
+  };
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     if (options.signal?.aborted) break;
     let reply: string;
@@ -218,7 +360,7 @@ export async function humaniseParagraph(paragraph: string, options: HumanisePara
       problems.push(`attempt ${attempt}: ${err instanceof Error ? err.message : "the model call failed"}`);
       break;
     }
-    const output = cleanReply(reply);
+    const output = plainCleanup(cleanReply(reply));
     const mechanical = checkRewrite(masked, output, options.strength);
     if (mechanical.length) {
       problems.push(`attempt ${attempt}: ${mechanical.join("; ")}`);
@@ -232,17 +374,15 @@ export async function humaniseParagraph(paragraph: string, options: HumanisePara
       feedback.splice(0, feedback.length, ...why.map((p) => `the meaning changed: ${p}`));
       continue;
     }
-    const text = restore(output, spans).text;
-    return {
-      original: paragraph,
-      text,
-      status: "rewritten",
-      attempts: attempt,
-      problems,
-      meaningChecked: meaning !== null,
-      changed: Math.round(changedShare(diffWords(paragraph, text)) * 100) / 100,
-    };
+    // Passed: still send it back once more if it reads stiffly, but keep the best version so far.
+    const issues = styleIssues(masked, output);
+    const score = issues.length + inflatedCount(output);
+    if (!best || score < best.score) best = { output, attempt, meaningChecked: meaning !== null, issues, score };
+    if (!issues.length || attempt === retries + 1) return done(best);
+    problems.push(`attempt ${attempt}: ${issues.join("; ")}`);
+    feedback.splice(0, feedback.length, ...issues);
   }
+  if (best) return done(best);
   return { original: paragraph, text: paragraph, status: "kept_original", attempts: problems.length, problems, meaningChecked: false, changed: 0 };
 }
 
