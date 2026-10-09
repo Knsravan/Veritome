@@ -140,7 +140,7 @@ export function HistoryList() {
               placeholder="Search by name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 w-56 rounded-lg border border-rule bg-page px-3 text-sm"
+              className="h-10 w-56 rounded-lg border border-[var(--neu-edge)] bg-desk px-3 text-sm"
             />
             {confirmClear ? (
               <>
@@ -192,13 +192,13 @@ export function HistoryList() {
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <Link
               href="/plagiarism"
-              className="rounded-full bg-action px-5 py-2 font-semibold text-action-ink"
+              className="rounded-full bg-action px-5 py-2 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[box-shadow,transform] hover:-translate-y-px active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]"
             >
               Check a paper
             </Link>
             <Link
               href="/detector"
-              className="rounded-full border border-rule px-5 py-2 font-semibold"
+              className="neu-sm rounded-full border border-[var(--neu-edge)] px-5 py-2 font-semibold transition-[box-shadow,transform] hover:-translate-y-px active:shadow-[var(--neu-in)]"
             >
               AI detector
             </Link>
@@ -249,7 +249,7 @@ export function HistoryList() {
                     type="button"
                     onClick={() => void deleteCheck(i.id)}
                     aria-label={`Delete ${i.title} from history`}
-                    className="relative z-10 rounded-lg p-2 text-ink-soft hover:bg-desk-deep hover:text-ink"
+                    className="relative z-10 rounded-lg p-2 text-ink-soft transition-[color,box-shadow] hover:text-ink hover:shadow-[var(--neu-sm)] active:shadow-[var(--neu-in)]"
                   >
                     <TrashIcon size={18} />
                   </button>

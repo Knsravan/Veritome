@@ -92,7 +92,7 @@ function PaperStage({
 }) {
   return (
     <div aria-hidden className="relative mx-auto w-56">
-      <div className="relative aspect-[1/1.3] overflow-hidden rounded-lg border border-rule bg-page shadow-[var(--shadow-lift)]">
+      <div className="relative aspect-[1/1.3] overflow-hidden rounded-lg border border-[var(--neu-edge)] bg-page shadow-[var(--shadow-lift)]">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -291,8 +291,8 @@ export function ReportProgress({
                     className={cx(
                       "rounded-full border px-2.5 py-0.5 text-xs font-medium transition-all duration-500",
                       searching && i === lit
-                        ? "scale-105 border-action bg-action text-action-ink shadow-[0_4px_14px_-4px_var(--action)]"
-                        : "border-rule bg-page text-ink-soft",
+                        ? "neu-on scale-105 border-transparent"
+                        : "neu-in border-transparent text-ink-soft",
                     )}
                   >
                     {s}

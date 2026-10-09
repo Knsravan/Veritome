@@ -610,7 +610,7 @@ function ExportMenu({ report }: { report: PaperReport }) {
   const close = () => ref.current?.removeAttribute("open");
   return (
     <details ref={ref} className="relative">
-      <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-md border border-rule bg-page px-3 font-semibold hover:bg-desk [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 neu-sm rounded-lg border border-[var(--neu-edge)] px-3 font-semibold transition-[box-shadow,color] hover:text-action active:shadow-[var(--neu-in)] [&::-webkit-details-marker]:hidden">
         More formats <ChevronDownIcon size={16} />
       </summary>
       <div className="card absolute right-0 z-20 mt-1 w-56 p-1">

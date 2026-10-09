@@ -189,8 +189,8 @@ export function ScanArt() {
   const ai = new Set([1, 2, 5]);
   return (
     <div aria-hidden className="relative h-56 w-64 select-none">
-      <div className="absolute top-6 left-8 h-48 w-48 rotate-[6deg] rounded-xl border border-rule bg-page/70 shadow-sm" />
-      <div className="animate-fade-up absolute top-2 left-2 h-52 w-52 -rotate-[3deg] overflow-hidden rounded-xl border border-rule bg-page p-4 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="absolute top-6 left-8 h-48 w-48 rotate-[6deg] rounded-xl border border-[var(--neu-edge)] bg-page/70 shadow-sm" />
+      <div className="animate-fade-up absolute top-2 left-2 h-52 w-52 -rotate-[3deg] overflow-hidden rounded-xl border border-[var(--neu-edge)] bg-page p-4 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <div className="mb-3 h-2.5 w-1/2 rounded-full bg-ink/80" />
         <div className="space-y-2.5">
           {lines.map((w, k) => (
@@ -208,7 +208,7 @@ export function ScanArt() {
         <div className="scan-beam" />
       </div>
       <div
-        className="animate-pop absolute right-0 bottom-3 flex items-center gap-2 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md"
+        className="animate-pop absolute right-0 bottom-3 flex items-center gap-2 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]"
         style={{ animationDelay: "1.6s" }}
       >
         <span className="size-2 rounded-full bg-[var(--u-ai)]" /> 3 of 8 read as AI
@@ -246,7 +246,7 @@ export function MorphArt() {
   const [stiff, easy] = SWAPS[k]!;
   return (
     <div aria-hidden className="relative h-56 w-72 select-none">
-      <div className="animate-fade-up absolute inset-x-0 top-3 rounded-2xl border border-rule bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="animate-fade-up absolute inset-x-0 top-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <p className="mb-3 text-xs font-semibold tracking-wide text-ink-faint uppercase">Your sentence</p>
         <p className="min-h-[4.5rem] font-serif text-[1.05rem] leading-relaxed">
           We{" "}
@@ -271,7 +271,7 @@ export function MorphArt() {
         </div>
       </div>
       <div
-        className="animate-pop absolute right-2 bottom-2 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md"
+        className="animate-pop absolute right-2 bottom-2 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]"
         style={{ animationDelay: "1.2s" }}
       >
         Citations and numbers locked
@@ -309,7 +309,7 @@ export function ParaphraseArt() {
   }, [n, after.length, reduce]);
   return (
     <div aria-hidden className="relative w-80 select-none">
-      <div className="animate-fade-up space-y-3 rounded-2xl border border-rule bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
+      <div className="animate-fade-up space-y-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-5 shadow-[var(--shadow-lift)]" style={{ ["--i" as string]: 2 }}>
         <div>
           <p className="text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase">Original</p>
           <p key={k} className="animate-swap mt-1 font-serif text-[0.95rem] leading-relaxed text-ink-soft">
@@ -325,7 +325,7 @@ export function ParaphraseArt() {
           </p>
         </div>
       </div>
-      <div className="animate-pop absolute -right-3 -bottom-4 rounded-full border border-rule bg-page px-3 py-1.5 text-xs font-semibold shadow-md" style={{ animationDelay: "1.2s" }}>
+      <div className="animate-pop absolute -right-3 -bottom-4 rounded-full border border-[var(--neu-edge)] bg-page px-3 py-1.5 text-xs font-semibold shadow-[var(--shadow-card)]" style={{ animationDelay: "1.2s" }}>
         Same meaning, checked
       </div>
     </div>

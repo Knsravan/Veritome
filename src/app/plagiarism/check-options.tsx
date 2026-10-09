@@ -96,11 +96,11 @@ function CheckRow({
       style={hue(color)}
       title={full}
       className={cx(
-        "group relative flex items-center gap-2.5 overflow-hidden rounded-xl border py-1.5 pr-2.5 pl-3 transition-[background-color,border-color] duration-200",
+        "group relative flex items-center gap-2.5 overflow-hidden rounded-xl border py-1.5 pr-2.5 pl-3 transition-[background-color,border-color,box-shadow] duration-200",
         locked ? "cursor-default" : "cursor-pointer",
         checked
-          ? "border-[color-mix(in_srgb,var(--hue)_40%,transparent)] bg-[color-mix(in_srgb,var(--hue)_8%,var(--page))]"
-          : "border-rule bg-page hover:bg-desk",
+          ? "border-transparent bg-[color-mix(in_srgb,var(--hue)_7%,var(--desk))] shadow-[var(--neu-in)]"
+          : "border-[var(--neu-edge)] bg-page shadow-[var(--neu-sm)]",
       )}
     >
       <span
@@ -159,9 +159,9 @@ function SourceChip({
       style={hue("var(--action)")}
       title={title}
       className={cx(
-        "flex min-w-0 items-center gap-2 rounded-xl border py-2 pr-2 pl-2.5 transition-[background-color,border-color] duration-200",
+        "flex min-w-0 items-center gap-2 rounded-xl border py-2 pr-2 pl-2.5 transition-[background-color,border-color,box-shadow] duration-200",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
-        on ? "border-action/40 bg-action-soft/70" : "border-rule bg-page",
+        on ? "border-transparent bg-[color-mix(in_srgb,var(--action)_7%,var(--desk))] shadow-[var(--neu-in)]" : "border-[var(--neu-edge)] bg-page shadow-[var(--neu-sm)]",
       )}
     >
       <span aria-hidden className={cx("shrink-0", on ? "text-action" : "text-ink-faint")}>

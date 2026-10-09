@@ -121,7 +121,7 @@ export function GrammarDetail({ text, result }: { text: string; result: GrammarC
                 </h3>
                 <label className="text-sm print:hidden">
                   <span className="sr-only">Show</span>
-                  <select value={filter} onChange={(e) => setFilter(e.target.value as Severity | "all")} className="rounded-md border border-rule bg-page px-2 py-1">
+                  <select value={filter} onChange={(e) => setFilter(e.target.value as Severity | "all")} className="neu-sm rounded-lg border border-[var(--neu-edge)] px-2.5 py-1">
                     <option value="all">All notes</option>
                     {SEVERITY_ORDER.map((s) => (
                       <option key={s} value={s}>

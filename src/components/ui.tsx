@@ -120,7 +120,7 @@ export function ProofLayout({ sheet, margin }: { sheet: ReactNode; margin: React
 
 export function Sheet({ children, label }: { children: ReactNode; label?: string }) {
   return (
-    <section aria-label={label} className="animate-fade-in rounded-2xl border border-rule bg-page px-5 py-6 shadow-[var(--shadow-card)] sm:px-10 sm:py-10">
+    <section aria-label={label} className="animate-fade-in rounded-2xl border border-[var(--neu-edge)] bg-page px-5 py-6 shadow-[var(--shadow-card)] sm:px-10 sm:py-10">
       {children}
     </section>
   );

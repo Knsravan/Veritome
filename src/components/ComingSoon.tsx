@@ -42,7 +42,7 @@ export function ComingSoon({ href }: { href: string }) {
             <li key={t.href}>
               <Link
                 href={t.href}
-                className="inline-flex items-center gap-2 rounded-full bg-action px-5 py-2.5 font-semibold text-action-ink shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-full bg-action px-5 py-2.5 font-semibold text-action-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--neu-sm)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 active:shadow-[inset_2px_2px_6px_rgb(0_0_0/0.25)]"
               >
                 {t.name} <ArrowRightIcon size={16} />
               </Link>

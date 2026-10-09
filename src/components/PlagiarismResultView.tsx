@@ -721,7 +721,7 @@ export function PlagiarismResultView({
               <select
                 value={minWords}
                 onChange={(e) => setMinWords(Number(e.target.value))}
-                className="rounded-md border border-rule bg-page px-2 py-1"
+                className="neu-sm rounded-lg border border-[var(--neu-edge)] px-2.5 py-1"
               >
                 <option value={0}>any length</option>
                 <option value={8}>8 words</option>

@@ -212,7 +212,7 @@ export function FileDrop({
                 ]
                   .filter(Boolean)
                   .map((t, i) => (
-                    <li key={t} className="animate-fade-in rounded-full border border-rule bg-page/80 px-2.5 py-0.5 font-medium text-ink-soft" style={{ ["--i" as string]: i }}>
+                    <li key={t} className="animate-fade-in neu-sm rounded-full px-2.5 py-0.5 font-medium text-ink-soft" style={{ ["--i" as string]: i }}>
                       {t}
                     </li>
                   ))}
@@ -272,7 +272,7 @@ export function FileDrop({
         </Button>
         <ul className="relative flex flex-wrap justify-center gap-1.5 text-xs font-semibold text-ink-faint">
           {FORMATS.map((f) => (
-            <li key={f} className="rounded-full border border-rule bg-page px-2 py-0.5">
+            <li key={f} className="neu-sm rounded-full px-2 py-0.5">
               {f}
             </li>
           ))}

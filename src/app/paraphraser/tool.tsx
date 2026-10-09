@@ -617,7 +617,7 @@ function Suggestions({
       ref={box}
       role="dialog"
       aria-label="Suggestions"
-      className="animate-pop absolute z-30 w-[min(24rem,calc(100%-1.5rem))] space-y-3 rounded-2xl border border-rule bg-page p-4 font-sans text-sm shadow-[var(--shadow-lift)]"
+      className="animate-pop absolute z-30 w-[min(24rem,calc(100%-1.5rem))] space-y-3 rounded-2xl border border-[var(--neu-edge)] bg-page p-4 font-sans text-sm shadow-[var(--shadow-lift)]"
       style={{ left: `clamp(0.75rem, ${pick.x - 160}px, calc(100% - min(24rem, 100% - 1.5rem) - 0.75rem))`, top: pick.y }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -633,7 +633,7 @@ function Suggestions({
           ) : synonyms.length ? (
             <div className="flex flex-wrap gap-1.5">
               {synonyms.map((w) => (
-                <button key={w} type="button" onClick={() => onWord(w)} className="rounded-full border border-rule px-2.5 py-1 font-medium hover:border-action hover:bg-action-soft hover:text-action">
+                <button key={w} type="button" onClick={() => onWord(w)} className="neu-sm rounded-full px-2.5 py-1 font-medium transition-[box-shadow,color] hover:text-action active:shadow-[var(--neu-in)]">
                   {w}
                 </button>
               ))}

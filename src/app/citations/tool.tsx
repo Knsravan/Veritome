@@ -124,7 +124,7 @@ function FindSources() {
             value={single}
             onChange={(e) => setSingle(e.target.value)}
             maxLength={2000}
-            className="sheet-text block w-full max-w-none rounded-sm border border-rule bg-page px-4 py-3"
+            className="sheet-text block w-full max-w-none rounded-lg border border-[var(--neu-edge)] bg-desk px-4 py-3"
             placeholder="e.g. Riparian zones account for a large share of soil carbon efflux in temperate catchments."
           />
           <Button variant="secondary" disabled={!single.trim() || found[-1] === "busy"} onClick={() => void search(-1, single)}>

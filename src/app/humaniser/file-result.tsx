@@ -432,7 +432,7 @@ export function FileResult({
                         aria-label="Edit this paragraph"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        className="block h-40 w-full resize-y rounded-lg border border-rule bg-page p-3 font-serif leading-[1.7]"
+                        className="block h-40 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk p-3 font-serif leading-[1.7]"
                       />
                       <div className="flex gap-2">
                         <Button

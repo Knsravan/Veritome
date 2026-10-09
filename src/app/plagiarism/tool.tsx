@@ -276,7 +276,7 @@ export function PlagiarismTool() {
                     disabled={!external}
                     placeholder="ORCID iD or your full name"
                     autoComplete="name"
-                    className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm transition-colors focus:border-action"
+                    className="mt-1.5 w-full rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2 text-sm transition-colors focus:border-action"
                   />
                 </label>
                 <fieldset className="space-y-3">

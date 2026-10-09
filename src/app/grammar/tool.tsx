@@ -111,7 +111,7 @@ export function GrammarTool() {
                       type="button"
                       aria-pressed={filter === f}
                       onClick={() => setFilter(f)}
-                      className={cx("rounded border px-2.5 py-1 text-sm", filter === f ? "border-action bg-action text-action-ink" : "border-rule bg-page")}
+                      className={cx("rounded-full px-3 py-1 text-sm font-medium transition-[box-shadow,color] duration-200", filter === f ? "neu-in text-action" : "neu-sm text-ink-soft hover:text-ink")}
                     >
                       {f === "all" ? "All" : SEVERITY_LABEL[f]} ({f === "all" ? doc.issues.length : doc.issues.filter((i) => i.severity === f).length})
                     </button>

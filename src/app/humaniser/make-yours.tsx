@@ -153,7 +153,7 @@ export function MakeYours({
                   )
                 }
                 placeholder="Your answer"
-                className="block h-20 w-full resize-y rounded-lg border border-rule bg-page px-3 py-2 text-sm"
+                className="block h-20 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2 text-sm"
               />
             </li>
           ))}

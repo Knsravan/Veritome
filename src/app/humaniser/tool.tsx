@@ -463,7 +463,7 @@ export function HumaniserTool() {
                       value={voice}
                       onChange={(e) => setVoice(e.target.value.slice(0, 12_000))}
                       placeholder="Paste 150 to 1,500 words you wrote yourself, before any AI tool touched it. The rewrite copies its style, not its content."
-                      className="block h-36 w-full resize-y rounded-lg border border-rule bg-page px-3 py-2 text-sm"
+                      className="block h-36 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk px-3 py-2 text-sm"
                     />
                     <p className="text-xs text-ink-faint">
                       Used only for this check and never stored.
@@ -708,7 +708,7 @@ function Result({
                         aria-label="Edit this paragraph"
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        className="block h-40 w-full resize-y rounded-lg border border-rule bg-page p-3 font-serif leading-[1.7]"
+                        className="block h-40 w-full resize-y rounded-lg border border-[var(--neu-edge)] bg-desk p-3 font-serif leading-[1.7]"
                       />
                       <div className="flex gap-2">
                         <Button
