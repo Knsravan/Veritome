@@ -42,6 +42,7 @@ test("every tool page loads and passes axe", async ({ page }) => {
     "/settings",
     "/history",
     "/about",
+    "/ai-rules",
   ]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

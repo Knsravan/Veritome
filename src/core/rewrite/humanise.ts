@@ -106,7 +106,7 @@ export const PLAIN_WORDS: ReadonlyArray<readonly [RegExp, string, string]> = [
  * Wordy phrases with a plain equivalent that means exactly the same, replaced after the rewrite. Only phrases whose
  * swap can never change the meaning or the grammar are here.
  */
-const WORDY: ReadonlyArray<readonly [RegExp, string]> = [
+export const WORDY: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bin order to\b/gi, "to"],
   [/\bdue to the fact that\b/gi, "because"],
   [/\bowing to the fact that\b/gi, "because"],

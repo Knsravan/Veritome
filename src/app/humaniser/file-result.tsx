@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiffView } from "@/components/DiffView";
 import {
@@ -14,6 +15,7 @@ import {
 import { Button, Notice, cx } from "@/components/ui";
 import { HUMANISE_DISCLOSURE } from "@/core/rewrite/humanise";
 import { MakeYours } from "./make-yours";
+import { QualityCard } from "./quality-card";
 import {
   buildFile,
   download,
@@ -244,6 +246,21 @@ export function FileResult({
         )}
       </div>
 
+      {tab === "document" && !running && finished > 0 && (
+        <QualityCard
+          job={job}
+          onMakeYours={(i) => {
+            setOpen(i);
+            setYours(i);
+            requestAnimationFrame(() =>
+              document
+                .getElementById(`para-${i}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            );
+          }}
+        />
+      )}
+
       {tab === "preview" ? (
         <FilePreview job={job} onBuilt={report} />
       ) : (
@@ -282,8 +299,9 @@ export function FileResult({
               return (
                 <div
                   key={i}
+                  id={`para-${i}`}
                   className={cx(
-                    "-mx-3 rounded-lg border-l-[3px] px-3 py-1 transition-colors",
+                    "-mx-3 scroll-mt-24 rounded-lg border-l-[3px] px-3 py-1 transition-colors",
                     pending
                       ? "border-rule"
                       : shown !== it.piece.text
@@ -469,6 +487,14 @@ export function FileResult({
         <blockquote className="rounded-lg border-l-4 border-action bg-action-soft px-4 py-3 font-serif">
           {HUMANISE_DISCLOSURE}
         </blockquote>
+        <p className="text-sm">
+          <Link href="/ai-rules" className="font-semibold text-action underline">
+            What journals and universities allow
+          </Link>{" "}
+          <span className="text-ink-soft">
+            — each publisher&apos;s AI rules in plain words.
+          </span>
+        </p>
       </section>
     </div>
   );
