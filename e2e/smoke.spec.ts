@@ -59,7 +59,7 @@ test("the old full-report address opens the plagiarism check", async ({
     "Plagiarism check",
   );
   await expect(page.getByText("Sample paper.docx")).toBeVisible();
-  await expect(page.getByRole("textbox")).toHaveCount(1); // only the optional author field, no paste box
+  await expect(page.getByRole("textbox")).toHaveCount(0); // no paste box (the optional author field is under More options)
 });
 
 test("theme switch flips between light and dark and is remembered", async ({

@@ -91,12 +91,15 @@ export function FileDrop({
   onPaper,
   initialFile,
   sample,
+  fill,
 }: {
   paper: LoadedPaper | null;
   onPaper: (p: LoadedPaper | null) => void;
   initialFile?: () => Promise<File>;
   /** Offers a sample paper to try the tool with. */
   sample?: () => Promise<File>;
+  /** Stretch the empty drop zone to the height of its container. */
+  fill?: boolean;
 }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -239,10 +242,11 @@ export function FileDrop({
     );
 
   return (
-    <div className="space-y-3">
+    <div className={cx("space-y-3", fill && "flex flex-1 flex-col")}>
       <div
         {...drop}
         className={cx(
+          fill && "flex-1",
           "drop-glow group relative flex min-h-[22rem] flex-col items-center justify-center gap-5 overflow-hidden rounded-2xl p-8 text-center transition-transform duration-300",
           dragging && "scale-[1.01]",
         )}

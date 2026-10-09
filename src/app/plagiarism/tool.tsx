@@ -20,43 +20,11 @@ import { sampleDocx } from "@/lib/sample-file";
 import type { ImageReport } from "@/lib/images/analyze";
 import { reviewReport } from "@/core/plagiarism/review";
 import { useHasLlm, useSettings } from "@/lib/settings";
+import { CheckOptions, type Extra } from "./check-options";
 
 type Phase = "compose" | "running" | "done";
-type Extra = "detector" | "citations" | "grammar" | "rewrites";
 
 const countWords = (s: string) => (s.match(/[\p{L}\p{N}]+/gu) ?? []).length;
-
-const EXTRAS: Array<{ id: Extra; label: string; hint: string }> = [
-  { id: "detector", label: "AI writing", hint: "How much of the text reads as AI-written, paragraph by paragraph." },
-  { id: "citations", label: "References and citations", hint: "Looks up every reference, flags retractions and finds claims without a citation." },
-  { id: "grammar", label: "Grammar and spelling", hint: "Grammar, spelling, academic style and readability." },
-  { id: "rewrites", label: "Rewrite suggestions", hint: "Suggested rewrites for copied passages and formulaic paragraphs." },
-];
-
-function Toggle({ checked, onChange, label, hint, locked }: { checked: boolean; onChange?: (v: boolean) => void; label: string; hint: string; locked?: boolean }) {
-  return (
-    <label
-      className={cx(
-        "group flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-[background-color,border-color,transform] duration-200",
-        locked ? "cursor-default" : "cursor-pointer hover:-translate-y-px",
-        checked ? "border-action/50 bg-action-soft/60" : "border-rule hover:bg-desk",
-      )}
-    >
-      <input
-        type="checkbox"
-        className="mt-1 size-4 shrink-0 accent-[var(--action)]"
-        checked={checked}
-        disabled={locked}
-        onChange={(e) => onChange?.(e.target.checked)}
-      />
-      <span>
-        <span className="font-semibold">{label}</span>
-        {locked && <span className="ml-2 rounded-full bg-action px-2 py-px text-[0.7rem] font-semibold text-action-ink">Always on</span>}
-        <span className="block text-sm text-ink-soft">{hint}</span>
-      </span>
-    </label>
-  );
-}
 
 /**
  * The plagiarism check is the full paper check: matching passages are always searched, and the AI-writing,
@@ -260,50 +228,35 @@ export function PlagiarismTool() {
         </Notice>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <section aria-label="Your paper" className="card animate-fade-up p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
-          <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} {...(wantSample ? { initialFile: sampleDocx } : {})} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23.5rem]">
+        <section aria-label="Your paper" className="card animate-fade-up flex flex-col gap-4 p-4 sm:p-6" style={{ ["--i" as string]: 2 }}>
+          <div className="flex flex-1 flex-col">
+            <FileDrop paper={paper} onPaper={setPaper} sample={sampleDocx} fill {...(wantSample ? { initialFile: sampleDocx } : {})} />
+          </div>
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1.5 border-t border-rule pt-4 text-sm text-ink-soft">
+            <li className="flex items-center gap-2">
+              <ShieldIcon size={17} className="shrink-0 text-ok" />
+              Never stored on our servers; history stays in this browser.
+            </li>
+            <li className="flex items-center gap-2">
+              <CheckIcon size={17} className="shrink-0 text-ok" />
+              Only short passages are searched, after you agree.
+            </li>
+          </ul>
         </section>
 
-        <div className="animate-fade-up space-y-4 lg:sticky lg:top-24" style={{ ["--i" as string]: 3 }}>
-          <section aria-label="Options" className="card space-y-5 p-4 sm:p-6">
-            <fieldset className="space-y-2">
-              <legend className="mb-2 font-semibold">What to check</legend>
-              <Toggle checked locked label="Plagiarism" hint="Copied and reworded passages in published papers, the web and your documents." />
-              {EXTRAS.map((x) => (
-                <Toggle key={x.id} checked={extras[x.id]} onChange={(v) => setExtras((e) => ({ ...e, [x.id]: v }))} label={x.label} hint={x.hint} />
-              ))}
-            </fieldset>
-
-            <fieldset className="space-y-3">
-              <legend className="font-semibold">Compare against</legend>
-              <Checkbox
-                checked={external}
-                onChange={setExternal}
-                label="Scholarly databases"
-                hint={`${(status?.plagiarismSources ?? ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "Europe PMC", "Wikipedia"]).join(", ")}. Asks before sending anything.`}
-              />
-              <Checkbox
-                checked={external && settings.webSearch && web.length > 0}
-                onChange={(v) => update({ webSearch: v })}
-                disabled={!external || web.length === 0}
-                label="The open web"
-                hint={web.length ? `Searched with ${web.join(" and ")}.` : "Not enabled on this server."}
-              />
-              <label className={cx("block", !external && "opacity-60")}>
-                <span className="font-medium">Your earlier papers</span>
-                <span className="block text-sm text-ink-faint">Optional. Checks for text reused from your own published work (self-plagiarism).</span>
-                <input
-                  type="text"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  disabled={!external}
-                  placeholder="ORCID iD or your full name"
-                  autoComplete="name"
-                  className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm transition-colors focus:border-action"
-                />
-              </label>
-            </fieldset>
+        <div className="animate-fade-up flex flex-col" style={{ ["--i" as string]: 3 }}>
+          <section aria-label="Options" className="card flex-1 space-y-4 p-4 sm:p-5">
+            <CheckOptions
+              extras={extras}
+              onExtras={setExtras}
+              external={external}
+              onExternal={setExternal}
+              web={web}
+              webOn={external && settings.webSearch && web.length > 0}
+              onWeb={(v) => update({ webSearch: v })}
+              sources={status?.plagiarismSources ?? ["OpenAlex", "Crossref", "Semantic Scholar", "arXiv", "Europe PMC", "Wikipedia"]}
+            />
 
             <details className="group rounded-xl border border-rule">
               <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 font-semibold">
@@ -313,6 +266,19 @@ export function PlagiarismTool() {
                 </span>
               </summary>
               <div className="animate-fade-in space-y-4 border-t border-rule px-3 py-3">
+                <label className={cx("block", !external && "opacity-60")}>
+                  <span className="font-semibold">Your earlier papers</span>
+                  <span className="block text-sm text-ink-faint">Optional. Checks for text reused from your own published work (self-plagiarism).</span>
+                  <input
+                    type="text"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    disabled={!external}
+                    placeholder="ORCID iD or your full name"
+                    autoComplete="name"
+                    className="mt-1.5 w-full rounded-lg border border-rule bg-page px-3 py-2 text-sm transition-colors focus:border-action"
+                  />
+                </label>
                 <fieldset className="space-y-3">
                   <legend className="font-semibold">Leave out of the score</legend>
                   <Checkbox checked={excludeQuotes} onChange={setExcludeQuotes} label="Quotations" hint="Quoted passages of 40 characters or more. They are still checked for a citation." />
@@ -340,16 +306,6 @@ export function PlagiarismTool() {
             )}
           </section>
 
-          <ul className="space-y-1.5 px-1 text-sm text-ink-soft">
-            <li className="flex items-start gap-2">
-              <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Your paper is processed in memory and never stored on our servers. Your history stays in this browser.
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckIcon size={18} className="mt-0.5 shrink-0 text-ok" />
-              Only short passages are sent to search services, and only after you agree.
-            </li>
-          </ul>
         </div>
       </div>
     </div>
