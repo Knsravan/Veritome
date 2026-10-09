@@ -34,6 +34,7 @@ import { useSettings } from "@/lib/settings";
 import { tidyPasted } from "../detector/tool";
 import { FileResult } from "./file-result";
 import { MakeYours } from "./make-yours";
+import { QualityCard } from "./quality-card";
 import {
   buildFile,
   download,
@@ -612,6 +613,20 @@ function Result({
         </p>
       )}
 
+      {!running && finished > 0 && (
+        <QualityCard
+          job={job}
+          onMakeYours={(i) => {
+            setYours(i);
+            requestAnimationFrame(() =>
+              document
+                .getElementById(`para-${i}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            );
+          }}
+        />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm font-medium">
           <input
@@ -646,7 +661,7 @@ function Result({
           const r = it.result;
           const revisedText = r?.status === "rewritten" ? r.text : null;
           return (
-            <li key={i} className="card overflow-hidden">
+            <li key={i} id={`para-${i}`} className="card scroll-mt-24 overflow-hidden">
               <div className="grid lg:grid-cols-2">
                 <div className="border-b border-rule p-4 sm:p-5 lg:border-r lg:border-b-0">
                   <p className="mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase">

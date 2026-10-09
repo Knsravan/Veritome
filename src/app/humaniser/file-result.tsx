@@ -14,6 +14,7 @@ import {
 import { Button, Notice, cx } from "@/components/ui";
 import { HUMANISE_DISCLOSURE } from "@/core/rewrite/humanise";
 import { MakeYours } from "./make-yours";
+import { QualityCard } from "./quality-card";
 import {
   buildFile,
   download,
@@ -244,6 +245,21 @@ export function FileResult({
         )}
       </div>
 
+      {tab === "document" && !running && finished > 0 && (
+        <QualityCard
+          job={job}
+          onMakeYours={(i) => {
+            setOpen(i);
+            setYours(i);
+            requestAnimationFrame(() =>
+              document
+                .getElementById(`para-${i}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            );
+          }}
+        />
+      )}
+
       {tab === "preview" ? (
         <FilePreview job={job} onBuilt={report} />
       ) : (
@@ -282,8 +298,9 @@ export function FileResult({
               return (
                 <div
                   key={i}
+                  id={`para-${i}`}
                   className={cx(
-                    "-mx-3 rounded-lg border-l-[3px] px-3 py-1 transition-colors",
+                    "-mx-3 scroll-mt-24 rounded-lg border-l-[3px] px-3 py-1 transition-colors",
                     pending
                       ? "border-rule"
                       : shown !== it.piece.text

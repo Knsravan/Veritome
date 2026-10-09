@@ -19,7 +19,14 @@ export interface MakeYoursQuestion {
   why: string;
 }
 
-const ASK_SYSTEM = `You help a researcher make a paragraph of their manuscript genuinely their own. Find the places where the paragraph is generic: vague claims, stock statements that could appear in any paper, missing specifics. For each, ask the author one short, concrete question that only they can answer from their own work: what exactly they did, measured, observed or found, which numbers, settings, data or examples, what went wrong or surprised them, and why they made a choice.
+const ASK_SYSTEM = `You help a researcher make a paragraph of their manuscript genuinely their own. Find the places where the paragraph is generic: vague claims, stock statements that could appear in any paper, missing specifics. For each, ask the author one short, concrete question that only they can answer from their own work.
+
+Good questions draw out, in order of usefulness:
+- the exact figures: how many, how much, how long, what size, what result;
+- the names of what they used: the dataset, instrument, software, site, sample or group;
+- a choice they made and why they made it rather than the obvious alternative;
+- something they saw: what went wrong, what surprised them, what did not work at first;
+- the limits they know of: where the result does not hold.
 
 Rules:
 - Ask 2 or 3 questions, the most useful first. Never ask more than 3.
