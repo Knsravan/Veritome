@@ -91,6 +91,7 @@ All settings are environment variables and all are optional; see [.env.example](
 | `SEMANTIC_SCHOLAR_API_KEY` | Higher rate limits and full-text snippet search for plagiarism checks. |
 | `BRAVE_API_KEY`, `SERPER_API_KEY` | Optional web search for plagiarism checks. |
 | `LIBRARY_DIR` | Folder of documents every plagiarism check also compares against. |
+| `SITE_URL` | The public address, for the sitemap, canonical links and link previews. On Vercel the production domain is used automatically; set it for your own domain or when self-hosting. |
 | `RATE_LIMIT_PER_MINUTE`, `TRUST_PROXY` | Abuse protection. Only trust `X-Forwarded-For` behind a proxy you control. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate-limit counts across server instances (needed on Vercel). `KV_REST_API_URL` and `KV_REST_API_TOKEN` from Vercel's Upstash integration also work. |
 

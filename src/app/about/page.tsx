@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import { Reveal } from "@/components/motion";
 import { TOOLS } from "@/lib/tools";
 
-export const metadata: Metadata = { title: "Limits and privacy" };
+export const metadata: Metadata = pageMetadata({
+  title: "Limits and privacy",
+  description:
+    "What each Veritome check can and cannot see, how accurate it is, and how your text is handled: processed in memory, never stored or logged.",
+  path: "/about",
+});
 
 const GH = "https://github.com/Knsravan/Veritome/blob/main";
 

@@ -31,6 +31,8 @@ Papers and APT originals are split by document, so no held-out text shares a sou
    `onnxruntime.quantization.quantize_dynamic(..., weight_type=QInt8)` to `es2-onnx/onnx/model_quantized.onnx`.
 7. `python calibrate.py es2-onnx calib.json && python report.py calib.json` scores the held-out sets exactly as the
    browser does (180-word windows, 256 tokens, averaged) and prints the thresholds for about 1% and 0.5% false
-   positives on human text. They go into `public/models/ai-writing/meta.json`.
+   positives on human text. They go into `public/models/ai-writing/meta.json`, together with each model's
+   `sha256` (the first 16 hex digits of the file's SHA-256, `sha256sum model-a.onnx | cut -c1-16`). Browsers keep a
+   model for a year under that fingerprint, so a replaced model must get its new one; `npm test` fails until it does.
 8. The whole-paper test (`document` in `meta.json`) was set on 300 held-out human peS2o papers: share of prose
    paragraphs above the 90th human percentile, level at the 99th percentile of papers (0.55, minimum six paragraphs).

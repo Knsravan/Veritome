@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isProse, mergeNeural, neuralWindows, toClassifierScale, type NeuralMeta } from "../../src/core/detector/neural.ts";
@@ -112,4 +114,14 @@ test("in a paper judged AI-written as a whole, paragraphs in the top fifth of hu
   // Without the whole-paper judgement the same paragraph is left alone.
   const alone = mergeNeural(base, [high, high, upper, typical, typical, typical, typical, typical], docMeta);
   assert.equal(alone.model.segments![2]!.probability, 0.1);
+});
+
+test("each shipped model's fingerprint in meta.json matches the file, so a changed model is never served from cache", () => {
+  const dir = new URL("../../public/models/ai-writing/", import.meta.url);
+  const shipped = JSON.parse(readFileSync(new URL("meta.json", dir), "utf8")) as NeuralMeta;
+  assert.ok(shipped.models.length > 0);
+  for (const m of shipped.models) {
+    const actual = createHash("sha256").update(readFileSync(new URL(m.file, dir))).digest("hex").slice(0, 16);
+    assert.equal(m.sha256, actual, `${m.file}: set "sha256": "${actual}" in meta.json`);
+  }
 });

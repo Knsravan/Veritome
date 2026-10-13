@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -16,6 +17,7 @@ import {
   UploadIcon,
 } from "@/components/icons";
 import { CountUp, Reveal } from "@/components/motion";
+import { SITE_DESCRIPTION, pageMetadata } from "@/lib/site";
 import { TOOLS } from "@/lib/tools";
 
 const TOOL_ICON: Record<string, ReactNode> = {
@@ -235,6 +237,8 @@ const REPORT_FEATURES = [
     text: "See where problems sit in your document and download a complete report.",
   },
 ];
+
+export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: "/" });
 
 export default function Home() {
   return (

@@ -5,6 +5,7 @@
   "models": [
     {
       "file": "model-a.onnx",
+      "sha256": "caca9dee8d78af94",
       "humanQuantiles": [
         0.02091,
         0.15756,
@@ -19,6 +20,7 @@
     },
     {
       "file": "model-b.onnx",
+      "sha256": "2d51c57560f86dc3",
       "humanQuantiles": [
         0.21017,
         0.30102,
