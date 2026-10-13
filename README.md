@@ -43,7 +43,11 @@ any result.
    `CONTACT_EMAIL` for better searches, and `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` for real rewriting.
    For Google Gemini: `LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`,
    `LLM_MODEL=gemini-3.8-flash`, `LLM_API_KEY=<your Gemini key>`, and optionally `LLM_REASONING_EFFORT=low`.
-3. Optional: attach your own domain under **Settings → Domains**.
+3. Recommended for a public site: under **Storage**, add **Upstash for Redis** (free tier) and connect it to the
+   project, then redeploy. Without it, each Vercel function instance counts requests on its own, so the rate limit
+   barely holds and one visitor can run up your API-key quotas. Setting `UPSTASH_REDIS_REST_URL` and
+   `UPSTASH_REDIS_REST_TOKEN` from an Upstash database you made yourself works too.
+4. Optional: attach your own domain under **Settings → Domains**.
 
 On Vercel, uploads are limited to about 4 MB (Vercel's request limit) and each check can run for up to 5 minutes.
 The shared document library (`LIBRARY_DIR`) is not available there; users can still attach their own documents.
@@ -88,6 +92,7 @@ All settings are environment variables and all are optional; see [.env.example](
 | `BRAVE_API_KEY`, `SERPER_API_KEY` | Optional web search for plagiarism checks. |
 | `LIBRARY_DIR` | Folder of documents every plagiarism check also compares against. |
 | `RATE_LIMIT_PER_MINUTE`, `TRUST_PROXY` | Abuse protection. Only trust `X-Forwarded-For` behind a proxy you control. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared rate-limit counts across server instances (needed on Vercel). `KV_REST_API_URL` and `KV_REST_API_TOKEN` from Vercel's Upstash integration also work. |
 
 Check that every configured service is reachable with `node --env-file=.env scripts/smoke-sources.ts`.
 

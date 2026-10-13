@@ -20,7 +20,7 @@ tested offline with mock fetches (`tests/core`, run with `node --test`).
 | Folder | Contents |
 | --- | --- |
 | `text/` | Sentence and paragraph splitting with exact offsets, tokens, statistics (MATTR, CV), title similarity, reference-list detection, word diff, LaTeX-to-text and PDF line repair. `protect.ts` swaps citations, maths, URLs, DOIs and cross-references for `{{Pn}}` placeholders and restores them; `checkNumbersPreserved` compares numbers as multisets. |
-| `infra/` | HTTP client with timeouts, retries and redacted errors; `netguard.ts` SSRF guard (blocks metadata ranges always, private ranges unless allowed, credentials in URLs); fixed-window rate limiter. |
+| `infra/` | HTTP client with timeouts, retries and redacted errors; `netguard.ts` SSRF guard (blocks metadata ranges always, private ranges unless allowed, credentials in URLs); fixed-window rate limiters, in memory or shared through Redis (Upstash REST API) with a fallback to memory when the store is down. |
 | `llm/` | OpenAI-compatible chat client and the rules for when a browser-supplied model may be used. |
 | `grammar/` | Offline rules and lexicons, readability metrics, LanguageTool client and merge logic. |
 | `citations/` | Reference parser, verifier (DOI then title lookup, discrepancy and retraction flags), in-text cross-check, claim finder and paper suggestions, formatters (APA, MLA, IEEE, Chicago, Harvard, Vancouver, BibTeX, RIS), and clients for Crossref, OpenAlex, Semantic Scholar, arXiv and DataCite. |

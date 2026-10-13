@@ -20,6 +20,11 @@ export interface ServerConfig {
   contactEmail?: string;
   libraryDir?: string;
   rateLimitPerMinute: number;
+  /**
+   * Shared Redis (Upstash REST API) for rate limits, so every server instance counts together.
+   * Needed on Vercel, where each function instance otherwise keeps its own count.
+   */
+  rateLimitStore?: { url: string; token: string };
   /** Read the client address from X-Forwarded-For. Only enable behind a proxy you control. On Vercel it is always on. */
   trustProxy: boolean;
   /** Largest upload accepted. Vercel functions reject request bodies over about 4.5 MB. */
@@ -56,6 +61,10 @@ export function readConfig(env: Record<string, string | undefined> = process.env
   set("coreApiKey", str(env.CORE_API_KEY));
   set("contactEmail", str(env.CONTACT_EMAIL));
   set("libraryDir", str(env.LIBRARY_DIR));
+  // Upstash's own names, or the ones Vercel's Upstash (formerly Vercel KV) integration sets.
+  const storeUrl = str(env.UPSTASH_REDIS_REST_URL) ?? str(env.KV_REST_API_URL);
+  const storeToken = str(env.UPSTASH_REDIS_REST_TOKEN) ?? str(env.KV_REST_API_TOKEN);
+  if (storeUrl && storeToken) cfg.rateLimitStore = { url: storeUrl, token: storeToken };
   return cfg;
 }
 

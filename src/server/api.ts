@@ -1,7 +1,8 @@
 import "server-only";
+import { createHmac } from "node:crypto";
 import { LlmError, LlmNotConfiguredError } from "../core/llm/client.ts";
 import { UnsafeUrlError } from "../core/infra/netguard.ts";
-import { createRateLimiter } from "../core/infra/ratelimit.ts";
+import { createRateLimiter, createRedisRateLimiter, withFallback, type RateLimiter } from "../core/infra/ratelimit.ts";
 import type { ClientLlmOverride } from "../core/llm/config.ts";
 import { readConfig, type ServerConfig } from "./config.ts";
 import { ExtractionError } from "./extract.ts";
@@ -19,15 +20,35 @@ export class BadRequest extends Error {
   }
 }
 
-type Limiter = ReturnType<typeof createRateLimiter>;
-const g = globalThis as typeof globalThis & { __veritomeLimiters?: Map<string, Limiter> };
+const g = globalThis as typeof globalThis & { __veritomeLimiters?: Map<string, RateLimiter>; __veritomeWarnedNoStore?: boolean };
 
-function limiter(bucket: string, perMinute: number): Limiter {
+function limiter(bucket: string, perMinute: number, cfg: ServerConfig): RateLimiter {
   g.__veritomeLimiters ??= new Map();
   let l = g.__veritomeLimiters.get(bucket);
-  if (!l) g.__veritomeLimiters.set(bucket, (l = createRateLimiter({ limit: perMinute, windowMs: 60_000 })));
+  if (l) return l;
+  const local = createRateLimiter({ limit: perMinute, windowMs: 60_000 });
+  if (cfg.rateLimitStore) {
+    const shared = createRedisRateLimiter({ ...cfg.rateLimitStore, limit: perMinute, windowMs: 60_000, prefix: `veritome:rl:${bucket}` });
+    l = withFallback(shared, local, {
+      onError: (err) => console.error(`[veritome] rate-limit store unreachable, using this instance's own count for now: ${err instanceof Error ? err.message : "unknown error"}`),
+    });
+  } else {
+    if (process.env.VERCEL === "1" && !g.__veritomeWarnedNoStore) {
+      g.__veritomeWarnedNoStore = true;
+      console.warn("[veritome] No shared rate-limit store is set, so each Vercel instance counts on its own. Connect Upstash Redis to enforce the limit.");
+    }
+    l = local;
+  }
+  g.__veritomeLimiters.set(bucket, l);
   return l;
 }
+
+/**
+ * Client addresses are keyed-hashed, so a shared rate-limit store never holds raw IP addresses and
+ * its contents cannot be reversed without the store's token.
+ */
+const hashKey = (key: string, cfg: ServerConfig) =>
+  createHmac("sha256", cfg.rateLimitStore?.token ?? "veritome-local").update(key).digest("base64url").slice(0, 22);
 
 export function clientKey(req: Request, trustProxy: boolean): string {
   if (trustProxy) {
@@ -62,7 +83,7 @@ export function route(options: HandlerOptions, fn: (ctx: HandlerContext) => Prom
   return async (req: Request): Promise<Response> => {
     const cfg = readConfig();
     const perMinute = Math.max(1, Math.floor(cfg.rateLimitPerMinute * (options.weight ?? 1)));
-    const decision = limiter(options.bucket, perMinute).check(clientKey(req, cfg.trustProxy));
+    const decision = await limiter(options.bucket, perMinute, cfg).check(hashKey(clientKey(req, cfg.trustProxy), cfg));
     if (!decision.allowed) {
       return json(
         { error: "Too many requests. Wait a moment and try again." },
