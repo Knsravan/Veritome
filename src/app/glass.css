@@ -1,0 +1,180 @@
+/*
+ * Glassmorphism preview. Every rule here applies only while <html data-ui="glass"> is set (by /preview/glass, or
+ * by the "keep it on" switch there), so the neumorphic site is unchanged for everyone else.
+ *
+ * Glass needs something colourful behind it: the page gets soft colour fields, and surfaces become frosted panes
+ * (translucent fill, backdrop blur, a bright top edge and a soft drop shadow) instead of raised clay.
+ */
+
+:root[data-ui="glass"] {
+  --desk: rgb(255 255 255 / 0.28);
+  --desk-deep: rgb(255 255 255 / 0.42);
+  --page: rgb(255 255 255 / 0.58);
+  --rule: rgb(15 23 42 / 0.1);
+  --action-soft: rgb(79 70 229 / 0.12);
+  --glass-blur: blur(20px) saturate(170%);
+  --glass-blur-strong: blur(28px) saturate(180%);
+  --glass-edge: rgb(255 255 255 / 0.7);
+  --glass-shine: inset 0 1px 0 rgb(255 255 255 / 0.75);
+  /* The header sits over the page as it scrolls by, so it is frostier than the panes. */
+  --glass-header: rgb(255 255 255 / 0.62);
+  --glass-bg:
+    radial-gradient(42rem 32rem at 8% 6%, rgb(129 140 248 / 0.55), transparent 65%),
+    radial-gradient(38rem 30rem at 92% 12%, rgb(244 114 182 / 0.42), transparent 65%),
+    radial-gradient(44rem 34rem at 78% 88%, rgb(45 212 191 / 0.4), transparent 65%),
+    radial-gradient(36rem 28rem at 12% 92%, rgb(251 191 36 / 0.3), transparent 65%),
+    linear-gradient(135deg, #eef2ff 0%, #fdf2f8 50%, #ecfeff 100%);
+  /* The neumorphic shadow pair becomes one soft drop shadow plus a lit top edge. */
+  --neu-dark: rgb(30 41 99 / 0.14);
+  --neu-light: rgb(255 255 255 / 0);
+  --neu-edge: var(--glass-edge);
+  --shadow-card: var(--glass-shine), 0 10px 32px -6px rgb(30 41 99 / 0.18);
+  --shadow-lift: var(--glass-shine), 0 18px 44px -8px rgb(30 41 99 / 0.26);
+  --neu-sm: var(--glass-shine), 0 4px 14px -4px rgb(30 41 99 / 0.18);
+  --neu-in: inset 0 1px 3px rgb(15 23 42 / 0.12), inset 0 0 0 1px rgb(255 255 255 / 0.45);
+  --chart-neutral: rgb(100 116 139 / 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-ui="glass"]:not([data-theme="light"]) {
+    --desk: rgb(255 255 255 / 0.04);
+    --desk-deep: rgb(255 255 255 / 0.08);
+    --page: rgb(255 255 255 / 0.07);
+    --rule: rgb(255 255 255 / 0.1);
+    --action-soft: rgb(129 140 248 / 0.18);
+    --glass-edge: rgb(255 255 255 / 0.14);
+    --glass-shine: inset 0 1px 0 rgb(255 255 255 / 0.12);
+    --glass-header: rgb(12 14 28 / 0.62);
+    --glass-bg:
+      radial-gradient(42rem 32rem at 8% 6%, rgb(99 102 241 / 0.45), transparent 65%),
+      radial-gradient(38rem 30rem at 92% 12%, rgb(219 39 119 / 0.32), transparent 65%),
+      radial-gradient(44rem 34rem at 78% 88%, rgb(13 148 136 / 0.35), transparent 65%),
+      radial-gradient(36rem 28rem at 12% 92%, rgb(217 119 6 / 0.22), transparent 65%),
+      linear-gradient(135deg, #0b1020 0%, #140c24 50%, #061a1f 100%);
+    --neu-dark: rgb(0 0 0 / 0.45);
+    --shadow-card: var(--glass-shine), 0 12px 36px -8px rgb(0 0 0 / 0.55);
+    --shadow-lift: var(--glass-shine), 0 20px 48px -10px rgb(0 0 0 / 0.65);
+    --neu-sm: var(--glass-shine), 0 4px 14px -4px rgb(0 0 0 / 0.5);
+    --neu-in: inset 0 1px 3px rgb(0 0 0 / 0.45), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    --chart-neutral: rgb(148 163 184 / 0.4);
+  }
+}
+:root[data-ui="glass"][data-theme="dark"] {
+  --desk: rgb(255 255 255 / 0.04);
+  --desk-deep: rgb(255 255 255 / 0.08);
+  --page: rgb(255 255 255 / 0.07);
+  --rule: rgb(255 255 255 / 0.1);
+  --action-soft: rgb(129 140 248 / 0.18);
+  --glass-edge: rgb(255 255 255 / 0.14);
+  --glass-shine: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --glass-header: rgb(12 14 28 / 0.62);
+  --glass-bg:
+    radial-gradient(42rem 32rem at 8% 6%, rgb(99 102 241 / 0.45), transparent 65%),
+    radial-gradient(38rem 30rem at 92% 12%, rgb(219 39 119 / 0.32), transparent 65%),
+    radial-gradient(44rem 34rem at 78% 88%, rgb(13 148 136 / 0.35), transparent 65%),
+    radial-gradient(36rem 28rem at 12% 92%, rgb(217 119 6 / 0.22), transparent 65%),
+    linear-gradient(135deg, #0b1020 0%, #140c24 50%, #061a1f 100%);
+  --neu-dark: rgb(0 0 0 / 0.45);
+  --shadow-card: var(--glass-shine), 0 12px 36px -8px rgb(0 0 0 / 0.55);
+  --shadow-lift: var(--glass-shine), 0 20px 48px -10px rgb(0 0 0 / 0.65);
+  --neu-sm: var(--glass-shine), 0 4px 14px -4px rgb(0 0 0 / 0.5);
+  --neu-in: inset 0 1px 3px rgb(0 0 0 / 0.45), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --chart-neutral: rgb(148 163 184 / 0.4);
+}
+
+/* The colour fields stay put while the frosted panes scroll over them. */
+:root[data-ui="glass"],
+:root[data-ui="glass"] body {
+  background: var(--glass-bg);
+  background-attachment: fixed;
+}
+
+/* Frosted panes: everything that was a raised or pressed surface. */
+:root[data-ui="glass"] :is(.card, .neu-raised, .neu-sm, .neu-on, .nb:not(.nb-brand), .sw .tr, .cap, .drop-glow),
+:root[data-ui="glass"] body > header,
+:root[data-ui="glass"] :is(textarea, select, input[type="text"], input[type="search"], input[type="email"], input[type="url"], input:not([type])) {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root[data-ui="glass"] :is(.card, .neu-raised, .nb, .sw .tr, .cap) {
+  border: 1px solid var(--glass-edge);
+}
+:root[data-ui="glass"] :is(textarea, select, input[type="text"], input[type="search"], input[type="email"], input[type="url"], input:not([type])) {
+  background-color: var(--desk-deep);
+  border-color: var(--glass-edge);
+}
+
+/* The header is always a pane, not only once the page scrolls. */
+:root[data-ui="glass"] body > header {
+  background: var(--glass-header);
+  border-bottom-color: var(--glass-edge);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+}
+
+/* The main button: a tinted pane of the action colour with a lit edge. */
+:root[data-ui="glass"] .nb-brand {
+  background: linear-gradient(135deg, rgb(99 102 241 / 0.92), rgb(139 92 246 / 0.88));
+  border: 1px solid rgb(255 255 255 / 0.35);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.4),
+    0 8px 24px -6px rgb(79 70 229 / 0.55);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+:root[data-ui="glass"] .nb-brand:not(:disabled):hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 12px 30px -6px rgb(79 70 229 / 0.65);
+}
+
+/* The switch knob and the slider fill read as small glass beads. */
+:root[data-ui="glass"] .sw .kn,
+:root[data-ui="glass"] .cap .fill {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    0 2px 8px rgb(30 41 99 / 0.25);
+}
+
+/* Dark bands (light text on the ink colour) use the page colour as their text, which glass makes see-through.
+   Inside them the page colour stays solid, so the text keeps its contrast, and the band becomes smoked glass. */
+:root[data-ui="glass"] .bg-ink {
+  --page: #eff1f6;
+  background-color: rgb(14 19 32 / 0.84);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-ui="glass"]:not([data-theme="light"]) .bg-ink {
+    --page: #1d2129;
+    background-color: rgb(236 239 246 / 0.9);
+  }
+}
+:root[data-ui="glass"][data-theme="dark"] .bg-ink {
+  --page: #1d2129;
+  background-color: rgb(236 239 246 / 0.9);
+}
+
+/* The faint grid behind hero sections would show through every pane; the colour fields replace it. */
+:root[data-ui="glass"] .bg-grid {
+  background-image: none;
+}
+
+/* Browsers without backdrop-filter get solid panes, so text never sits on a busy background. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-ui="glass"] {
+    --page: rgb(255 255 255 / 0.9);
+    --desk-deep: rgb(255 255 255 / 0.8);
+    --glass-header: rgb(255 255 255 / 0.95);
+  }
+}
+
+/* Paper stays paper when printed. */
+@media print {
+  :root[data-ui="glass"],
+  :root[data-ui="glass"] body {
+    background: #fff;
+  }
+}

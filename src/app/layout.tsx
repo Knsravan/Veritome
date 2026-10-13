@@ -3,11 +3,14 @@ import Link from "next/link";
 import { LogoMark } from "@/components/icons";
 import type { ReactNode } from "react";
 import { ConsentProvider } from "@/components/Consent";
+import { GlassBar } from "@/components/GlassBar";
 import { SiteHeader } from "@/components/Nav";
 import { SettingsProvider } from "@/lib/settings";
 import { THEME_SCRIPT } from "@/lib/theme";
+import { UI_SCRIPT } from "@/lib/ui-style";
 import "./globals.css";
 import "./controls.css";
+import "./glass.css";
 
 export const metadata: Metadata = {
   title: {
@@ -32,6 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: UI_SCRIPT }} />
       </head>
       <body className="flex min-h-dvh flex-col">
         <a
@@ -131,6 +135,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
               </div>
             </footer>
+            <GlassBar />
           </ConsentProvider>
         </SettingsProvider>
       </body>
