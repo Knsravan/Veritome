@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createHttp, HttpError, mapLimit, redactUrl, TimeoutError } from "../../src/core/infra/http.ts";
-import { createRateLimiter } from "../../src/core/infra/ratelimit.ts";
+import { createRateLimiter, createRedisRateLimiter, withFallback } from "../../src/core/infra/ratelimit.ts";
 import { assertSafeUrl, isPrivateIp, UnsafeUrlError } from "../../src/core/infra/netguard.ts";
 import { chunkBySentences } from "../../src/core/text/chunk.ts";
 import { jsonResponse, mockFetch, noSleep } from "./helpers.ts";
@@ -69,6 +69,61 @@ test("rate limiter blocks after the limit and resets after the window", () => {
   assert.equal(rl.check("other").allowed, true);
   t += 1001;
   assert.equal(rl.check("ip").allowed, true);
+});
+
+test("redis rate limiter shares one count, expires keys and reports the window end", async () => {
+  const store = new Map<string, number>();
+  const { fetch, calls } = mockFetch((call) => {
+    const cmds = JSON.parse(call.body ?? "[]") as string[][];
+    return jsonResponse(cmds.map(([cmd, key]) => (cmd === "INCR" ? { result: store.set(key!, (store.get(key!) ?? 0) + 1).get(key!) } : { result: 1 })));
+  });
+  let t = 60_500;
+  const make = () => createRedisRateLimiter({ url: "https://db.example.io/", token: "tok", limit: 2, windowMs: 60_000, prefix: "vt:grammar", fetch, now: () => t });
+  // Two separate instances, as on two serverless functions.
+  const a = make();
+  const b = make();
+  assert.equal((await a.check("ip")).allowed, true);
+  assert.equal((await b.check("ip")).allowed, true);
+  const blocked = await a.check("ip");
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.retryAfterMs, 59_500);
+  assert.equal((await b.check("other")).allowed, true);
+  assert.equal(calls[0]?.url, "https://db.example.io/pipeline");
+  assert.equal(calls[0]?.headers.authorization, "Bearer tok");
+  assert.deepEqual(JSON.parse(calls[0]?.body ?? ""), [["INCR", "vt:grammar:ip:1"], ["PEXPIRE", "vt:grammar:ip:1", "61000"]]);
+  t = 120_000;
+  assert.equal((await a.check("ip")).allowed, true);
+});
+
+test("redis rate limiter throws on errors and bad replies", async () => {
+  for (const reply of [jsonResponse({}, 401), jsonResponse([{ error: "WRONGTYPE" }]), jsonResponse({ result: 1 })]) {
+    const { fetch } = mockFetch(() => reply);
+    const rl = createRedisRateLimiter({ url: "https://db.example.io", token: "t", limit: 5, windowMs: 1000, prefix: "p", fetch });
+    await assert.rejects(() => Promise.resolve(rl.check("ip")));
+  }
+});
+
+test("rate limiter falls back while the shared store is down and retries after a cooldown", async () => {
+  let t = 0;
+  let up = false;
+  let primaryCalls = 0;
+  const errors: unknown[] = [];
+  const primary = {
+    check: async () => {
+      primaryCalls++;
+      if (!up) throw new Error("down");
+      return { allowed: false, remaining: 0, retryAfterMs: 5 };
+    },
+  };
+  const rl = withFallback(primary, createRateLimiter({ limit: 1, windowMs: 100_000, now: () => t }), { cooldownMs: 1000, now: () => t, onError: (e) => errors.push(e) });
+  assert.equal((await rl.check("ip")).allowed, true);
+  assert.equal((await rl.check("ip")).allowed, false, "the local count still limits");
+  assert.equal(primaryCalls, 1, "the store is skipped during the cooldown");
+  assert.equal(errors.length, 1);
+  up = true;
+  t = 1000;
+  assert.deepEqual(await rl.check("new"), { allowed: false, remaining: 0, retryAfterMs: 5 });
+  assert.equal(primaryCalls, 2);
 });
 
 test("assertSafeUrl blocks metadata, bad schemes and credentials always", async () => {

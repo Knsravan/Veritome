@@ -46,6 +46,13 @@ describe("config", () => {
     expect(self.maxUploadBytes).toBe(15 * 1024 * 1024);
   });
 
+  test("a shared rate-limit store is read from Upstash or Vercel KV variables", () => {
+    expect(readConfig({}).rateLimitStore).toBeUndefined();
+    expect(readConfig({ UPSTASH_REDIS_REST_URL: "https://a.upstash.io" }).rateLimitStore).toBeUndefined();
+    expect(readConfig({ UPSTASH_REDIS_REST_URL: "https://a.upstash.io", UPSTASH_REDIS_REST_TOKEN: "t" }).rateLimitStore).toEqual({ url: "https://a.upstash.io", token: "t" });
+    expect(readConfig({ KV_REST_API_URL: "https://b.upstash.io", KV_REST_API_TOKEN: "k" }).rateLimitStore).toEqual({ url: "https://b.upstash.io", token: "k" });
+  });
+
   test("client key ignores forwarding headers unless the proxy is trusted", () => {
     const r = new Request("http://x", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } });
     expect(clientKey(r, false)).toBe("shared");
@@ -149,6 +156,52 @@ describe("routes", () => {
     const limited = await go();
     expect(limited.status).toBe(429);
     expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  test("rate limits are counted in the shared store, without raw client addresses", async () => {
+    vi.stubEnv("RATE_LIMIT_PER_MINUTE", "2");
+    vi.stubEnv("TRUST_PROXY", "true");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://db.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "secret");
+    const counts = new Map<string, number>();
+    const bodies: string[] = [];
+    const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const body = String(init?.body);
+      bodies.push(body);
+      const key = (JSON.parse(body) as string[][])[0]![1]!;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+      return Response.json([{ result: counts.get(key) }, { result: 1 }]);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const go = () => grammar(post({ text: "Hello there." }, { "x-forwarded-for": "203.0.113.9" }));
+      expect((await go()).status).toBe(200);
+      expect((await go()).status).toBe(200);
+      // A fresh instance, as on another serverless function, still sees the shared count.
+      (globalThis as { __veritomeLimiters?: unknown }).__veritomeLimiters = undefined;
+      expect((await go()).status).toBe(429);
+      expect(bodies.length).toBe(3);
+      expect(bodies.join("")).not.toContain("203.0.113.9");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  test("an unreachable rate-limit store falls back to this instance's own count", async () => {
+    vi.stubEnv("RATE_LIMIT_PER_MINUTE", "1");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://db.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "secret");
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const go = () => grammar(post({ text: "Hello there." }));
+      expect((await go()).status).toBe(200);
+      expect((await go()).status).toBe(429);
+      expect(errors).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+      errors.mockRestore();
+    }
   });
 
   test("extract reads an uploaded .docx and rejects unsupported files", async () => {
