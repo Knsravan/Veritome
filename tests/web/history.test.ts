@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { Blob as NodeBlob } from "node:buffer";
+import { IDBFactory } from "fake-indexeddb";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   clearChecks,
   deleteCheck,
@@ -13,6 +15,11 @@ import {
   setHistoryEnabled,
   titleFor,
 } from "@/lib/history";
+
+// A fresh, empty database for every test.
+beforeEach(() => {
+  vi.stubGlobal("indexedDB", new IDBFactory());
+});
 
 afterEach(() => {
   localStorage.clear();
@@ -80,5 +87,118 @@ describe("history", () => {
 
   test("an empty text is never looked up", async () => {
     expect(await findCheck("detector", "  ")).toBeNull();
+  });
+});
+
+/** Ids in one of history's stores, read straight from the database. */
+function storedIds(store: "history" | "history-body"): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("veritome");
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      const keys = db.transaction(store, "readonly").objectStore(store).getAllKeys();
+      keys.onsuccess = () => {
+        db.close();
+        resolve(keys.result as string[]);
+      };
+      keys.onerror = () => reject(keys.error);
+    };
+  });
+}
+
+describe("saved checks", () => {
+  const plagiarism = (text: string, extra: Partial<Parameters<typeof saveCheck>[0]> = {}) =>
+    saveCheck({ tool: "plagiarism", title: titleFor(text), text, words: text.split(" ").length, figures: [{ label: "Similarity", value: "12%" }], payload: { similarity: 12 }, ...extra });
+
+  test("a saved check is listed and reopens with its text, result and file", async () => {
+    const changed = vi.fn();
+    const stop = onHistoryChange(changed);
+    // Node's Blob, because jsdom's does not survive the structured clone IndexedDB stores values with (a browser's does).
+    const file = new NodeBlob(["%PDF-1.7 fake"], { type: "application/pdf" }) as unknown as Blob;
+    const id = await plagiarism("A short paper about alder respiration.", { file: { name: "paper.pdf", data: file } });
+    stop();
+    expect(id).toEqual(expect.any(String));
+    expect(changed).toHaveBeenCalledOnce();
+
+    const list = await listChecks();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ id, tool: "plagiarism", title: "A short paper about alder respiration.", words: 6, figures: [{ label: "Similarity", value: "12%" }] });
+    // The list holds only summaries, not the text or the result.
+    expect(list[0]).not.toHaveProperty("text");
+    expect(list[0]).not.toHaveProperty("payload");
+
+    const back = await getCheck(id!);
+    expect(back).toMatchObject({ id, text: "A short paper about alder respiration.", payload: { similarity: 12 } });
+    expect(back!.file!.name).toBe("paper.pdf");
+    expect(back!.file!.data.size).toBe(file.size);
+    expect(back!.file!.data.type).toBe("application/pdf");
+    expect(await back!.file!.data.text()).toBe("%PDF-1.7 fake");
+    expect(await getCheck("missing")).toBeNull();
+  });
+
+  test("the newest check is listed first", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+      await plagiarism("First text");
+      vi.setSystemTime(new Date("2026-01-02T10:00:00Z"));
+      await plagiarism("Second text");
+    } finally {
+      vi.useRealTimers();
+    }
+    expect((await listChecks()).map((c) => c.title)).toEqual(["Second text", "First text"]);
+  });
+
+  test("saving with the same id replaces the entry", async () => {
+    const id = await plagiarism("Draft one");
+    await plagiarism("Draft one, revised", { id: id! });
+    const list = await listChecks();
+    expect(list).toHaveLength(1);
+    expect((await getCheck(id!))!.text).toBe("Draft one, revised");
+  });
+
+  test("a repeat check of the same text with the same tool is found, ignoring spacing", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+      await plagiarism("Same words here");
+      vi.setSystemTime(new Date("2026-01-03T10:00:00Z"));
+      const latest = await plagiarism("Same words here");
+      expect((await findCheck("plagiarism", "Same   words\nhere"))!.id).toBe(latest);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(await findCheck("detector", "Same words here")).toBeNull();
+    expect(await findCheck("plagiarism", "Other words here")).toBeNull();
+  });
+
+  test("checks can be deleted one at a time or all at once, and nothing is left behind", async () => {
+    const a = await plagiarism("Keep me");
+    const b = await plagiarism("Delete me");
+    await plagiarism("Clear me");
+    const changed = vi.fn();
+    const stop = onHistoryChange(changed);
+    await deleteCheck(b!);
+    expect((await listChecks()).map((c) => c.id)).not.toContain(b);
+    // The text and result go too, not just the list entry.
+    expect(await storedIds("history-body")).not.toContain(b);
+    expect(await getCheck(b!)).toBeNull();
+    expect(await findCheck("plagiarism", "Delete me")).toBeNull();
+    expect(await getCheck(a!)).not.toBeNull();
+
+    await clearChecks();
+    stop();
+    expect(await listChecks()).toEqual([]);
+    expect(await storedIds("history-body")).toEqual([]);
+    expect(await getCheck(a!)).toBeNull();
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+
+  test("switching history off stops saving but keeps what was saved", async () => {
+    await plagiarism("Saved before");
+    setHistoryEnabled(false);
+    expect(await plagiarism("Not saved")).toBeNull();
+    expect((await listChecks()).map((c) => c.title)).toEqual(["Saved before"]);
   });
 });
