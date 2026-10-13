@@ -1,6 +1,7 @@
 /**
  * Runs the neural AI-writing model in the browser (ONNX Runtime Web, WebAssembly), so the paper never leaves the
- * device for this check. The two models (about 14 MB each) are downloaded once and then served from the browser cache.
+ * device for this check. The two models (about 14 MB each) are downloaded once and then kept in the browser cache for
+ * a year, under addresses that change whenever a model does.
  */
 import { isProse, mergeNeural, neuralWindows, type NeuralMeta } from "@/core/detector/neural";
 import type { DetectorResult } from "@/core/detector/types";
@@ -27,7 +28,8 @@ function load(): Promise<Loaded> {
     const [meta, vocab] = await Promise.all([fetch(`${BASE}meta.json`).then((r) => r.json() as Promise<NeuralMeta>), fetch(`${BASE}vocab.txt`).then((r) => r.text())]);
     const sessions = await Promise.all(
       meta.models.map(async (m) => {
-        const bytes = await fetch(BASE + m.file).then((r) => {
+        // The fingerprint in the address lets the browser keep the model for a year (see next.config.ts).
+        const bytes = await fetch(`${BASE}${m.file}${m.sha256 ? `?v=${m.sha256}` : ""}`).then((r) => {
           if (!r.ok) throw new Error(`${m.file}: ${r.status}`);
           return r.arrayBuffer();
         });

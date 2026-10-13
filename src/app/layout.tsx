@@ -5,17 +5,21 @@ import type { ReactNode } from "react";
 import { ConsentProvider } from "@/components/Consent";
 import { SiteHeader } from "@/components/Nav";
 import { SettingsProvider } from "@/lib/settings";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, siteUrl } from "@/lib/site";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 import "./controls.css";
 
 export const metadata: Metadata = {
+  // Full addresses for the sitemap, canonical links and link previews (see src/lib/site.ts).
+  metadataBase: siteUrl(),
   title: {
-    default: "Veritome: check your paper before you submit",
-    template: "%s · Veritome",
+    default: SITE_TITLE,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    "Open-source pre-publication checks for researchers: plagiarism, AI-writing patterns, citations and grammar, with the evidence and limits shown for every result.",
+  description: SITE_DESCRIPTION,
+  openGraph: { siteName: SITE_NAME, type: "website", locale: "en", title: SITE_TITLE, description: SITE_DESCRIPTION },
+  twitter: { card: "summary_large_image", title: SITE_TITLE, description: SITE_DESCRIPTION },
   // Google Search Console ownership check.
   verification: { google: "SAwsy8C8j80Ck6pa8_Y7kr-6C8B70CGSwQRgtUhj51c" },
 };

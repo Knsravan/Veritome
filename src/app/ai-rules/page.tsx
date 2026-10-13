@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { Reveal } from "@/components/motion";
 import { HUMANISE_DISCLOSURE } from "@/core/rewrite/humanise";
@@ -11,11 +12,12 @@ import {
   type PublisherRule,
 } from "@/lib/ai-rules";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "AI rules for authors",
   description:
     "What journals, publishers and universities allow authors to do with AI writing tools, and how to disclose it.",
-};
+  path: "/ai-rules",
+});
 
 function RuleCard({ r }: { r: PublisherRule }) {
   return (

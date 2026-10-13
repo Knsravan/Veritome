@@ -17,7 +17,15 @@ export interface NeuralMeta {
    * HUMAN_PERCENTILES (measured on held-out human writing). The last one is the "likely AI" level: with the higher
    * of the models counting, about 1% of human paragraphs reach it.
    */
-  models: Array<{ file: string; humanQuantiles: number[] }>;
+  models: Array<{
+    file: string;
+    /**
+     * First 16 hex digits of the file's SHA-256. The browser fetches `file?v=sha256`, so the model can be cached
+     * for a year and a changed model is still fetched at once (tests check it matches the file).
+     */
+    sha256?: string;
+    humanQuantiles: number[];
+  }>;
   /**
    * The whole-document test. In a paper with at least `minParagraphs` prose paragraphs, if `share` or more of them
    * score above the `percentile` of human paragraphs (about 1 in 100 human papers did), those paragraphs count as
