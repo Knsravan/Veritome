@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   },
   description:
     "Open-source pre-publication checks for researchers: plagiarism, AI-writing patterns, citations and grammar, with the evidence and limits shown for every result.",
+  // Google Search Console ownership check.
+  verification: { google: "SAwsy8C8j80Ck6pa8_Y7kr-6C8B70CGSwQRgtUhj51c" },
 };
 
 export const viewport: Viewport = {
