@@ -1,6 +1,6 @@
 "use client";
 
-import { WholePaperNote } from "./PlagiarismResultView";
+import { WholePaperNote } from "./AiSummary";
 import { useState } from "react";
 import type { DetectorResult, SentenceScore } from "@/core/detector/types";
 import { AnnotatedText, focusMark, focusNote, type TextMark } from "./AnnotatedText";

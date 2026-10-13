@@ -13,7 +13,7 @@ import type { TextMark } from "../AnnotatedText";
 import { useDocModel } from "../DocumentContext";
 import { DocumentView, LayoutToggle } from "../DocumentView";
 import { ArrowLeftIcon, ArrowRightIcon, XIcon } from "../icons";
-import { sourceColours } from "../PlagiarismResultView";
+import { sourceColours } from "../plagiarism/shared";
 import { Sheet, cx } from "../ui";
 
 export type Category =

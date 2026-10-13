@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DetectorResultView } from "@/components/DetectorResultView";
 import { DocumentProvider } from "@/components/DocumentContext";
-import { AiSummary } from "@/components/PlagiarismResultView";
+import { AiSummary } from "@/components/AiSummary";
 import { PaperPanel } from "@/components/report/PaperPanel";
 import { DownloadIcon, RepeatIcon } from "@/components/icons";
 import { Button, Notice } from "@/components/ui";
