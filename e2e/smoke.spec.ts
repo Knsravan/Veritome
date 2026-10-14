@@ -157,7 +157,6 @@ test("tools that are not ready yet say they are coming soon", async ({
 }) => {
   for (const path of [
     "/compare",
-    "/citations",
     "/grammar",
   ]) {
     await page.goto(path);
@@ -634,4 +633,35 @@ test("dark theme keeps contrast on results", async ({ page }) => {
     timeout: 60_000,
   });
   await axe(page);
+});
+
+test("citations: the sample list is checked after consent, problems are flagged, and the corrected list exports", async ({
+  page,
+}) => {
+  const reply = readFileSync(new URL("../tests/fixtures/citations-sample.json", import.meta.url), "utf8");
+  let sent: { references?: string; consent?: boolean } | null = null;
+  await page.route("**/api/citations/verify", async (route) => {
+    sent = route.request().postDataJSON();
+    await route.fulfill({ contentType: "application/json", body: reply });
+  });
+  await page.goto("/citations");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Make sure every reference is real and right");
+  await page.getByRole("button", { name: "Try a sample" }).click();
+  await page.getByRole("button", { name: "Check references" }).click();
+  await page.getByRole("dialog", { name: "Send parts of your text to search services?" }).getByRole("button", { name: "Send and run the check" }).click();
+
+  await expect(page.getByText("Retracted", { exact: true })).toBeVisible();
+  await expect(page.getByText("DOI points elsewhere", { exact: true })).toBeVisible();
+  await expect(page.getByText("DOI points to another work", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/year: you have 2018, the record says 2016/)).toBeVisible();
+  expect(sent?.consent).toBe(true);
+  expect(sent?.references).toContain("Wakefield");
+  await axe(page);
+
+  const bib = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download BibTeX" }).click();
+  expect((await bib).suggestedFilename()).toBe("veritome-references.bib");
+
+  await page.getByRole("tab", { name: /Find sources/ }).click();
+  await expect(page.getByRole("button", { name: "Find claims that may need a citation" })).toBeVisible();
 });

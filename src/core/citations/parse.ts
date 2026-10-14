@@ -272,8 +272,12 @@ function parseTail(rest: string): Tail {
 }
 
 function pickYear(body: string): { year?: number; suffix?: string; parenIndex: number; parenEnd: number } {
-  const paren = /\(\s*(?:n\.d\.|(\d{4})([a-z])?)\s*[,)]/.exec(body);
-  if (paren) {
+  // "(2020)" after the authors, not "171(4356)", an issue number right after a volume (Vancouver), or an
+  // implausible year.
+  const paren = [...body.matchAll(/(?<!\d)\(\s*(?:n\.d\.|(\d{4})([a-z])?)\s*[,)]/g)].find(
+    (m) => !m[1] || (Number(m[1]) >= 1500 && Number(m[1]) <= new Date().getFullYear() + 1),
+  );
+  if (paren && paren.index !== undefined) {
     const end = body.indexOf(")", paren.index);
     const year = paren[1] ? Number(paren[1]) : undefined;
     return { ...(year !== undefined ? { year } : {}), ...(paren[2] ? { suffix: paren[2] } : {}), parenIndex: paren.index, parenEnd: end + 1 };

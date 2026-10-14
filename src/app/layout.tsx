@@ -99,8 +99,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                         Paraphraser
                       </Link>
                     </li>
+                    <li>
+                      <Link
+                        href="/citations"
+                        className="hover:text-ink hover:underline"
+                      >
+                        Citations
+                      </Link>
+                    </li>
                     <li className="text-ink-faint">
-                      Compare, Citations and Grammar: coming soon
+                      Compare and Grammar: coming soon
                     </li>
                   </ul>
                 </div>

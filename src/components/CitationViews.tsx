@@ -5,7 +5,8 @@ import type { CitationCrossCheck } from "@/core/citations/intext";
 import { formatBibtex, formatReferenceText } from "@/core/citations/format";
 import { CITATION_STYLES, type CitationStyle, type Work } from "@/core/citations/types";
 import type { ReferenceCheck, VerifyListResult, VerifyStatus } from "@/core/citations/verify";
-import { Switch, cx } from "./ui";
+import { DownloadIcon } from "./icons";
+import { Button, Switch, cx } from "./ui";
 
 export const STATUS_TEXT: Record<VerifyStatus, { label: string; tone: string; help: string }> = {
   verified: { label: "Verified", tone: "border-ok text-ok", help: "Matches a database record closely." },
@@ -84,11 +85,11 @@ function CheckItem({ c, style }: { c: ReferenceCheck; style: CitationStyle }) {
   const s = STATUS_TEXT[c.status];
   const serious = c.flags.filter((f) => ["retracted", "withdrawn", "removed", "expression_of_concern", "doi_points_elsewhere"].includes(f));
   return (
-    <li className={cx("rounded border-l-4 bg-page px-4 py-3", serious.length ? "border-danger" : s.tone.split(" ")[0])}>
+    <li className={cx("rounded-xl border-l-4 bg-page px-4 py-3 shadow-[var(--neu-sm)]", serious.length ? "border-danger" : s.tone.split(" ")[0])}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="tabular-nums text-ink-faint">[{c.index}]</span>
         <span className={cx("rounded border px-1.5 text-xs font-semibold", s.tone)}>{s.label}</span>
-        {c.flags.map((f) => (
+        {c.flags.filter((f) => !(f === "doi_points_elsewhere" && c.status === "mismatch")).map((f) => (
           <span key={f} className={cx("rounded px-1.5 text-xs font-semibold", serious.includes(f) ? "bg-danger-soft text-danger" : "bg-desk text-ink-soft")}>
             {FLAG_TEXT[f] ?? f}
           </span>
@@ -113,9 +114,36 @@ function CheckItem({ c, style }: { c: ReferenceCheck; style: CitationStyle }) {
           </div>
         </details>
       )}
-      {c.status === "not_found" && <p className="mt-1 text-sm text-ink-faint">{s.help}</p>}
+      {c.status === "not_found" && c.notes.length === 0 && <p className="mt-1 text-sm text-ink-faint">{s.help}</p>}
     </li>
   );
+}
+
+/**
+ * The reference list rewritten in one style: entries matched to a record use the record's details (fixing a wrong
+ * year or page range); entries that were not found stay as written, for the author to check.
+ */
+export function correctedList(checks: readonly ReferenceCheck[], style: CitationStyle): string {
+  return checks.map((c, i) => (c.match && c.status !== "not_found" ? formatReferenceText(c.match, style, i + 1) : c.raw)).join("\n");
+}
+
+/** BibTeX for every entry matched to a record. */
+export function bibtexOf(checks: readonly ReferenceCheck[]): string {
+  return checks
+    .filter((c) => c.match && c.status !== "not_found")
+    .map((c) => formatBibtex(c.match!))
+    .join("\n\n");
+}
+
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export function VerifyView({ result, crossCheck }: { result: VerifyListResult; crossCheck: CitationCrossCheck | null }) {
@@ -135,7 +163,7 @@ export function VerifyView({ result, crossCheck }: { result: VerifyListResult; c
             ["Not checked", counts.unchecked],
           ] as const
         ).map(([k, v]) => (
-          <div key={k} className="rounded bg-page px-3 py-2">
+          <div key={k} className="card px-3 py-2">
             <dt className="text-sm text-ink-soft">{k}</dt>
             <dd className="font-display text-2xl font-semibold tabular-nums">{v}</dd>
           </div>
@@ -148,6 +176,15 @@ export function VerifyView({ result, crossCheck }: { result: VerifyListResult; c
           Only show entries that need attention
         </label>
         <StylePicker value={style} onChange={setStyle} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm print:hidden">
+        <CopyButton text={correctedList(result.checks, style)} label={`Copy the list in ${CITATION_STYLES.find((s) => s.id === style)?.label ?? style} style`} />
+        {result.checks.some((c) => c.match && c.status !== "not_found") && (
+          <Button variant="quiet" className="min-h-0 px-0 py-0" onClick={() => download("veritome-references.bib", bibtexOf(result.checks), "application/x-bibtex")}>
+            <DownloadIcon size={16} /> Download BibTeX
+          </Button>
+        )}
+        <span className="text-ink-faint">Entries matched to a record use its details; entries not found stay as you wrote them.</span>
       </div>
       <ol className="space-y-3">
         {shown.map((c) => (

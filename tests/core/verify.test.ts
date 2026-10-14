@@ -308,3 +308,126 @@ test("a surname recorded in the other name order, or an affiliation listed as an
   const ref2 = parseReference("Shankarlingam, G., & Reddy, K. T. (2023). Predicting a small-cap company stock price using Python with best accuracy rate. Indian Journal of Science and Technology.", 1);
   assert.deepEqual(findDiscrepancies(ref2, junk).filter((d) => d.field === "authors"), []);
 });
+
+// Cases found by checking real reference lists against Crossref and arXiv.
+
+const deepLearning: Work = {
+  title: "Deep learning",
+  authors: [{ family: "LeCun", given: "Yann" }, { family: "Bengio", given: "Yoshua" }, { family: "Hinton", given: "Geoffrey" }],
+  year: 2015,
+  container: "Nature",
+  doi: "10.1038/nature14539",
+  type: "journal-article",
+  sources: ["crossref"],
+};
+const deepArchitectures: Work = {
+  title: "Learning deep architectures for AI",
+  authors: [{ family: "Bengio", given: "Yoshua" }],
+  year: 2009,
+  container: "Foundations and Trends in Machine Learning",
+  doi: "10.1561/2200000006",
+  type: "journal-article",
+  sources: ["crossref"],
+};
+
+test("a DOI whose paper shares a few title words with the entry is still reported as pointing elsewhere", async () => {
+  const ref = parseReference(
+    "Bengio, Y. (2009). Learning deep architectures for AI. Foundations and Trends in Machine Learning, 2(1), 1–127. https://doi.org/10.1038/nature14539",
+    1,
+  );
+  const r = await verifyReference(ref, fakeDeps({ byDoi: [deepLearning], search: [deepArchitectures] }));
+  assert.equal(r.status, "mismatch");
+  assert.ok(r.flags.includes("doi_points_elsewhere"));
+  assert.equal(r.match?.doi, deepArchitectures.doi);
+  assert.equal(r.doiWork?.doi, deepLearning.doi);
+});
+
+test("a preprint and its published article are one work: a correct DOI is not flagged when the preprint also turns up", async () => {
+  const article: Work = { ...deepLearning };
+  const preprint: Work = { ...deepLearning, doi: "10.48550/arxiv.0000.00000", container: undefined, type: "preprint", sources: ["arxiv"], year: 2014 };
+  const ref = parseReference("LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature, 521, 436–444. https://doi.org/10.1038/nature14539", 1);
+  const r = await verifyReference(ref, fakeDeps({ byDoi: [article], search: [preprint] }));
+  assert.equal(r.status, "verified");
+  assert.deepEqual(r.flags, []);
+});
+
+test("a book review or commentary by other people is not taken for the cited work", async () => {
+  const review: Work = {
+    title: "Kahneman, D., Thinking, Fast and Slow",
+    authors: [{ family: "Galli", given: "Emma" }],
+    year: 2011,
+    container: "Journal of Public Finance and Public Choice",
+    type: "journal-article",
+    sources: ["crossref"],
+  };
+  const ref = parseReference("Kahneman, D. (2011). Thinking, fast and slow. Farrar, Straus and Giroux.", 1);
+  const r = await verifyReference(ref, fakeDeps({ search: [review] }));
+  assert.equal(r.status, "not_found");
+  assert.equal(r.match, undefined);
+  assert.deepEqual(r.discrepancies, []);
+});
+
+test("the published version wins a near tie with its preprint, and the year is checked against it", async () => {
+  const conference: Work = {
+    title: "Deep residual learning for image recognition",
+    authors: [{ family: "He", given: "Kaiming" }, { family: "Zhang", given: "Xiangyu" }],
+    year: 2016,
+    container: "2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)",
+    pages: "770-778",
+    doi: "10.1109/cvpr.2016.90",
+    type: "proceedings-article",
+    sources: ["crossref"],
+  };
+  const preprint: Work = { ...conference, year: 2015, container: undefined, pages: undefined, doi: undefined, type: "preprint", sources: ["arxiv"] };
+  const ref = parseReference(
+    "He, K., Zhang, X., Ren, S., & Sun, J. (2018). Deep residual learning for image recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 770–778).",
+    1,
+  );
+  const r = await verifyReference(ref, { ...fakeDeps({ search: [conference] }), arxiv: { getById: async () => null, searchByTitle: async () => [preprint] } });
+  assert.equal(r.match?.doi, conference.doi);
+  assert.deepEqual(r.discrepancies.map((d) => [d.field, d.actual]), [["year", "2016"]]);
+});
+
+test("a published year shortly after the preprint's is not called wrong", () => {
+  const preprint: Work = { title: "Adam: A method for stochastic optimization", authors: [{ family: "Kingma" }, { family: "Ba" }], year: 2014, type: "preprint", sources: ["arxiv"] };
+  const ref = parseReference("Kingma, D. P., & Ba, J. (2015). Adam: A method for stochastic optimization. International Conference on Learning Representations.", 1);
+  assert.deepEqual(findDiscrepancies(ref, preprint), []);
+  assert.deepEqual(findDiscrepancies(parseReference("Kingma, D. P., & Ba, J. (2013). Adam: A method for stochastic optimization.", 1), preprint).map((d) => d.field), ["year"]);
+});
+
+test("a search by author and title finds a paper that commentary records crowd out of a plain search", async () => {
+  const alphafold: Work = {
+    title: "Highly accurate protein structure prediction with AlphaFold",
+    authors: [{ family: "Jumper", given: "John" }, { family: "Evans", given: "Richard" }],
+    year: 2021,
+    container: "Nature",
+    doi: "10.1038/s41586-021-03819-2",
+    type: "journal-article",
+    sources: ["crossref"],
+  };
+  const commentary: Work = { title: "Faculty Opinions recommendation of Highly accurate protein structure prediction with AlphaFold", authors: [{ family: "Herault" }], year: 2021, container: "Faculty Opinions", type: "dataset", sources: ["crossref"] };
+  const asked: string[] = [];
+  const deps: VerifierDeps = {
+    crossref: {
+      getWork: async () => null,
+      search: async () => [commentary, commentary],
+      searchByAuthorTitle: async (author) => {
+        asked.push(author);
+        return [alphafold];
+      },
+    },
+  };
+  const ref = parseReference("Jumper, J., Evans, R., Pritzel, A., et al. (2021). Highly accurate protein structure prediction with AlphaFold. Nature, 596(7873), 583–589.", 1);
+  const r = await verifyReference(ref, deps);
+  assert.deepEqual(asked, ["Jumper"]);
+  assert.equal(r.status, "verified");
+  assert.equal(r.match?.doi, alphafold.doi);
+});
+
+test("Vancouver: an issue number in brackets is not read as the year", () => {
+  const ref = parseReference("Watson JD, Crick FHC. Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid. Nature. 1953;171(4356):737-8.", 1);
+  assert.equal(ref.year, 1953);
+  assert.equal(ref.title, "Molecular structure of nucleic acids: a structure for deoxyribose nucleic acid");
+  assert.equal(ref.container, "Nature");
+  assert.deepEqual([ref.volume, ref.issue, ref.pages], ["171", "4356", "737-8"]);
+});
