@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { StylePicker, VerifyView, WorkCitation } from "@/components/CitationViews";
 import { useConsent } from "@/components/Consent";
+import { BookIcon, ScanIcon } from "@/components/icons";
+import { SlidingChoice } from "@/components/motion-ui";
 import { TextSource } from "@/components/TextSource";
-import { Button, Limits, Notice, ToolHeader, Warnings, cx } from "@/components/ui";
+import { Button, Limits, Notice, Warnings } from "@/components/ui";
 import type { ClaimCandidate, SuggestResult } from "@/core/citations/finder";
 import type { CitationCrossCheck } from "@/core/citations/intext";
 import type { CitationStyle } from "@/core/citations/types";
 import type { VerifyListResult } from "@/core/citations/verify";
 import { ApiError, postJson } from "@/lib/api";
+import { SAMPLE_REFERENCES } from "@/lib/sample";
 import { useRun } from "@/lib/useRun";
 
 type VerifyReply = VerifyListResult & { crossCheck: CitationCrossCheck | null };
@@ -25,16 +28,20 @@ function CheckReferences() {
   };
   return (
     <div className="space-y-6">
-      <div className="card animate-fade-up max-w-4xl space-y-4 p-4 sm:p-6 [--i:2]">
+      <div className="card animate-fade-up space-y-4 p-4 sm:p-6" style={{ ["--i" as string]: 4 }}>
         <TextSource
           value={text}
           onChange={setText}
           label="Reference list, or the whole paper"
-          hint="Paste just the references, or the full text with a “References” heading to also cross-check in-text citations."
+          sample={SAMPLE_REFERENCES}
+          hint="Paste just the references, or upload or paste the whole paper with a “References” heading to also check the citations in the text against the list."
         />
-        <Button onClick={() => void go()} busy={busy} disabled={!text.trim()}>
-          {busy ? "Looking up references" : "Check references"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => void go()} busy={busy} disabled={!text.trim()}>
+            {busy ? "Looking up references" : "Check references"}
+          </Button>
+          {busy && <span className="text-sm text-ink-faint" role="status">Each entry is looked up in turn; a long list can take a minute or two.</span>}
+        </div>
         {error && <Notice kind="error">{error}</Notice>}
       </div>
       {result && (
@@ -107,14 +114,14 @@ function FindSources() {
   return (
     <div className="space-y-6">
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="card animate-fade-up space-y-4 p-4 sm:p-6 [--i:2]">
+        <div className="card animate-fade-up space-y-4 p-4 sm:p-6" style={{ ["--i" as string]: 4 }}>
           <TextSource value={text} onChange={setText} label="Scan a text for uncited claims" rows={10} hint="Finding the claims happens on the server without any outside service." />
           <Button onClick={() => void scanText()} busy={scan.busy} disabled={!text.trim()}>
             Find claims that may need a citation
           </Button>
           {scan.error && <Notice kind="error">{scan.error}</Notice>}
         </div>
-        <div className="space-y-3">
+        <div className="card animate-fade-up space-y-3 p-4 sm:p-6" style={{ ["--i" as string]: 5 }}>
           <label htmlFor="claim" className="font-semibold">
             Or search for one statement
           </label>
@@ -124,7 +131,7 @@ function FindSources() {
             value={single}
             onChange={(e) => setSingle(e.target.value)}
             maxLength={2000}
-            className="sheet-text block w-full max-w-none rounded-lg border border-[var(--neu-edge)] bg-desk px-4 py-3"
+            className="sheet-text neu-in block w-full max-w-none rounded-xl border border-[var(--neu-edge)] px-4 py-3"
             placeholder="e.g. Riparian zones account for a large share of soil carbon efflux in temperate catchments."
           />
           <Button variant="secondary" disabled={!single.trim() || found[-1] === "busy"} onClick={() => void search(-1, single)}>
@@ -143,7 +150,7 @@ function FindSources() {
           </div>
           <ol className="space-y-3">
             {claims.map((c, i) => (
-              <li key={c.start} className={cx("rounded bg-page px-4 py-3")}>
+              <li key={c.start} className="card px-4 py-3">
                 <p className="font-serif">
                   <span className="mark mark-cite">{c.text}</span>
                 </p>
@@ -171,39 +178,32 @@ export function CitationsTool() {
   const [tab, setTab] = useState<"check" | "find">("check");
   return (
     <div className="space-y-8">
-      <ToolHeader title="Citations" intro="Check that every reference is real and correct, and find published support for claims that have none." />
-      <div
-        role="tablist"
-        aria-label="Citation tools"
-        className="flex gap-1 border-b border-rule"
-        onKeyDown={(e) => {
-          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-          const next = tab === "check" ? "find" : "check";
-          setTab(next);
-          document.getElementById(`tab-${next}`)?.focus();
-        }}
-      >
-        {(
-          [
-            ["check", "Check references"],
-            ["find", "Find sources"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            id={`tab-${id}`}
-            aria-selected={tab === id}
-            tabIndex={tab === id ? 0 : -1}
-            aria-controls={`panel-${id}`}
-            onClick={() => setTab(id)}
-            className={cx("-mb-px border-b-2 px-4 py-2 font-semibold", tab === id ? "border-action text-ink" : "border-transparent text-ink-soft hover:text-ink")}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+      <header className="max-w-3xl">
+        <p className="animate-fade-up text-sm font-semibold tracking-wide text-action uppercase">Citations</p>
+        <h1
+          className="animate-fade-up mt-2 font-display text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]"
+          style={{ ["--i" as string]: 1 }}
+        >
+          Make sure every reference is real and right
+        </h1>
+        <p className="animate-fade-up mt-3 text-lg text-ink-soft" style={{ ["--i" as string]: 2 }}>
+          Each reference is looked up in Crossref, OpenAlex, DataCite and arXiv. You see which ones match a real record, which
+          have a wrong year, author or DOI, which were retracted, and which could not be found. You can also find published
+          papers for claims that have no citation.
+        </p>
+        <div className="animate-fade-up mt-6" style={{ ["--i" as string]: 3 }}>
+          <SlidingChoice
+            label="Citation tools"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { id: "check", title: "Check a reference list", label: <><BookIcon size={16} /> Check references</> },
+              { id: "find", title: "Find papers for claims without a citation", label: <><ScanIcon size={16} /> Find sources</> },
+            ]}
+          />
+        </div>
+      </header>
+      <div role="tabpanel" aria-label={tab === "check" ? "Check references" : "Find sources"}>
         {tab === "check" ? <CheckReferences /> : <FindSources />}
       </div>
     </div>

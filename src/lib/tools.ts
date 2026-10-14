@@ -48,9 +48,8 @@ export const TOOLS: readonly ToolInfo[] = [
   },
   {
     href: "/citations",
-    soon: true,
     name: "Citations",
-    does: "Checks references against Crossref and others, flags retractions, and finds papers for uncited claims.",
+    does: "Checks every reference against Crossref, OpenAlex, DataCite and arXiv: wrong years, authors and DOIs, retractions, and entries that cannot be found. Finds papers for uncited claims.",
     cannot:
       "“Not found” is not “fabricated”: books and reports are often missing from these databases.",
   },

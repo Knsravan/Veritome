@@ -1,6 +1,7 @@
 import { mapLimit } from "../infra/http.ts";
 import { dice, normalizeTitle, titleContainedIn, titleSimilarity, titleTokens } from "../text/similarity.ts";
 import type { ArxivClient } from "./sources/arxiv.ts";
+import { normalizeDoi } from "./sources/common.ts";
 import type { CrossrefClient } from "./sources/crossref.ts";
 import type { DataCiteClient } from "./sources/datacite.ts";
 import type { OpenAlexClient } from "./sources/openalex.ts";
@@ -51,7 +52,7 @@ export interface ReferenceCheck {
 }
 
 export interface VerifierDeps {
-  crossref: Pick<CrossrefClient, "getWork" | "search">;
+  crossref: Pick<CrossrefClient, "getWork" | "search" | "searchByAuthorTitle">;
   openalex?: Pick<OpenAlexClient, "getByDoi" | "searchByTitle">;
   datacite?: Pick<DataCiteClient, "getWork">;
   arxiv?: Pick<ArxivClient, "getById" | "searchByTitle">;
@@ -153,9 +154,15 @@ function firstPage(p: string | undefined): string {
   return (p ?? "").split(/[-–—]/)[0]?.replace(/\D/g, "") ?? "";
 }
 
+/** Preprints (arXiv, posted content), which precede the published version of the same work. */
+const isPreprint = (w: Work) => w.type === "preprint" || w.type === "posted-content" || (w.sources.length === 1 && w.sources[0] === "arxiv");
+
 export function findDiscrepancies(ref: ParsedReference, work: Work): Discrepancy[] {
   const out: Discrepancy[] = [];
-  if (ref.year !== undefined && work.year !== undefined && ref.year !== work.year) {
+  // A preprint comes out a year or two before the published version an entry usually cites, so a later year is not
+  // an error there.
+  const preprintThenPublished = isPreprint(work) && ref.year !== undefined && work.year !== undefined && ref.year > work.year && ref.year - work.year <= 2;
+  if (ref.year !== undefined && work.year !== undefined && ref.year !== work.year && !preprintThenPublished) {
     out.push({ field: "year", cited: String(ref.year), actual: String(work.year) });
   }
   const firstCited = ref.authors[0];
@@ -197,16 +204,26 @@ function searchQuery(ref: ParsedReference): string {
     .slice(0, 300);
 }
 
+/**
+ * The candidate that fits the entry best. A preprint and its published version are the same work, and the preprint
+ * often scores a little higher only because it has no journal to compare; the published record is what a reference
+ * list should cite, so it wins a near tie.
+ */
 function bestCandidate(ref: ParsedReference, candidates: readonly Work[]): { work: Work; score: MatchScore } | null {
   let best: { work: Work; score: MatchScore } | null = null;
+  const rank = (c: { work: Work; score: MatchScore }) => c.score.score - (isPreprint(c.work) ? 0.04 : 0);
   for (const work of candidates) {
-    const score = scoreMatch(ref, work);
-    if (!best || score.score > best.score.score) best = { work, score };
+    const c = { work, score: scoreMatch(ref, work) };
+    if (!best || rank(c) > rank(best)) best = c;
   }
   return best;
 }
 
 function statusFromScore(score: MatchScore): VerifyStatus {
+  const { parts } = score;
+  // A record that shares none of the cited authors is someone else's work (a review of the book, a later paper with
+  // the same title) unless everything else agrees closely.
+  if (parts.authors === 0 && (parts.title < 0.95 || parts.year === 0 || (parts.container !== null && parts.container < 0.5))) return "not_found";
   if (score.score >= VERIFIED_SCORE && score.parts.title >= 0.75) return "verified";
   if (score.score >= LIKELY_SCORE && score.parts.title >= 0.55) return "likely";
   return "not_found";
@@ -270,6 +287,14 @@ export async function verifyReference(ref: ParsedReference, deps: VerifierDeps):
       } catch {
         lookupFailed = true;
       }
+      const firstAuthor = ref.authors[0]?.family;
+      if (ref.title && firstAuthor && deps.crossref.searchByAuthorTitle && (bestCandidate(ref, candidates)?.score.score ?? 0) < VERIFIED_SCORE) {
+        try {
+          candidates.push(...(await deps.crossref.searchByAuthorTitle(firstAuthor, ref.title, 5)));
+        } catch {
+          // The plain search above already decided whether the lookup counts as failed.
+        }
+      }
       if (ref.title && deps.openalex && (bestCandidate(ref, candidates)?.score.score ?? 0) < VERIFIED_SCORE) {
         try {
           candidates.push(...(await deps.openalex.searchByTitle(ref.title, 5)));
@@ -288,6 +313,23 @@ export async function verifyReference(ref: ParsedReference, deps: VerifierDeps):
       }
       const best = bestCandidate(ref, candidates);
       if (best && (!match || best.score.score > match.score.score + 0.05)) match = best;
+    }
+
+    // The entry fits a different paper better than the one its DOI resolves to (titles sharing a few words, such as
+    // "Deep learning" and "Learning deep architectures for AI", pass the first check). Two versions of one paper
+    // (preprint and article) have near-identical titles and are not flagged.
+    if (
+      doiWork &&
+      match &&
+      match.work !== doiWork &&
+      !check.flags.includes("doi_points_elsewhere") &&
+      normalizeDoi(match.work.doi) !== normalizeDoi(doiWork.doi) &&
+      titleSimilarity(match.work.title, doiWork.title) < 0.85 &&
+      match.score.parts.title - scoreMatch(ref, doiWork).parts.title >= 0.15
+    ) {
+      check.flags.push("doi_points_elsewhere");
+      check.doiWork = doiWork;
+      check.notes.push(`The cited DOI resolves to "${doiWork.title}", which does not match the title of this entry.`);
     }
   } catch (err) {
     lookupFailed = true;

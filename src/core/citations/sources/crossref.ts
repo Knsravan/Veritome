@@ -96,6 +96,11 @@ export interface CrossrefClient {
   /** Returns null when the DOI is not registered with Crossref. */
   getWork(doi: string): Promise<Work | null>;
   search(query: string, rows?: number): Promise<Work[]>;
+  /**
+   * Searches the title with the first author's surname as a separate field. Finds a paper whose title is shared by
+   * many commentary records (such as "Faculty Opinions recommendation of …") that crowd a plain search.
+   */
+  searchByAuthorTitle?(author: string, title: string, rows?: number): Promise<Work[]>;
   /** Matching works, most cited first. Surfaces the canonical papers a relevance sort buries. */
   searchMostCited?(query: string, rows?: number): Promise<Work[]>;
 }
@@ -116,6 +121,12 @@ export function createCrossref(http: Http, options: { mailto?: string; baseUrl?:
     async search(query, rows = 5) {
       const data = await http.json<{ message?: { items?: CrossrefItem[] } }>(
         `${base}/works?query.bibliographic=${encodeURIComponent(query)}&rows=${rows}${mailto}`,
+      );
+      return (data.message?.items ?? []).map(mapCrossrefItem);
+    },
+    async searchByAuthorTitle(author, title, rows = 5) {
+      const data = await http.json<{ message?: { items?: CrossrefItem[] } }>(
+        `${base}/works?query.bibliographic=${encodeURIComponent(title)}&query.author=${encodeURIComponent(author)}&rows=${rows}${mailto}`,
       );
       return (data.message?.items ?? []).map(mapCrossrefItem);
     },

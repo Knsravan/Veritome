@@ -7,3 +7,5 @@
 - `sample.docx`, `sample.pdf`: tiny documents for extraction tests, generated for this project.
 - `humanise.docx`, `humanise.pdf`: a short paper (a Word file and the same file saved as PDF by LibreOffice) for the
   Humaniser's File mode, written for this project.
+- `citations-sample.json`: the citation check's reply for the sample reference list (`SAMPLE_REFERENCES` in
+  `src/lib/sample.ts`), recorded from Crossref and arXiv on 2026-10-13, so the browser test needs no network.
