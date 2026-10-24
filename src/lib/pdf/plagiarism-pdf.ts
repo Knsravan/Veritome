@@ -1,4 +1,4 @@
-import type { AiBreakdown } from "@/core/detector/breakdown";
+import { aiShareLabel, isLowAiShare, LOW_AI_SHARE_NOTE, type AiBreakdown } from "@/core/detector/breakdown";
 import { ISSUE_TEXT, type IssueKind, type ReviewedReport } from "@/core/plagiarism/review";
 import type { PlagiarismReport } from "@/core/plagiarism/types";
 import type { ParagraphStat } from "@/core/report/paragraphs";
@@ -93,7 +93,7 @@ export function writePlagiarismSection(w: PdfWriter, input: PlagiarismPdfInput) 
   w.ensure(90);
   const serious = r.issues.filter((i) => ISSUE_TEXT[i.kind].serious).length;
   w.figure(w.margin, pct(r.similarity), "Similarity", `${r.matchedWords} of ${report.words} words match a source word for word. ${serious} passage(s) need fixing.`);
-  if (ai?.judged) w.figure(w.margin + w.content / 2, pct(ai.aiPercent), "AI writing", "of the text is in paragraphs that read as likely AI-written. A pattern match, not proof.");
+  if (ai?.judged) w.figure(w.margin + w.content / 2, aiShareLabel(ai.aiPercent), "AI writing", isLowAiShare(ai.aiPercent) ? `Measured ${ai.aiPercent}%. ${LOW_AI_SHARE_NOTE}` : "of the text is in paragraphs that read as likely AI-written. A pattern match, not proof.");
   else w.figure(w.margin + w.content / 2, "–", "AI writing", ai ? "Not enough text to judge (about 150 words needed)." : "Not checked.");
   w.y += 90;
 

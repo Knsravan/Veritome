@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
 import { fileOf, SeenBefore, useSavedCheck } from "@/components/HistoryBits";
-import { aiBreakdown } from "@/core/detector/breakdown";
+import { aiBreakdown, aiShareLabel } from "@/core/detector/breakdown";
 import { saveCheck, titleFor } from "@/lib/history";
 import {
   ArrowRightIcon,
@@ -234,7 +234,7 @@ export function DetectorTool() {
         tool: "detector",
         title: titleFor(input, from?.name),
         words: countWords(input),
-        figures: b.judged ? [{ label: "AI writing", value: `${Math.round(b.aiPercent)}%` }] : [],
+        figures: b.judged ? [{ label: "AI writing", value: aiShareLabel(b.aiPercent) }] : [],
         text: input,
         ...(fileOf(from) ? { file: fileOf(from)! } : {}),
         payload: { result: merged },

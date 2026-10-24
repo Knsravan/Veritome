@@ -1,4 +1,4 @@
-import { aiBreakdown } from "@/core/detector/breakdown";
+import { aiBreakdown, aiShareLabel, isLowAiShare, LOW_AI_SHARE_NOTE } from "@/core/detector/breakdown";
 import { paperTitle } from "@/lib/paper-title";
 import { reviewReport } from "@/core/plagiarism/review";
 import {
@@ -103,10 +103,12 @@ export async function buildReportPdf(
     );
     w.figure(
       w.margin + quarter,
-      ai?.judged ? `${ai.aiPercent}%` : "–",
+      ai?.judged ? aiShareLabel(ai.aiPercent) : "–",
       "AI writing",
       ai?.judged
-        ? "in paragraphs that read as likely AI"
+        ? isLowAiShare(ai.aiPercent)
+          ? `under 20% (measured ${ai.aiPercent}%)`
+          : "in paragraphs that read as likely AI"
         : "Not enough text or not run",
       quarter - 10,
     );
@@ -508,10 +510,12 @@ function writeCover(
     );
   w.figure(
     p ? w.margin + half : w.margin,
-    ai?.judged ? `${ai.aiPercent}%` : "–",
+    ai?.judged ? aiShareLabel(ai.aiPercent) : "–",
     "AI writing",
     ai?.judged
-      ? "in paragraphs that read as AI-written or AI-polished"
+      ? isLowAiShare(ai.aiPercent)
+        ? `Measured ${ai.aiPercent}%. ${LOW_AI_SHARE_NOTE}`
+        : "in paragraphs that read as AI-written or AI-polished"
       : "Not enough text, or not run",
     half - 12,
   );

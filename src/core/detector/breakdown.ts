@@ -10,12 +10,30 @@ export interface AiBreakdown {
   aiPercent: number;
   uncertainPercent: number;
   humanPercent: number;
+  /** Words of running prose the shares are counted on (headings, captions, lists and the reference list are left out). */
   words: number;
+  /** Separate stretches of text marked as likely AI-written. */
+  aiPassages: number;
   /** Consecutive stretches of text with the same verdict, for highlighting (offsets into the checked text). */
   regions: Array<{ start: number; end: number; kind: AiRegionKind; probability: number }>;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** Below this AI share Turnitin shows "*%" instead of a number: low shares are where human writing is most often misflagged. */
+export const LOW_AI_SHARE = 20;
+
+/** Whether a share is low enough to be shown as "*%". */
+export const isLowAiShare = (percent: number) => percent > 0 && percent < LOW_AI_SHARE;
+
+/** The AI share as reports show it, the way Turnitin does: "*%" above 0 and under 20%, otherwise a whole percent. */
+export function aiShareLabel(percent: number): string {
+  return isLowAiShare(percent) ? "*%" : `${Math.round(percent)}%`;
+}
+
+/** What "*%" means, for wherever it is shown. */
+export const LOW_AI_SHARE_NOTE =
+  "Under 20% is shown as *%, as Turnitin does, because a low share is where human writing is most often wrongly flagged.";
 
 /**
  * The stretches of running prose that an AI share is judged on, as Turnitin does: paragraphs of real sentences.
@@ -44,7 +62,7 @@ export function proseRanges(text: string): Array<{ start: number; end: number }>
  * classed with the same thresholds as the overall verdict. A short text is a single segment, so it is all one class.
  */
 export function aiBreakdown(result: DetectorResult, text: string): AiBreakdown {
-  const empty: AiBreakdown = { judged: false, aiPercent: 0, uncertainPercent: 0, humanPercent: 0, words: result.words, regions: [] };
+  const empty: AiBreakdown = { judged: false, aiPercent: 0, uncertainPercent: 0, humanPercent: 0, words: result.words, aiPassages: 0, regions: [] };
   // Without the neural models the lighter classifier misses most AI-polished text, so no share is claimed.
   if (result.verdict === "insufficient_text" || result.model.neural === "unavailable") return empty;
   const { likelyAi, likelyHuman } = result.model.thresholds;
@@ -94,6 +112,7 @@ export function aiBreakdown(result: DetectorResult, text: string): AiBreakdown {
     humanPercent: human,
     uncertainPercent: round1(Math.max(0, 100 - ai - human)),
     words: total,
+    aiPassages: regions.filter((r) => r.kind === "ai").length,
     regions: regions.map((r) => ({ ...r, probability: Math.round(r.probability * 1000) / 1000 })),
   };
 }

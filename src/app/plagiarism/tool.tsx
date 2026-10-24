@@ -10,7 +10,7 @@ import { ReportProgress, type ProgressState, type StepState } from "@/components
 import { ReportView } from "@/components/report/ReportView";
 import { FileDrop, type LoadedPaper } from "@/components/FileDrop";
 import { fileOf, SeenBefore, useSavedCheck } from "@/components/HistoryBits";
-import { aiBreakdown } from "@/core/detector/breakdown";
+import { aiBreakdown, aiShareLabel } from "@/core/detector/breakdown";
 import { saveCheck, titleFor } from "@/lib/history";
 import { Button, Checkbox, Notice, cx } from "@/components/ui";
 import { detectorOverview } from "@/core/detector/overview";
@@ -164,7 +164,7 @@ export function PlagiarismTool() {
         figures: [
           ...(done.plagiarism.status === "done" ? [{ label: "Similarity", value: `${done.plagiarism.result.similarity}%` }] : []),
           ...(done.detector.status === "done" && aiBreakdown(done.detector.result, text).judged
-            ? [{ label: "AI writing", value: `${Math.round(aiBreakdown(done.detector.result, text).aiPercent)}%` }]
+            ? [{ label: "AI writing", value: aiShareLabel(aiBreakdown(done.detector.result, text).aiPercent) }]
             : []),
         ],
         text,

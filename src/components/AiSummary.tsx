@@ -1,6 +1,6 @@
 "use client";
 
-import type { AiBreakdown } from "@/core/detector/breakdown";
+import { isLowAiShare, LOW_AI_SHARE_NOTE, type AiBreakdown } from "@/core/detector/breakdown";
 import type { DetectorResult } from "@/core/detector/types";
 import { StackedBar } from "./charts";
 import { CountUp } from "./motion";
@@ -74,10 +74,11 @@ export function AiSummary({
           {b.judged ? (
             <>
               <p className="font-display text-6xl font-semibold tracking-tight tabular-nums">
-                <CountUp
-                  value={b.aiPercent}
-                  decimals={Number.isInteger(b.aiPercent) ? 0 : 1}
-                />
+                {isLowAiShare(b.aiPercent) ? (
+                  <span aria-label="Under 20%">*</span>
+                ) : (
+                  <CountUp value={Math.round(b.aiPercent)} />
+                )}
                 <span className="text-3xl text-ink-faint">%</span>
               </p>
               <p className="mt-1 font-semibold">
@@ -88,7 +89,19 @@ export function AiSummary({
                     : "No AI-written parts found"}
               </p>
               <p className="text-sm text-ink-soft">
-                of the text is in paragraphs that read as likely AI-written.
+                of the text is in paragraphs that read as likely AI-written
+                {b.aiPassages > 0 &&
+                  ` (${b.aiPassages} ${b.aiPassages === 1 ? "passage" : "passages"})`}
+                .
+              </p>
+              {isLowAiShare(b.aiPercent) && (
+                <p className="mt-2 max-w-64 text-xs text-ink-faint">
+                  Measured: {b.aiPercent}%. {LOW_AI_SHARE_NOTE}
+                </p>
+              )}
+              <p className="mt-2 text-xs text-ink-faint">
+                Counted on {b.words.toLocaleString("en")} words of prose;
+                headings, captions, lists and references are left out.
               </p>
             </>
           ) : (
