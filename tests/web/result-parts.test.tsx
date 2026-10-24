@@ -19,15 +19,18 @@ const breakdown = (b: Partial<AiBreakdown>): AiBreakdown => ({
   uncertainPercent: 0,
   humanPercent: 100,
   words: 400,
+  aiPassages: 0,
   regions: [],
   ...b,
 });
 
 describe("AiSummary", () => {
   test("shows the AI share with a bar of how the text reads", () => {
-    render(<AiSummary ai={result({ neural: "used" })} b={breakdown({ aiPercent: 32.5, uncertainPercent: 17.5, humanPercent: 50 })} />);
+    render(<AiSummary ai={result({ neural: "used" })} b={breakdown({ aiPercent: 32.5, uncertainPercent: 17.5, humanPercent: 50, aiPassages: 3 })} />);
     const card = screen.getByRole("region", { name: "AI writing summary" });
-    expect(card).toHaveTextContent("32.5%");
+    expect(card).toHaveTextContent("33%");
+    expect(card).toHaveTextContent("likely AI-written (3 passages).");
+    expect(card).toHaveTextContent("Counted on 400 words of prose");
     expect(card).toHaveTextContent("Parts read as AI-written");
     expect(within(card).getByRole("img")).toHaveAccessibleName(
       "How the text reads: Likely AI-written 32.5%, Unclear 17.5%, Likely human-written 50%",
@@ -42,6 +45,18 @@ describe("AiSummary", () => {
     cleanup();
     render(<AiSummary ai={result({ neural: "used" })} b={breakdown({})} />);
     expect(screen.getByText("No AI-written parts found")).toBeInTheDocument();
+  });
+
+  test("a share under 20% shows as *%, as Turnitin does, with the measured value", () => {
+    render(<AiSummary ai={result({ neural: "used" })} b={breakdown({ aiPercent: 6.4, humanPercent: 93.6, aiPassages: 1 })} />);
+    const card = screen.getByRole("region", { name: "AI writing summary" });
+    expect(within(card).getByLabelText("Under 20%").parentElement).toHaveTextContent(/^\*%$/);
+    expect(card).toHaveTextContent("Measured: 6.4%. Under 20% is shown as *%");
+    expect(card).toHaveTextContent("(1 passage).");
+    cleanup();
+    render(<AiSummary ai={result({ neural: "used" })} b={breakdown({})} />);
+    expect(screen.getByRole("region", { name: "AI writing summary" })).toHaveTextContent("0%");
+    expect(screen.queryByText(/Measured:/)).toBeNull();
   });
 
   test("too little text is not judged", () => {

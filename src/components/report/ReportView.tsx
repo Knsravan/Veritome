@@ -1,6 +1,6 @@
 "use client";
 
-import { aiBreakdown } from "@/core/detector/breakdown";
+import { aiBreakdown, aiShareLabel } from "@/core/detector/breakdown";
 import { paperTitle } from "@/lib/paper-title";
 import {
   useId,
@@ -198,7 +198,8 @@ function scores(r: PaperReport, text: string): Score[] {
           tool: "detector",
           label: "AI writing",
           // The share of the prose that reads as AI-written, as Turnitin reports it, and as the PDF report shows.
-          value: `${Math.round(aiBreakdown(d.result, text).aiPercent)}`,
+          // Under 20% it shows "*", as Turnitin does.
+          value: aiShareLabel(aiBreakdown(d.result, text).aiPercent).replace("%", ""),
           unit: "%",
           meter: aiBreakdown(d.result, text).aiPercent,
           note: "of the text reads as AI-written",

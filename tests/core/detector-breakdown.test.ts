@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aiBreakdown } from "../../src/core/detector/breakdown.ts";
+import { aiBreakdown, aiShareLabel, isLowAiShare } from "../../src/core/detector/breakdown.ts";
 import type { DetectorResult } from "../../src/core/detector/types.ts";
 
 const words = (n: number, w = "word") => Array.from({ length: n }, (_, i) => `${w}${i}`).join(" ");
@@ -40,6 +40,18 @@ test("splits a long text into AI, uncertain and human shares by section", () => 
   assert.equal(r.uncertainPercent, 33.4);
   assert.deepEqual(r.regions.map((x) => x.kind), ["ai", "uncertain", "human"]);
   assert.equal(r.regions[0]?.start, 0);
+  assert.equal(r.aiPassages, 1);
+});
+
+test("AI shares under 20% show as *%, as Turnitin does", () => {
+  assert.equal(aiShareLabel(0), "0%");
+  assert.equal(aiShareLabel(0.3), "*%");
+  assert.equal(aiShareLabel(19.9), "*%");
+  assert.equal(aiShareLabel(20), "20%");
+  assert.equal(aiShareLabel(33.3), "33%");
+  assert.equal(aiShareLabel(100), "100%");
+  assert.equal(isLowAiShare(0), false);
+  assert.equal(isLowAiShare(12), true);
 });
 
 test("a single section follows the overall verdict, and short texts are not judged", () => {

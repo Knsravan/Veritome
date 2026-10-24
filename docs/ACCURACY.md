@@ -37,6 +37,11 @@ An optional language-model opinion is shown separately and can only widen the un
 - score at or below **15**: "Few patterns typical of model output"
 - anything else: "Inconclusive"
 
+The **AI writing percentage** (the share of the prose in paragraphs that read as likely AI-written) is shown as a
+whole number, and a share above 0 but under 20% is shown as **\*%**, as Turnitin does: low shares are where human
+writing is most often wrongly flagged. The measured value is still given beside it. The report also says how many
+separate passages were marked and how many words of prose the share was counted on.
+
 ### How well it works
 
 Measured on 6 October 2026 on texts **never used in training or for choosing the threshold**, through the full
