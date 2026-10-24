@@ -2,13 +2,19 @@
 # flag this register often (language models learned from it), so the models need it among their human examples.
 #
 #   python human-wiki.py data/human-wiki.jsonl [--articles 1200] [--exclude textsight-wiki.jsonl]
+#   python human-wiki.py data/human-wiki.jsonl --dump train-00002-of-00041.parquet [--articles 1200]
+#
+# The API is rate-limited for unregistered clients (an hour gave about 200 articles), so --dump reads one file of the
+# Wikimedia dump of 1 March 2022 instead (legacy-datasets/wikipedia on Hugging Face, config 20220301.en; needs
+# pyarrow), which is from before ChatGPT and already plain text. Both write the same rows to the same file, and
+# articles already in it are skipped.
 #
 # Random articles of some length; for each, the last revision before 2022, read as rendered prose: reference markers
 # ("[1]"), tables, infoboxes, captions, lists and maths are left out. Paragraphs are joined into 150-380-word chunks,
 # at most two per article, split by article (2 in 10 held out). Every row carries the title and revision for the
-# CC BY-SA attribution. Articles named in --exclude files (rows whose "attribution" quotes a title, as in the
+# CC BY-SA attribution (text from before June 2023 is CC BY-SA 3.0). Articles named in --exclude files (rows whose "attribution" quotes a title, as in the
 # TextSight benchmark) are skipped. Standard library only.
-import argparse, hashlib, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+import argparse, hashlib, json, os, random, re, sys, time, urllib.error, urllib.parse, urllib.request
 from html.parser import HTMLParser
 
 API = "https://en.wikipedia.org/w/api.php"
@@ -88,7 +94,55 @@ def paragraphs(revid):
     p = Paragraphs()
     p.feed(d.get("parse", {}).get("text", ""))
     # Prose only: no stubs of a line, no runs of figures.
-    return [t for t in p.out if len(t.split()) >= 25 and sum(ch.isdigit() for ch in t) / max(1, len(t)) < 0.04]
+    return [t for t in p.out if prose(t)]
+
+
+def chunks(paras):
+    """Paragraphs joined into 150-380-word chunks, at most two per article."""
+    buf, out = [], []
+    for t in paras:
+        buf.append(t)
+        w = sum(len(x.split()) for x in buf)
+        if w >= 150:
+            if w <= 380: out.append("\n\n".join(buf))
+            buf = []
+        if len(out) >= 2: break
+    return out
+
+
+def prose(t):
+    return len(t.split()) >= 25 and sum(ch.isdigit() for ch in t) / max(1, len(t)) < 0.04
+
+
+END = re.compile(r"^(see also|notes|references|external links|further reading|bibliography|sources|footnotes|citations)\s*$", re.I)
+
+
+def from_dump(path, want, skip, out, split):
+    """Articles from one parquet file of the 1 March 2022 dump, in a fixed random order; returns (chunks, articles)."""
+    import pyarrow.parquet as pq  # only needed here
+    t = pq.read_table(path, columns=["id", "title", "url", "text"])
+    order = list(range(t.num_rows))
+    random.Random(7).shuffle(order)
+    total = kept = 0
+    for i in order:
+        if kept >= want: break
+        title = t.column("title")[i].as_py()
+        if title in skip or re.search(r"^(List|Lists|Timeline|Index) of|\(disambiguation\)", title): continue
+        text = t.column("text")[i].as_py()
+        if len(text) < 8000: continue  # long articles, as with the API
+        paras = []
+        for line in text.split("\n"):
+            if END.match(line.strip()): break
+            if prose(line.strip()): paras.append(re.sub(r"\s+", " ", line).strip())
+        texts = chunks(paras)
+        if not texts: continue
+        aid = t.column("id")[i].as_py()
+        for k, c in enumerate(texts):
+            out.write(json.dumps({"id": f"wiki22-{aid}-{k}", "paper": f"wiki:{title}", "title": title, "url": t.column("url")[i].as_py(),
+                                  "licence": "CC BY-SA 3.0", "attribution": f"Wikipedia contributors, '{title}', as in the Wikimedia dump of 1 March 2022",
+                                  "source": "wiki-20220301", "split": split(f"wiki:{title}"), "text": c}) + "\n")
+        total += len(texts); kept += 1
+    return total, kept
 
 
 def main():
@@ -96,6 +150,7 @@ def main():
     ap.add_argument("output")
     ap.add_argument("--articles", type=int, default=1200, help="articles to keep (with at least one chunk)")
     ap.add_argument("--exclude", action="append", default=[])
+    ap.add_argument("--dump", help="a parquet file of the 1 March 2022 Wikimedia dump to read instead of the API")
     a = ap.parse_args()
     exclude = set()
     for f in a.exclude:
@@ -109,6 +164,11 @@ def main():
     want = a.articles - len(done)
     split = lambda paper: "test" if int(hashlib.md5(paper.encode()).hexdigest(), 16) % 10 < 2 else "train"
     out = open(a.output, "a")
+    if a.dump:
+        total, kept = from_dump(a.dump, want, done | exclude, out, split)
+        out.close()
+        print(f"{total} chunks added from {kept} articles of the dump ({len(done)} articles were already done)")
+        return
     total = kept = n = 0
     tried, pool = set(done) | exclude, []
     # About a third of long random articles have enough running prose, so titles are drawn until enough are kept.
@@ -123,19 +183,10 @@ def main():
             paras = paragraphs(revid)
         except Exception as e:
             print(f"{title}: {type(e).__name__}", file=sys.stderr); continue
-        buf, k, rows = [], 0, []
-        for t in paras:
-            buf.append(t)
-            w = sum(len(x.split()) for x in buf)
-            if w >= 150:
-                if w <= 380:
-                    rows.append({"id": f"wiki-{revid}-{k}", "paper": f"wiki:{title}", "title": title, "revision": revid, "timestamp": ts,
-                                 "url": f"https://en.wikipedia.org/w/index.php?oldid={revid}", "licence": "CC BY-SA 4.0",
-                                 "attribution": f"Wikipedia contributors, '{title}', revision {revid} ({ts[:10]})",
-                                 "source": "wiki-pre2022", "split": split(f"wiki:{title}"), "text": "\n\n".join(buf)})
-                    k += 1
-                buf = []
-            if k >= 2: break
+        rows = [{"id": f"wiki-{revid}-{k}", "paper": f"wiki:{title}", "title": title, "revision": revid, "timestamp": ts,
+                 "url": f"https://en.wikipedia.org/w/index.php?oldid={revid}", "licence": "CC BY-SA 3.0",
+                 "attribution": f"Wikipedia contributors, '{title}', revision {revid} ({ts[:10]})",
+                 "source": "wiki-pre2022", "split": split(f"wiki:{title}"), "text": c} for k, c in enumerate(chunks(paras))]
         for r in rows: out.write(json.dumps(r) + "\n")
         out.flush()
         total += len(rows); kept += bool(rows)

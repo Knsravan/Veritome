@@ -25,8 +25,8 @@ humanised AI text**, not catching plain output from current models.
 
 | Data | Script | Why |
 |---|---|---|
-| Research papers by first authors in 20 non-English-speaking countries, 2012-2021, CC BY, from Europe PMC (about 4,500 chunks) | `scripts/train/neural/human-pmc.py` | the group detectors most often wrong |
-| Pre-2022 Wikipedia revisions (CC BY-SA, about 2,500 chunks from 1,500 articles) | `scripts/train/neural/human-wiki.py` | encyclopedic text reads like model output |
+| Research papers by first authors in 20 non-English-speaking countries, 2012-2021, CC BY, from Europe PMC: **collected**, 2,933 chunks from 1,913 papers (`scripts/train/data/human-esl.jsonl.gz`) | `scripts/train/neural/human-pmc.py` | the group detectors most often wrong |
+| Wikipedia before ChatGPT (CC BY-SA 3.0): **collected**, 2,352 chunks from 1,200 articles (`scripts/train/data/human-wiki.jsonl.gz`) | `scripts/train/neural/human-wiki.py` | encyclopedic text reads like model output |
 | peS2o research papers before June 2022 (existing) | `human-chunks.py` | native and mixed academic writing |
 | Text as it arrives from PDFs and Word files: citation markers, hyphenation, stray entities | augmentation in `make-batches` step | extraction leftovers were in several false positives |
 
