@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 API = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 COUNTRIES = ["Brazil", "China", "Japan", "Korea", "Indonesia", "Thailand", "Iran", "Turkey", "Italy", "Spain", "Germany",
-             "France", "Poland", "Egypt", "Nigeria", "Mexico", "Pakistan", "India", "Viet Nam", "Saudi Arabia"]
+             "France", "Poland", "Egypt", "Nigeria", "Mexico", "Pakistan", "India", "Vietnam", "Saudi Arabia"]
 ANGLO = re.compile(r"\b(USA|United States|U\.S\.A|United Kingdom|UK|England|Scotland|Wales|Ireland|Canada|Australia|New Zealand)\b")
 UA = {"user-agent": "Veritome detector training (https://github.com/Knsravan/Veritome)"}
 
@@ -108,7 +108,7 @@ def main():
     for country in COUNTRIES:
         kept = len(have.get(country, ()))
         if kept >= a.per_country: continue
-        papers = [p for p in search(country, a.per_country * 4) if p["pmcid"] not in exclude and p["pmcid"] not in seen]
+        papers = [p for p in search(country, a.per_country * 8) if p["pmcid"] not in exclude and p["pmcid"] not in seen]
         for p in papers:
             if kept >= a.per_country: break
             seen.add(p["pmcid"])
