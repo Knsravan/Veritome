@@ -145,10 +145,11 @@ without the neural models is not shown as a percentage. Every row: [detector-eva
    usually also flag more human text.
 3. **Unseen models are harder.** Models not represented in the training data (here Claude, Cohere and GPT-3)
    are detected less often. The model will need retraining as new language models appear.
-4. **Non-native English academic writing is flagged more often.** About 2 in 100 such texts were wrongly flagged
-   (4 of 183 and 1 of 42 in two samples), twice the rate on other research writing, and encyclopedic text did worse
-   still (5 of 155). Be especially careful there; [detector-training-plan.md](detector-training-plan.md) is the
-   plan to bring both to 1 in 100.
+4. **Some kinds of human writing are flagged more often.** Of 2,933 passages of research writing by authors in 20
+   non-English-speaking countries, 1.3% were wrongly flagged (95% range 0.9-1.7%), a little above other research
+   writing. Encyclopedic writing is worse: 3.0% of 2,352 Wikipedia passages from before ChatGPT (2.4-3.7%). Be
+   especially careful with both; [detector-training-plan.md](detector-training-plan.md) is the plan to bring them
+   to 1 in 100.
 
 Reproduce or retrain with the steps in `scripts/train/README.md`, or measure on your own labelled data with
 `node scripts/evaluate-detector.ts your.jsonl --neural` (without `--neural` only the lighter classifier judges).

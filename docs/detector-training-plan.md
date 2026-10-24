@@ -12,13 +12,13 @@ Measured with the full site pipeline (`node scripts/evaluate-detector.ts <file> 
 | | Result | Target |
 |---|---|---|
 | Text by 2026 models (Claude Opus 5 and Haiku 4.5, GPT-4.1, gpt-oss-120b, Qwen 3.8) | 89% caught (50 of 56) | keep, raise gpt-oss and other open models (67%) |
-| Human, non-native research writing | 2.2% (4 of 183) and 2.4% (1 of 42) wrongly flagged | 1% or less |
-| Human, encyclopedic (pre-2022 Wikipedia) | 3.2% (5 of 155) | 1% or less |
+| Human, non-native research writing | 1.3% of 2,933 wrongly flagged (0.9-1.7%; first samples: 4 of 183, 1 of 42) | 1% or less |
+| Human, encyclopedic (Wikipedia before ChatGPT) | 3.0% of 2,352 (2.4-3.7%; first sample: 5 of 155) | 1% or less |
 | Human, literature | 0.7% (2 of 306) | 1% or less |
 | AI text paraphrased or "humanised" | 12-22% caught (older RAID and MAGE sets) | much higher |
 | Separate "AI-paraphrased" category, as Turnitin reports | not possible: no model is trained for it | a third class |
 
-So the biggest risks are **false positives on non-native and encyclopedic writing** and **missing paraphrased or
+So the biggest risks are **false positives on encyclopedic and, to a lesser degree, non-native writing** and **missing paraphrased or
 humanised AI text**, not catching plain output from current models.
 
 ## Step 1. Human writing the models have never seen (no cost)

@@ -65,3 +65,44 @@ Of the 11 human TextSight passages labelled likely AI: 5 are encyclopedic Wikipe
 Baroque music, diabetes, origami), 4 are research writing from Japan, Brazil and Thailand, and 2 are nineteenth-century
 fiction in dialogue or dialect. Several carry extraction leftovers (empty "()" where citations were removed, HTML
 entities). None of these kinds of human writing is in the neural models' training data.
+
+## The collected human training data, before training on it (24 October 2026)
+
+None of the current models has seen this text, so all of it measures their false positives: 5,285 chunks of
+150-380 words (`scripts/train/data/`), scored with the full pipeline. Ranges are 95% Wilson intervals.
+
+| Human writing | n | wrongly labelled likely AI | 95% range | inconclusive | likely human |
+|---|---:|---:|---:|---:|---:|
+| Research papers by first authors in 20 non-English-speaking countries | 2,933 | 37 (1.3%) | 0.9-1.7% | 16% | 83% |
+| Wikipedia before ChatGPT | 2,352 | 70 (3.0%) | 2.4-3.7% | 5% | 92% |
+| &nbsp;&nbsp;at the last revision before 2022 | 382 | 13 (3.4%) | 2.0-5.7% | 6% | 90% |
+| &nbsp;&nbsp;in the dump of 1 March 2022 | 1,970 | 57 (2.9%) | 2.2-3.7% | 5% | 92% |
+
+By country of the first author. Small groups have wide ranges. Korea (3.6%) and Saudi Arabia (3.8%) are highest and their ranges lie just above the overall rate; with 20 countries compared, one or two that far out is expected by chance, so neither is a firm finding yet:
+
+| Country | n | wrongly labelled likely AI | 95% range | inconclusive | likely human |
+|---|---:|---:|---:|---:|---:|
+| Egypt | 240 | 1 (0.4%) | 0.1-2.3% | 5% | 94% |
+| China | 239 | 2 (0.8%) | 0.2-3.0% | 26% | 73% |
+| Germany | 239 | 5 (2.1%) | 0.9-4.8% | 24% | 74% |
+| Italy | 209 | 6 (2.9%) | 1.3-6.1% | 18% | 79% |
+| India | 201 | 3 (1.5%) | 0.5-4.3% | 15% | 84% |
+| Poland | 176 | 0 (0.0%) | 0.0-2.1% | 16% | 84% |
+| Japan | 168 | 2 (1.2%) | 0.3-4.2% | 17% | 82% |
+| Korea | 168 | 6 (3.6%) | 1.6-7.6% | 18% | 78% |
+| Spain | 168 | 2 (1.2%) | 0.3-4.2% | 11% | 88% |
+| Brazil | 164 | 0 (0.0%) | 0.0-2.3% | 4% | 96% |
+| France | 163 | 1 (0.6%) | 0.1-3.4% | 11% | 88% |
+| Turkey | 153 | 0 (0.0%) | 0.0-2.4% | 14% | 86% |
+| Iran | 140 | 0 (0.0%) | 0.0-2.7% | 14% | 86% |
+| Saudi Arabia | 130 | 5 (3.8%) | 1.7-8.7% | 15% | 81% |
+| Nigeria | 95 | 2 (2.1%) | 0.6-7.4% | 17% | 81% |
+| Indonesia | 80 | 1 (1.2%) | 0.2-6.7% | 15% | 84% |
+| Pakistan | 64 | 1 (1.6%) | 0.3-8.3% | 33% | 66% |
+| Thailand | 55 | 0 (0.0%) | 0.0-6.5% | 16% | 84% |
+| Mexico | 54 | 0 (0.0%) | 0.0-6.6% | 15% | 85% |
+| Vietnam | 27 | 0 (0.0%) | 0.0-12.5% | 33% | 67% |
+
+With 16 times more text than the first samples, non-native research writing comes out at 1.3%, just above the 1%
+target (the 183-passage TextSight sample gave 2.2%). Encyclopedic writing is the larger problem at 3.0%, three times
+the target, and both ways of collecting it agree.
