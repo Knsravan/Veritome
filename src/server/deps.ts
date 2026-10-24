@@ -23,6 +23,7 @@ import {
   wikipediaProvider,
   type SourceProvider,
 } from "../core/plagiarism/providers.ts";
+import { guardedFetch } from "../core/infra/guarded-fetch.ts";
 import { assertSafeUrl } from "../core/infra/netguard.ts";
 import { fetchFullText } from "../core/plagiarism/fulltext.ts";
 import { findOwnWorks } from "../core/plagiarism/ownwork.ts";
@@ -135,7 +136,10 @@ export async function llmClient(cfg: ServerConfig, override?: ClientLlmOverride)
     allowClientConfig: cfg.allowClientLlm,
     allowPrivate: cfg.allowPrivateLlm,
   });
-  return config ? createLlmClient(config) : undefined;
+  if (!config) return undefined;
+  // A browser-supplied address also gets its connections checked, so it cannot be re-resolved past the guard.
+  const fromBrowser = Boolean(cfg.allowClientLlm && override?.baseUrl && override.model);
+  return createLlmClient(config, fromBrowser ? { fetch: guardedFetch({ allowPrivate: cfg.allowPrivateLlm }) } : {});
 }
 
 export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
@@ -156,18 +160,19 @@ export async function publicStatus(cfg: ServerConfig): Promise<PublicStatus> {
 }
 
 const MAX_PDF_BYTES = 20 * 1024 * 1024;
+const publicFetch = guardedFetch({ allowPrivate: false });
 const MAX_PAGE_BYTES = 5 * 1024 * 1024;
 
 /**
  * Downloads a public URL. Every hop of a redirect is checked against the SSRF guard (no private, local or
- * cloud-metadata addresses), the size is capped and the download times out.
+ * cloud-metadata addresses), and so is every address connected to, the size is capped and the download times out.
  */
 async function safeDownload(cfg: ServerConfig, url: string, accept: string, maxBytes: number, signal?: AbortSignal): Promise<{ bytes: Uint8Array; type: string }> {
   let target = url;
   let res: Response | null = null;
   for (let hop = 0; hop < 4; hop++) {
     const safe = await assertSafeUrl(target, { allowPrivate: false });
-    res = await fetch(safe, {
+    res = await publicFetch(safe, {
       redirect: "manual",
       headers: { "user-agent": USER_AGENT(cfg), accept },
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),

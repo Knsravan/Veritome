@@ -136,6 +136,8 @@ test("assertSafeUrl blocks metadata, bad schemes and credentials always", async 
     "https://user:pw@example.org/",
     "not a url",
     "http://[::ffff:169.254.169.254]/",
+    "http://[64:ff9b::169.254.169.254]/",
+    "http://[2002:a9fe:a9fe::]/",
   ]) {
     await assert.rejects(() => assertSafeUrl(bad, { allowPrivate: true, resolve }), UnsafeUrlError, bad);
   }
@@ -163,6 +165,24 @@ test("isPrivateIp covers common ranges", () => {
     assert.equal(isPrivateIp(ip), true, ip);
   }
   for (const ip of ["8.8.8.8", "172.32.0.1", "93.184.216.34"]) assert.equal(isPrivateIp(ip), false, ip);
+});
+
+test("isPrivateIp sees through IPv6 addresses that carry an IPv4 one", () => {
+  for (const ip of ["::7f00:1", "::127.0.0.1", "64:ff9b::a00:1", "64:ff9b::10.0.0.1", "2002:c0a8:101::1", "::ffff:7f00:1"]) {
+    assert.equal(isPrivateIp(ip), true, ip);
+  }
+  for (const ip of ["64:ff9b::808:808", "2002:808:808::", "2001:4860:4860::8888", "::808:808"]) assert.equal(isPrivateIp(ip), false, ip);
+});
+
+test("http can refuse redirects", async () => {
+  const seen: Array<RequestRedirect | undefined> = [];
+  const fetch = (async (_url: string, init?: RequestInit) => {
+    seen.push(init?.redirect);
+    return new Response("{}", { headers: { "content-type": "application/json" } });
+  }) as typeof globalThis.fetch;
+  await createHttp({ fetch, redirect: "error" }).json("https://api.example.org/");
+  await createHttp({ fetch }).json("https://api.example.org/");
+  assert.deepEqual(seen, ["error", undefined]);
 });
 
 test("chunkBySentences never cuts a sentence and maps back to the source", () => {

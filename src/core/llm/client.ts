@@ -1,4 +1,5 @@
 import { createHttp, HttpError, type FetchLike } from "../infra/http.ts";
+import { UnsafeUrlError } from "../infra/netguard.ts";
 
 export interface LlmConfig {
   /** OpenAI-compatible base URL, e.g. https://api.openai.com/v1 or http://localhost:11434/v1 */
@@ -60,6 +61,8 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
     ...(options.fetch ? { fetch: options.fetch } : {}),
     timeoutMs: options.timeoutMs ?? 120_000,
     retries: 1,
+    // The base URL may come from the browser and was checked by the SSRF guard; a redirect could lead past it.
+    redirect: "error",
   });
   const url = chatCompletionsUrl(config.baseUrl);
 
@@ -118,6 +121,8 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
 
 function mapError(err: unknown): Error {
   if (err instanceof LlmError) return err;
+  // The connection-time SSRF check refused the address; fetch wraps that in a generic error.
+  if (err instanceof Error && err.cause instanceof UnsafeUrlError) return err.cause;
   if (err instanceof HttpError) {
     if (err.status === 401 || err.status === 403) return new LlmError("The language model rejected the API key.", err.status);
     if (err.status === 404) return new LlmError("The language model endpoint or model name was not found.", err.status);

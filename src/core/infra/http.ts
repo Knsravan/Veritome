@@ -38,6 +38,8 @@ export interface HttpOptions {
   /** Base delay for exponential back-off. */
   backoffMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  /** How redirects are handled. Set "error" when the URL was checked by the SSRF guard, which a redirect would skip. */
+  redirect?: RequestRedirect;
 }
 
 export interface RequestOptions {
@@ -86,6 +88,7 @@ export function createHttp(options: HttpOptions = {}): Http {
           },
           body: req.body,
           signal: controller.signal,
+          ...(options.redirect ? { redirect: options.redirect } : {}),
         });
         if ((res.status === 429 || res.status >= 500) && attempt < retries) {
           const retryAfter = Number(res.headers.get("retry-after"));
