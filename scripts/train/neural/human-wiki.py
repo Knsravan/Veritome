@@ -1,14 +1,14 @@
 # Encyclopedic human writing: English Wikipedia articles as they stood before 2022, before AI writing tools. Detectors
 # flag this register often (language models learned from it), so the models need it among their human examples.
 #
-#   python human-wiki.py data/human-wiki.jsonl [--articles 1500] [--exclude textsight-wiki.jsonl]
+#   python human-wiki.py data/human-wiki.jsonl [--articles 1200] [--exclude textsight-wiki.jsonl]
 #
 # Random articles of some length; for each, the last revision before 2022, read as rendered prose: reference markers
 # ("[1]"), tables, infoboxes, captions, lists and maths are left out. Paragraphs are joined into 150-380-word chunks,
 # at most two per article, split by article (2 in 10 held out). Every row carries the title and revision for the
 # CC BY-SA attribution. Articles named in --exclude files (rows whose "attribution" quotes a title, as in the
 # TextSight benchmark) are skipped. Standard library only.
-import argparse, hashlib, html, json, re, sys, time, urllib.parse, urllib.request
+import argparse, hashlib, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from html.parser import HTMLParser
 
 API = "https://en.wikipedia.org/w/api.php"
@@ -16,15 +16,25 @@ UA = {"user-agent": "Veritome detector training (https://github.com/Knsravan/Ver
 BEFORE = "2021-12-31T23:59:59Z"
 
 
-def get(params, tries=4):
+_last = [0.0]
+
+
+def get(params, tries=8):
+    """One API request, at most two a second; a 429 or 503 waits as long as Retry-After asks."""
     url = API + "?" + urllib.parse.urlencode({**params, "format": "json", "formatversion": 2})
     for i in range(tries):
+        time.sleep(max(0.0, _last[0] + 0.5 - time.time()))
+        _last[0] = time.time()
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 return json.load(r)
+        except urllib.error.HTTPError as e:
+            if i == tries - 1 or e.code not in (429, 500, 502, 503, 504): raise
+            wait = e.headers.get("retry-after")
+            time.sleep(int(wait) + 1 if wait and wait.isdigit() else 5 * 2 ** i)
         except Exception:
             if i == tries - 1: raise
-            time.sleep(2 ** i)
+            time.sleep(5 * 2 ** i)
 
 
 class Paragraphs(HTMLParser):
@@ -63,7 +73,6 @@ def random_titles(n, min_bytes=15000):
         for p in d.get("query", {}).get("pages", []):
             if p.get("length", 0) >= min_bytes and not re.search(r"^(List|Lists|Timeline|Index) of|\(disambiguation\)", p["title"]):
                 out.add(p["title"])
-        time.sleep(0.1)
     return sorted(out)[:n]
 
 
@@ -85,7 +94,7 @@ def paragraphs(revid):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("output")
-    ap.add_argument("--articles", type=int, default=1500)
+    ap.add_argument("--articles", type=int, default=1200, help="articles to keep (with at least one chunk)")
     ap.add_argument("--exclude", action="append", default=[])
     a = ap.parse_args()
     exclude = set()
@@ -93,16 +102,28 @@ def main():
         for l in open(f):
             m = re.search(r"'([^']+)'", json.loads(l).get("attribution", ""))
             if m: exclude.add(m.group(1))
-    titles = [t for t in random_titles(a.articles + len(exclude)) if t not in exclude][: a.articles]
-    rows = []
-    for n, title in enumerate(titles, 1):
+    # Rows are written as each article is done, so an interrupted run keeps its work and a rerun adds to it.
+    done = set()
+    if os.path.exists(a.output):
+        done = {json.loads(l)["title"] for l in open(a.output) if l.strip()}
+    want = a.articles - len(done)
+    split = lambda paper: "test" if int(hashlib.md5(paper.encode()).hexdigest(), 16) % 10 < 2 else "train"
+    out = open(a.output, "a")
+    total = kept = n = 0
+    tried, pool = set(done) | exclude, []
+    # About a third of long random articles have enough running prose, so titles are drawn until enough are kept.
+    while kept < want:
+        if not pool:
+            pool = [t for t in random_titles(100) if t not in tried]
+            continue
+        title = pool.pop(); tried.add(title); n += 1
         try:
             revid, ts = revision_before(title)
             if not revid: continue  # created in 2022 or later
             paras = paragraphs(revid)
         except Exception as e:
             print(f"{title}: {type(e).__name__}", file=sys.stderr); continue
-        buf, k = [], 0
+        buf, k, rows = [], 0, []
         for t in paras:
             buf.append(t)
             w = sum(len(x.split()) for x in buf)
@@ -111,16 +132,16 @@ def main():
                     rows.append({"id": f"wiki-{revid}-{k}", "paper": f"wiki:{title}", "title": title, "revision": revid, "timestamp": ts,
                                  "url": f"https://en.wikipedia.org/w/index.php?oldid={revid}", "licence": "CC BY-SA 4.0",
                                  "attribution": f"Wikipedia contributors, '{title}', revision {revid} ({ts[:10]})",
-                                 "source": "wiki-pre2022", "text": "\n\n".join(buf)})
+                                 "source": "wiki-pre2022", "split": split(f"wiki:{title}"), "text": "\n\n".join(buf)})
                     k += 1
                 buf = []
             if k >= 2: break
-        time.sleep(0.1)
-        if n % 100 == 0: print(f"{n}/{len(titles)} articles, {len(rows)} chunks", flush=True)
-    for r in rows: r["split"] = "test" if int(hashlib.md5(r["paper"].encode()).hexdigest(), 16) % 10 < 2 else "train"
-    with open(a.output, "w") as f:
-        for r in rows: f.write(json.dumps(r) + "\n")
-    print(len(rows), "chunks,", sum(r["split"] == "test" for r in rows), "held out")
+        for r in rows: out.write(json.dumps(r) + "\n")
+        out.flush()
+        total += len(rows); kept += bool(rows)
+        if n % 100 == 0: print(f"{n} articles read, {kept}/{want} kept, {total} chunks", flush=True)
+    out.close()
+    print(f"{total} chunks added from {kept} articles ({n} read; {len(done)} were already done)")
 
 
 if __name__ == "__main__":

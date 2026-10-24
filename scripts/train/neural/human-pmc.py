@@ -8,7 +8,7 @@
 # 150-380-word chunks, at most two per paper, split by paper (2 in 10 papers held out). Citations stay as a reader
 # sees them ("[12]", "(Silva et al., 2019)"). Papers listed in --exclude files (rows with "pmc_id" or "pmcid"), such
 # as the TextSight benchmark, are skipped so they stay a clean test set. Standard library only.
-import argparse, hashlib, json, random, re, sys, time, urllib.parse, urllib.request
+import argparse, hashlib, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 
 API = "https://www.ebi.ac.uk/europepmc/webservices/rest"
@@ -18,14 +18,19 @@ ANGLO = re.compile(r"\b(USA|United States|U\.S\.A|United Kingdom|UK|England|Scot
 UA = {"user-agent": "Veritome detector training (https://github.com/Knsravan/Veritome)"}
 
 
-def get(url, as_json=True, tries=4):
+def get(url, as_json=True, tries=8):
+    """One request; a 429 or 503 waits as long as Retry-After asks."""
     for i in range(tries):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 return json.load(r) if as_json else r.read()
+        except urllib.error.HTTPError as e:
+            if i == tries - 1 or e.code not in (429, 500, 502, 503, 504): raise
+            wait = e.headers.get("retry-after")
+            time.sleep(int(wait) + 1 if wait and wait.isdigit() else 5 * 2 ** i)
         except Exception:
             if i == tries - 1: raise
-            time.sleep(2 ** i)
+            time.sleep(5 * 2 ** i)
 
 
 def first_affiliation(r):
@@ -90,11 +95,20 @@ def main():
     for f in a.exclude:
         for l in open(f):
             d = json.loads(l); exclude.add(d.get("pmc_id") or d.get("pmcid"))
-    random.seed(5)
-    rows, seen = [], set()
+    # Rows are written as each paper is done, so an interrupted run keeps its work and a rerun adds to it.
+    have = {}
+    if os.path.exists(a.output):
+        for l in open(a.output):
+            if l.strip():
+                d = json.loads(l); have.setdefault(d["country"], set()).add(d["paper"])
+    seen = set().union(*have.values()) if have else set()
+    split = lambda paper: "test" if int(hashlib.md5(paper.encode()).hexdigest(), 16) % 10 < 2 else "train"
+    out = open(a.output, "a")
+    total = 0
     for country in COUNTRIES:
+        kept = len(have.get(country, ()))
+        if kept >= a.per_country: continue
         papers = [p for p in search(country, a.per_country * 4) if p["pmcid"] not in exclude and p["pmcid"] not in seen]
-        kept = 0
         for p in papers:
             if kept >= a.per_country: break
             seen.add(p["pmcid"])
@@ -102,7 +116,7 @@ def main():
                 paras = paragraphs(p["pmcid"])
             except Exception as e:
                 print(f"{p['pmcid']}: {type(e).__name__}", file=sys.stderr); continue
-            buf, k = [], 0
+            buf, k, rows = [], 0, []
             for t in paras:
                 buf.append(t)
                 w = sum(len(x.split()) for x in buf)
@@ -111,17 +125,18 @@ def main():
                         # CC BY asks for credit, so every row carries its paper's citation.
                         rows.append({"id": f"{p['pmcid']}-{k}", "paper": p["pmcid"], "country": country, "year": p.get("pubYear"),
                                      "title": p.get("title"), "authors": p.get("authorString"), "journal": p.get("journalInfo", {}).get("journal", {}).get("title"),
-                                     "doi": p.get("doi"), "licence": "CC BY", "source": "pmc-esl", "text": "\n\n".join(buf)})
+                                     "doi": p.get("doi"), "licence": "CC BY", "source": "pmc-esl", "split": split(p["pmcid"]), "text": "\n\n".join(buf)})
                         k += 1
                     buf = []
                 if k >= 2: break
+            for r in rows: out.write(json.dumps(r) + "\n")
+            out.flush()
+            total += len(rows)
             kept += k > 0
             time.sleep(0.2)  # Europe PMC asks for moderate request rates
         print(f"{country}: {kept} papers", flush=True)
-    for r in rows: r["split"] = "test" if int(hashlib.md5(r["paper"].encode()).hexdigest(), 16) % 10 < 2 else "train"
-    with open(a.output, "w") as f:
-        for r in rows: f.write(json.dumps(r) + "\n")
-    print(len(rows), "chunks,", sum(r["split"] == "test" for r in rows), "held out")
+    out.close()
+    print(f"{total} chunks added")
 
 
 if __name__ == "__main__":
