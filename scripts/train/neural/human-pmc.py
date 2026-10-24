@@ -108,8 +108,10 @@ def main():
                 w = sum(len(x.split()) for x in buf)
                 if w >= 150:
                     if w <= 380:
+                        # CC BY asks for credit, so every row carries its paper's citation.
                         rows.append({"id": f"{p['pmcid']}-{k}", "paper": p["pmcid"], "country": country, "year": p.get("pubYear"),
-                                     "licence": "CC BY", "source": "pmc-esl", "text": "\n\n".join(buf)})
+                                     "title": p.get("title"), "authors": p.get("authorString"), "journal": p.get("journalInfo", {}).get("journal", {}).get("title"),
+                                     "doi": p.get("doi"), "licence": "CC BY", "source": "pmc-esl", "text": "\n\n".join(buf)})
                         k += 1
                     buf = []
                 if k >= 2: break
