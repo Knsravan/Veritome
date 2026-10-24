@@ -60,6 +60,8 @@ export function createLlmClient(config: LlmConfig, options: { fetch?: FetchLike;
     ...(options.fetch ? { fetch: options.fetch } : {}),
     timeoutMs: options.timeoutMs ?? 120_000,
     retries: 1,
+    // The base URL may come from the browser and was checked by the SSRF guard; a redirect could lead past it.
+    redirect: "error",
   });
   const url = chatCompletionsUrl(config.baseUrl);
 

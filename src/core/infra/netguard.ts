@@ -25,20 +25,41 @@ function inCidr(ip: string, base: string, bits: number): boolean {
   return (ipv4ToInt(ip) & mask) === (ipv4ToInt(base) & mask);
 }
 
+/** The eight 16-bit groups of an IPv6 address, or null when it is not one. */
+function ipv6Groups(ip: string): number[] | null {
+  let s = ip;
+  const tail = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(s);
+  if (tail) {
+    const [a, b, c, d] = tail.slice(1).map(Number) as [number, number, number, number];
+    s = `${s.slice(0, tail.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  if (fill < 0) return null;
+  const groups = [...head, ...Array<string>(fill).fill("0"), ...rest].map((g) => parseInt(g, 16));
+  return groups.length === 8 && groups.every((g) => g >= 0 && g <= 0xffff) ? groups : null;
+}
+
+const v4 = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
+
 /**
- * Unwraps IPv4-mapped IPv6 addresses. The URL parser rewrites
- * `::ffff:1.2.3.4` to `::ffff:102:304`, so both spellings are handled.
+ * Unwraps IPv6 addresses that carry an IPv4 one, so the IPv4 rules apply to them: IPv4-mapped (`::ffff:a.b.c.d`,
+ * which the URL parser rewrites to `::ffff:102:304`), IPv4-compatible (`::a.b.c.d`), NAT64 (`64:ff9b::/96`, which
+ * an IPv6-only network forwards to the IPv4 address) and 6to4 (`2002::/16`).
  */
 function normaliseIp(ip: string): string {
   const lower = ip.toLowerCase();
-  const dotted = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(lower);
-  if (dotted?.[1]) return dotted[1];
-  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(lower);
-  if (hex?.[1] && hex[2]) {
-    const hi = parseInt(hex[1], 16);
-    const lo = parseInt(hex[2], 16);
-    return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
-  }
+  if (isIP(lower) !== 6) return lower;
+  const g = ipv6Groups(lower);
+  if (!g) return lower;
+  const zero = (from: number, to: number) => g.slice(from, to).every((x) => x === 0);
+  if (zero(0, 5) && g[5] === 0xffff) return v4(g[6]!, g[7]!);
+  if (zero(0, 6) && (g[6]! > 0 || g[7]! > 1)) return v4(g[6]!, g[7]!);
+  if (g[0] === 0x64 && g[1] === 0xff9b && zero(2, 6)) return v4(g[6]!, g[7]!);
+  if (g[0] === 0x2002) return v4(g[1]!, g[2]!);
   return lower;
 }
 
