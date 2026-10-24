@@ -125,6 +125,16 @@ Two documents are not a benchmark; more Turnitin-checked papers with known histo
 measuring. Light polishing remains hard for every detector, and these scores should prompt a conversation, not a
 penalty.
 
+### Text by 2026 models (24 October 2026)
+
+On the independent [TextSight 2026 benchmark](https://huggingface.co/datasets/textsightai/ai-text-detection-benchmark-2026),
+whose AI passages match the human ones in genre and topic, the full pipeline (both models, as on the site) labelled
+**89%** of AI text likely AI (50 of 56: Claude Opus 5 and Claude Haiku 4.5 12 of 12, GPT-4.1 11 of 12, Qwen 3.8 7 of
+8, gpt-oss-120b 8 of 12) and **1.7%** of its human passages (11 of 635: non-native research writing 4 of 183,
+Wikipedia 5 of 155, literature 2 of 306). AUROC 0.943. The classifier alone caught 5%, which is why a result
+without the neural models is not shown as a percentage. Every row: [detector-eval-2026-10-24.md](detector-eval-2026-10-24.md).
+56 AI passages is a small sample.
+
 ### What this means in practice
 
 1. **False accusations are rare.** In these tests, about 1 human text in 500 was labelled AI, and none of the
@@ -135,11 +145,13 @@ penalty.
    usually also flag more human text.
 3. **Unseen models are harder.** Models not represented in the training data (here Claude, Cohere and GPT-3)
    are detected less often. The model will need retraining as new language models appear.
-4. **Not yet measured:** non-native English academic writing, where published studies show detectors of this
-   kind flag more human text. Be especially careful there.
+4. **Non-native English academic writing is flagged more often.** About 2 in 100 such texts were wrongly flagged
+   (4 of 183 and 1 of 42 in two samples), twice the rate on other research writing, and encyclopedic text did worse
+   still (5 of 155). Be especially careful there; [detector-training-plan.md](detector-training-plan.md) is the
+   plan to bring both to 1 in 100.
 
 Reproduce or retrain with the steps in `scripts/train/README.md`, or measure on your own labelled data with
-`node scripts/evaluate-detector.ts your.jsonl`.
+`node scripts/evaluate-detector.ts your.jsonl --neural` (without `--neural` only the lighter classifier judges).
 
 ## Plagiarism checker
 

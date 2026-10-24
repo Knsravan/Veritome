@@ -108,7 +108,7 @@ npm test                  # engine (node --test), server and web (Vitest) tests
 npm run typecheck
 npm run build
 npm run e2e               # Playwright smoke test with axe accessibility checks (after build)
-node scripts/evaluate-detector.ts data.jsonl   # measure the AI-pattern check on labelled text
+node scripts/evaluate-detector.ts data.jsonl --neural   # measure the AI detector (as on the site) on labelled text
 ```
 
 The checking engine in `src/core` has no dependencies and runs in Node or the browser. See
