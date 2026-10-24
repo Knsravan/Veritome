@@ -36,3 +36,6 @@ test-results/
 # local document library (keep the README)
 library/*
 !library/README.md
+
+# Python bytecode from the training scripts
+__pycache__/
