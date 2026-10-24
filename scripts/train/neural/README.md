@@ -16,6 +16,18 @@ hashed-phrase classifier caught almost none of the human-written, AI-*polished* 
 
 Papers and APT originals are split by document, so no held-out text shares a source with training text.
 
+## Next round
+
+[docs/detector-training-plan.md](../../../docs/detector-training-plan.md) is the plan for the next training round. Two
+scripts for it are ready:
+
+- `python human-pmc.py data/human-esl.jsonl --exclude textsight-pmc.jsonl` collects human research writing by
+  authors in non-English-speaking countries (open-access, CC BY, 2012-2021) from Europe PMC, in the same chunk format
+  as `human-chunks.py`.
+- `python generate.py data/human-acad.jsonl gen/ai.jsonl --models models.json --dry-run` plans AI versions of those
+  paragraphs (written, polished, translated, paraphrased, "humanised") across any OpenAI-compatible models, prints the
+  cost, and without `--dry-run` makes them. It replaces the manual batch steps 2-3 below.
+
 ## Steps (from a scratch directory with `data/`, `ft/` and `nn/`)
 
 1. `python human-chunks.py` cuts peS2o papers into 150–380-word chunks (`data/human-acad.jsonl`).
