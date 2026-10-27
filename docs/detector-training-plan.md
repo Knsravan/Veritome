@@ -59,6 +59,13 @@ if the most expensive frontier models are included. Light polishing is labelled 
 "likely AI" training class if it changes less than about a tenth of the words (as `apt.py` does for APT-Eval),
 so fixing grammar alone is not called AI writing.
 
+**With only a Claude key** (`scripts/train/neural/models.claude.json`): Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5
+plus the earlier Sonnet 4.6 and Haiku 4.5, 1,000 paragraphs each from the collected human texts, about US$44 by the
+dry-run estimate. This covers every kind of editing above and pairs each AI text with a non-native or encyclopedic
+human one on the same topic, but only one model family, which the detector already catches well (all 24 Claude
+passages in the TextSight benchmark). Free keys from Google (Gemini) and Groq (Llama, Qwen, gpt-oss) would add other
+families at no cost and should be added when available.
+
 ## Step 3. Train (needs a GPU for a few hours)
 
 1. Keep the current browser model (ELECTRA-small) as is, retrained on the new data with a third class
