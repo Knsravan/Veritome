@@ -32,7 +32,10 @@ scripts for it are ready:
   lists eleven models from ten companies behind one `OPENROUTER_API_KEY` (about US$14 for 480 paragraphs each by the
   dry-run estimate; GLM is held out for testing). With the key stored as the `OPENROUTER_API_KEY` repository
   secret, the **Generate AI training text** workflow (Actions tab, run by hand) does this on GitHub and pushes the
-  rows to the `data/ai-generation` branch; start with `per_model` 5 for a pilot that reports the real cost per model. Claude models can also go through
+  rows to the `data/ai-generation` branch; start with `per_model` 5 for a pilot that reports the real cost per model.
+  `models.gemini.json` (repository secret `GEMINI_API_KEY`) uses Gemini's free tier: run it once a day until done.
+  `models.claude.json` reads the `ANTHROPIC_API_KEY` secret, and `models.claude-gemini.json` uses both keys, putting
+  most paragraphs on the cheapest models (about US$12 in all by the estimate). Claude models can also go through
   Anthropic's SDK (`pip install anthropic`); `models.claude.json` lists five current and earlier ones, read the key
   from `VERITOME_ANTHROPIC_KEY` (not `ANTHROPIC_API_KEY`, which coding agents and other tools may use for their own
   access), and cost about US$44 for 1,000 paragraphs each by the dry-run estimate (about $21 without Opus).

@@ -21,6 +21,10 @@
 # Claude models go through the official SDK instead ("provider": "anthropic"; no base_url needed):
 #   [{"name": "claude-haiku-5-5", "provider": "anthropic", "model": "claude-haiku-5-5",
 #     "key_env": "VERITOME_ANTHROPIC_KEY", "effort": "low", "price_in": 0.10, "price_out": 0.50, "est_out": 600}]
+# A model's "max" caps its paragraphs below --per-model, so cheap models can do most of the work.
+# Free tiers (such as Google's Gemini API, models.gemini.json) allow only so many requests a minute and a day: "rpm"
+# spaces a model's requests to stay under the minute limit, and a model that keeps failing (its daily quota is used
+# up) is left alone for the rest of the run; run again the next day and it continues.
 # Prices are US dollars per million tokens, used only for the --dry-run estimate. "est_out" is the expected output
 # tokens per request (default 330, a paragraph); current Claude models think before answering and thinking is billed
 # as output, so give them more. "effort" (low, medium, high) is optional and sets how much they think.
@@ -101,8 +105,22 @@ def chat_anthropic(m, user):
     return "".join(b.text for b in r.content if b.type == "text"), usage, r.model
 
 
-def chat(m, user, retries=4):
+_pace, _pace_lock = {}, threading.Lock()
+
+
+def pace(m):
+    """Waits until this model may be asked again, keeping it under its requests-per-minute limit ("rpm")."""
+    if not m.get("rpm"): return
+    with _pace_lock:
+        lock = _pace.setdefault(m["name"], [threading.Lock(), 0.0])
+    with lock[0]:
+        time.sleep(max(0.0, lock[1] - time.time()))
+        lock[1] = time.time() + 60.0 / m["rpm"]
+
+
+def chat(m, user, retries=6):
     """One chat request: (text, usage, model that wrote it)."""
+    pace(m)
     if m.get("provider") == "anthropic": return chat_anthropic(m, user)
     key = os.environ.get(m.get("key_env", ""), "")
     body = {"model": m["model"], "max_tokens": m.get("max_tokens", 8000),
@@ -119,9 +137,15 @@ def chat(m, user, retries=4):
             return text, d.get("usage", {}), d.get("model") or m["model"]
         except urllib.error.HTTPError as e:
             if e.code not in (429, 500, 502, 503, 504) or attempt == retries: raise
+            # Rate limits: wait as long as the server asks, or longer each time (5 s up to a minute).
+            wait = e.headers.get("retry-after", "")
+            time.sleep(int(wait) + 1 if wait.isdigit() else min(60, 5 * 2 ** attempt) + random.random())
+            pace(m)
+            continue
         except (urllib.error.URLError, TimeoutError):
             if attempt == retries: raise
         time.sleep(2 ** attempt + random.random())
+        pace(m)
 
 
 def clean(text):
@@ -143,17 +167,44 @@ def plan(rows, models, per_model, mix, seed):
     pool = rows[:]
     random.Random(seed).shuffle(pool)
     kinds = list(mix)
-    jobs = []
-    for i, r in enumerate(pool[: per_model * len(models)]):
-        rnd = random.Random(f"{seed}:{r['id']}")
-        kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
-        inst = rnd.choice(TASKS[kind][1])
-        lang = rnd.choice(LANGS) if kind == "translate" else None
-        jobs.append({"model": models[i % len(models)], "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
+    jobs, rows_left = [], iter(pool)
+    # Round by round, each model takes the next paragraph, until it has per_model or its own "max".
+    for turn in range(per_model):
+        for m in models:
+            if turn >= m.get("max", per_model): continue
+            r = next(rows_left, None)
+            if r is None: return jobs
+            rnd = random.Random(f"{seed}:{r['id']}")
+            kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
+            inst = rnd.choice(TASKS[kind][1])
+            lang = rnd.choice(LANGS) if kind == "translate" else None
+            jobs.append({"model": m, "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
     return jobs
 
 
+# Consecutive failed jobs per model; after GIVE_UP of them (a used-up daily quota, an empty balance) the model is left
+# alone for the rest of the run.
+GIVE_UP = 8
+_failures, _given_up, _fail_lock = {}, set(), threading.Lock()
+
+
 def run(job):
+    m = job["model"]
+    if m["name"] in _given_up: return None, {"prompt_tokens": 0, "completion_tokens": 0}, "skipped"
+    try:
+        out = run_job(job)
+    except Exception:
+        with _fail_lock:
+            _failures[m["name"]] = _failures.get(m["name"], 0) + 1
+            if _failures[m["name"]] >= GIVE_UP and m["name"] not in _given_up:
+                _given_up.add(m["name"])
+                print(f"{m['name']}: {GIVE_UP} failures in a row, leaving it for the rest of this run", file=sys.stderr, flush=True)
+        raise
+    with _fail_lock: _failures[m["name"]] = 0
+    return out
+
+
+def run_job(job):
     m, r, kind = job["model"], job["row"], job["kind"]
     usage = {"prompt_tokens": 0, "completion_tokens": 0}
     served = set()
@@ -182,10 +233,15 @@ def main():
     a = ap.parse_args()
     models = json.load(open(a.models))
     rows = [json.loads(l) for l in open(a.input) if l.strip()]
-    jobs = plan(rows, models, a.per_model, DEFAULT_MIX, a.seed)
     done = set()
     if os.path.exists(a.output):
         done = {(d["id"], d["model"]) for d in map(json.loads, filter(str.strip, open(a.output)))}
+    # Paragraphs already rewritten by a model from another models file are left to it, so each paragraph keeps one
+    # AI counterpart however many runs and key sets fill the same output.
+    names = {m["name"] for m in models}
+    taken = {i for i, name in done if name not in names}
+    rows = [r for r in rows if r["id"] not in taken]
+    jobs = plan(rows, models, a.per_model, DEFAULT_MIX, a.seed)
     jobs = [j for j in jobs if (j["row"]["id"], j["model"]["name"]) not in done]
 
     if a.dry_run:
@@ -203,7 +259,7 @@ def main():
     for m in models:
         if m.get("key_env") and not os.environ.get(m["key_env"]):
             sys.exit(f"{m['name']}: set {m['key_env']} first")
-    lock = threading.Lock(); kept = failed = 0; spent = {"prompt_tokens": 0, "completion_tokens": 0}
+    lock = threading.Lock(); kept = failed = skipped = 0; spent = {"prompt_tokens": 0, "completion_tokens": 0}
     per = {m["name"]: {"requests": 0, "kept": 0, "prompt_tokens": 0, "completion_tokens": 0} for m in models}
     with open(a.output, "a") as f, ThreadPoolExecutor(a.workers) as pool:
         futures = [(j, pool.submit(run, j)) for j in jobs]
@@ -212,6 +268,8 @@ def main():
                 text, usage, served_by = fut.result()
             except Exception as e:  # one failed request must not stop a long run
                 failed += 1; print(f"{j['model']['name']} {j['row']['id']}: {type(e).__name__} {e}", file=sys.stderr); continue
+            if served_by == "skipped":
+                skipped += 1; continue
             with lock:
                 p = per[j["model"]["name"]]; p["requests"] += 1; p["kept"] += bool(text)
                 for k in spent: spent[k] += usage[k]; p[k] += usage[k]
@@ -222,7 +280,7 @@ def main():
                                     "instruction": j["instruction"], "text": text}) + "\n")
                 f.flush(); kept += 1
             if n % 50 == 0: print(f"{n}/{len(futures)} kept {kept} failed {failed} tokens {spent}", flush=True)
-    print(f"done: kept {kept}, failed or unusable {failed}, tokens {spent}")
+    print(f"done: kept {kept}, failed or unusable {failed}, not tried (model given up) {skipped}, tokens {spent}")
     # What this run actually cost, from the reported token counts and the listed prices.
     total = 0.0
     for m in models:
