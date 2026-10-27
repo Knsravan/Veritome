@@ -64,14 +64,40 @@ jobs:
       - name: Install the Claude SDK
         if: contains(inputs.models, 'claude')
         run: pip install --quiet anthropic
+      - name: Check the keys
+        # Says what kind of key each secret looks like, from its standard prefix and length only; nothing else of
+        # the key is printed.
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          kinds = {"ANTHROPIC_API_KEY": [("sk-ant-api", "an Anthropic API key, as needed"), ("sk-ant-oat", "a Claude login (OAuth) token, NOT an API key: create one at console.anthropic.com"), ("sk-ant-admin", "an Anthropic admin key, NOT a normal API key")],
+                   "GEMINI_API_KEY": [("AIza", "a Google API key, as needed")],
+                   "OPENROUTER_API_KEY": [("sk-or-", "an OpenRouter key, as needed")]}
+          for name, known in kinds.items():
+              raw = os.environ.get(name, "")
+              if not raw: print(f"{name}: not set"); continue
+              v = raw.strip()
+              kind = next((d for p, d in known if v.startswith(p)), "an unknown kind of key")
+              extra = " (has spaces or a line break around it, which will be trimmed)" if v != raw else ""
+              print(f"{name}: {len(v)} characters, looks like {kind}{extra}")
+          PY
       - name: Gemini models this key can use
         if: contains(inputs.models, 'gemini')
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          curl -sf -H "x-goog-api-key: $GEMINI_API_KEY" "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" \
-            | python -c "import json,sys; [print(m['name'].split('/')[-1]) for m in json.load(sys.stdin).get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]" \
-            || echo "could not list the models (is the GEMINI_API_KEY secret set?)"
+          KEY="$(printf '%s' "$GEMINI_API_KEY" | tr -d '[:space:]')"
+          curl -s -H "x-goog-api-key: $KEY" "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" \
+            | python -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          if 'error' in d: print('Google refused the key:', d['error'].get('status'), '-', d['error'].get('message'))
+          else: [print(m['name'].split('/')[-1]) for m in d.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+          " || echo "could not list the models"
       - name: Cost estimate
         run: python scripts/train/neural/generate.py "$RUNNER_TEMP/sources.jsonl" "$OUT" --models "scripts/train/neural/$MODELS" --per-model "$PER_MODEL" --dry-run
       - name: Generate
