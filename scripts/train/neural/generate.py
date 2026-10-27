@@ -21,6 +21,7 @@
 # Claude models go through the official SDK instead ("provider": "anthropic"; no base_url needed):
 #   [{"name": "claude-haiku-5-5", "provider": "anthropic", "model": "claude-haiku-5-5",
 #     "key_env": "VERITOME_ANTHROPIC_KEY", "effort": "low", "price_in": 0.10, "price_out": 0.50, "est_out": 600}]
+# A model's "max" caps its paragraphs below --per-model, so cheap models can do most of the work.
 # Free tiers (such as Google's Gemini API, models.gemini.json) allow only so many requests a minute and a day: "rpm"
 # spaces a model's requests to stay under the minute limit, and a model that keeps failing (its daily quota is used
 # up) is left alone for the rest of the run; run again the next day and it continues.
@@ -166,13 +167,18 @@ def plan(rows, models, per_model, mix, seed):
     pool = rows[:]
     random.Random(seed).shuffle(pool)
     kinds = list(mix)
-    jobs = []
-    for i, r in enumerate(pool[: per_model * len(models)]):
-        rnd = random.Random(f"{seed}:{r['id']}")
-        kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
-        inst = rnd.choice(TASKS[kind][1])
-        lang = rnd.choice(LANGS) if kind == "translate" else None
-        jobs.append({"model": models[i % len(models)], "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
+    jobs, rows_left = [], iter(pool)
+    # Round by round, each model takes the next paragraph, until it has per_model or its own "max".
+    for turn in range(per_model):
+        for m in models:
+            if turn >= m.get("max", per_model): continue
+            r = next(rows_left, None)
+            if r is None: return jobs
+            rnd = random.Random(f"{seed}:{r['id']}")
+            kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
+            inst = rnd.choice(TASKS[kind][1])
+            lang = rnd.choice(LANGS) if kind == "translate" else None
+            jobs.append({"model": m, "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
     return jobs
 
 
