@@ -28,7 +28,9 @@ scripts for it are ready:
   random English Wikipedia articles as they stood before 2022, without reference markers, tables or captions.
 - `python generate.py data/human-acad.jsonl gen/ai.jsonl --models models.json --dry-run` plans AI versions of those
   paragraphs (written, polished, translated, paraphrased, "humanised") across any OpenAI-compatible models, prints the
-  cost, and without `--dry-run` makes them. It replaces the manual batch steps 2-3 below. Claude models go through
+  cost, and without `--dry-run` makes them. It replaces the manual batch steps 2-3 below. `models.openrouter.json`
+  lists eleven models from ten companies behind one `OPENROUTER_API_KEY` (about US$14 for 480 paragraphs each by the
+  dry-run estimate; GLM is held out for testing). Claude models can also go through
   Anthropic's SDK (`pip install anthropic`); `models.claude.json` lists five current and earlier ones, read the key
   from `VERITOME_ANTHROPIC_KEY` (not `ANTHROPIC_API_KEY`, which coding agents and other tools may use for their own
   access), and cost about US$44 for 1,000 paragraphs each by the dry-run estimate (about $21 without Opus).

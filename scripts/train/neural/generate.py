@@ -10,9 +10,14 @@
 #   kind      write | polish-light | polish-heavy | paraphrase | humanise | translate
 #   category  ai-generated (write) | ai-polished (polish-*, translate) | ai-paraphrased (paraphrase, humanise)
 #
-# models.json lists the models to use, e.g. with OpenRouter (one key for most providers):
-#   [{"name": "gpt-5-mini", "base_url": "https://openrouter.ai/api/v1", "model": "openai/gpt-5-mini",
-#     "key_env": "OPENROUTER_API_KEY", "price_in": 0.25, "price_out": 2.0}]
+# models.json lists the models to use, e.g. with OpenRouter (one key for most providers; models.openrouter.json):
+#   [{"name": "gpt-6-luna", "base_url": "https://openrouter.ai/api/v1", "model": "openai/gpt-6-luna",
+#     "key_env": "OPENROUTER_API_KEY", "price_in": 0.10, "price_out": 0.50, "est_out": 900}]
+# Sampling is left at each model's default (what people get in its apps; many current models reject temperature),
+# unless an entry sets "temperature". "max_tokens" defaults to 8000 so reasoning models, which count their thinking
+# against it, still finish the paragraph. "extra" is merged into the request body as is (for example OpenRouter's
+# {"reasoning": {"effort": "low"}}). "holdout": true marks a model whose rows are for testing only, never training,
+# so every evaluation includes a model family the detector has not learned.
 # Claude models go through the official SDK instead ("provider": "anthropic"; no base_url needed):
 #   [{"name": "claude-haiku-5-5", "provider": "anthropic", "model": "claude-haiku-5-5",
 #     "key_env": "VERITOME_ANTHROPIC_KEY", "effort": "low", "price_in": 0.10, "price_out": 0.50, "est_out": 600}]
@@ -96,12 +101,14 @@ def chat_anthropic(m, user):
     return "".join(b.text for b in r.content if b.type == "text"), usage, r.model
 
 
-def chat(m, user, temperature=0.8, retries=4):
+def chat(m, user, retries=4):
     """One chat request: (text, usage, model that wrote it)."""
     if m.get("provider") == "anthropic": return chat_anthropic(m, user)
     key = os.environ.get(m.get("key_env", ""), "")
-    body = json.dumps({"model": m["model"], "temperature": temperature, "max_tokens": 900,
-                       "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]}).encode()
+    body = {"model": m["model"], "max_tokens": m.get("max_tokens", 8000),
+            "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], **m.get("extra", {})}
+    if "temperature" in m: body["temperature"] = m["temperature"]
+    body = json.dumps(body).encode()
     for attempt in range(retries + 1):
         req = urllib.request.Request(m["base_url"].rstrip("/") + "/chat/completions", data=body, method="POST",
                                      headers={"content-type": "application/json", **({"authorization": f"Bearer {key}"} if key else {})})
@@ -207,7 +214,7 @@ def main():
                 if not text: failed += 1; continue
                 r = j["row"]
                 f.write(json.dumps({"label": "ai", "category": TASKS[j["kind"]][0], "kind": j["kind"], "model": j["model"]["name"],
-                                    "served_by": served_by, "id": r["id"], "paper": r.get("paper"), "split": r.get("split"), "lang": j["lang"],
+                                    "served_by": served_by, "holdout": bool(j["model"].get("holdout")), "id": r["id"], "paper": r.get("paper"), "split": r.get("split"), "lang": j["lang"],
                                     "instruction": j["instruction"], "text": text}) + "\n")
                 f.flush(); kept += 1
             if n % 50 == 0: print(f"{n}/{len(futures)} kept {kept} failed {failed} tokens {spent}", flush=True)
