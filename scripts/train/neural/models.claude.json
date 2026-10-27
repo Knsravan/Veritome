@@ -1,0 +1,7 @@
+[
+  {"name": "claude-haiku-5-5", "provider": "anthropic", "model": "claude-haiku-5-5", "key_env": "VERITOME_ANTHROPIC_KEY", "price_in": 0.10, "price_out": 0.50, "est_out": 900},
+  {"name": "claude-sonnet-5-5", "provider": "anthropic", "model": "claude-sonnet-5-5", "key_env": "VERITOME_ANTHROPIC_KEY", "price_in": 2.00, "price_out": 10.00, "est_out": 900},
+  {"name": "claude-opus-5-5", "provider": "anthropic", "model": "claude-opus-5-5", "key_env": "VERITOME_ANTHROPIC_KEY", "price_in": 4.00, "price_out": 20.00, "est_out": 900},
+  {"name": "claude-sonnet-4-6", "provider": "anthropic", "model": "claude-sonnet-4-6", "key_env": "VERITOME_ANTHROPIC_KEY", "price_in": 3.00, "price_out": 15.00, "est_out": 330},
+  {"name": "claude-haiku-4-5", "provider": "anthropic", "model": "claude-haiku-4-5", "key_env": "VERITOME_ANTHROPIC_KEY", "price_in": 1.00, "price_out": 5.00, "est_out": 330}
+]

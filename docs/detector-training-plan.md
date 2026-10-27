@@ -48,16 +48,22 @@ the model cannot learn the topic instead of the writing.
 | paraphrase | 15% | ai-paraphrased | the same content in other words |
 | humanise | 15% | ai-paraphrased | "make it sound human / undetectable", as humaniser tools do |
 
-Models: one current model from each of OpenAI, Google (Gemini), Anthropic (Claude), DeepSeek, Meta (Llama), Alibaba
-(Qwen), Mistral and an open-weight GPT (gpt-oss), plus at least one cheap "mini" model, since students use free
-tiers. One OpenRouter key reaches all of them. **One whole model family is held out of training** so every evaluation
-also reports a model the detector has never seen.
+Models (`scripts/train/neural/models.openrouter.json`, all through one OpenRouter key, IDs and prices checked
+against OpenRouter's model list on 27 October 2026): OpenAI GPT-6.1 Terra and the cheap GPT-6 Luna, gpt-oss-120b
+(the model the detector catches least, 8 of 12), Google Gemini 3.8 Flash, Anthropic Claude Sonnet 5.5, xAI Grok
+4.3, DeepSeek V4.1 Flash, Meta Llama 4 Maverick, Qwen 3.8 Flash and Mistral Small; **Z.ai GLM 5.3 Flash is held out
+of training** (`"holdout": true`), so every evaluation also reports a model family the detector has never seen.
+Each model answers with its default settings, as in its own apps.
 
-Volume: about 1,500 paragraphs per model, 12,000 in all. `generate.py --dry-run` prints the exact cost for the
-chosen models before anything is spent; with mostly mid-priced models it is roughly US$15-30, and up to about $80
-if the most expensive frontier models are included. Light polishing is labelled AI-polished but kept out of the
-"likely AI" training class if it changes less than about a tenth of the words (as `apt.py` does for APT-Eval),
-so fixing grammar alone is not called AI writing.
+Volume: 480 paragraphs per model, 5,280 in all: every collected non-native and encyclopedic human text gets one AI
+counterpart on the same topic. `generate.py --dry-run` estimates **about US$14** (Claude Sonnet 5.5 $5.33, GPT-6.1
+Terra $2.66, Gemini $2.20, Grok $1.48, the other seven $0.16-0.33 each); reasoning models' thinking is billed as
+output and is the main uncertainty, so a first small batch measures the real cost before the full run. Light
+polishing is labelled AI-polished but kept out of the "likely AI" training class if it changes less than about a
+tenth of the words (as `apt.py` does for APT-Eval), so fixing grammar alone is not called AI writing.
+
+`models.claude.json` does the same with a Claude key alone (five Claude models, about $44), but covers one family
+only.
 
 ## Step 3. Train (needs a GPU for a few hours)
 

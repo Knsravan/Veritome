@@ -1,0 +1,84 @@
+name: Generate AI training text
+
+# Makes AI-written and AI-edited versions of the collected human paragraphs (scripts/train/data) through the models in
+# a models file, with the OPENROUTER_API_KEY repository secret, and pushes the result to the data/ai-generation branch
+# (never to main). Run it by hand from the Actions tab. Start with a small pilot (per_model 5) to see the real cost per
+# model; a larger run continues the same output without repeating anything, and progress is kept if a run stops.
+
+on:
+  workflow_dispatch:
+    inputs:
+      per_model:
+        description: "Paragraphs per model (5 for a pilot, 480 for the full run)"
+        required: true
+        default: "5"
+      models:
+        description: "Models file in scripts/train/neural"
+        required: true
+        default: "models.openrouter.json"
+      workers:
+        description: "Requests at a time"
+        required: true
+        default: "8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-ai-data
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      BRANCH: data/ai-generation
+      OUT: scripts/train/data/ai-generated.jsonl
+      PER_MODEL: ${{ inputs.per_model }}
+      MODELS: ${{ inputs.models }}
+      WORKERS: ${{ inputs.workers }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the inputs
+        run: |
+          [[ "$PER_MODEL" =~ ^[0-9]{1,4}$ ]] || { echo "per_model must be a number"; exit 1; }
+          [[ "$WORKERS" =~ ^[0-9]{1,2}$ ]] || { echo "workers must be a number"; exit 1; }
+          [[ "$MODELS" =~ ^models\.[a-z0-9-]+\.json$ ]] && [ -f "scripts/train/neural/$MODELS" ] || { echo "no such models file"; exit 1; }
+      - name: Continue from earlier runs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git show "origin/$BRANCH:$OUT.gz" 2>/dev/null | gunzip > "$OUT" || true
+          fi
+          touch "$OUT"; echo "rows so far: $(wc -l < "$OUT")"
+          zcat scripts/train/data/human-esl.jsonl.gz scripts/train/data/human-wiki.jsonl.gz > "$RUNNER_TEMP/sources.jsonl"
+      - name: Cost estimate
+        run: python scripts/train/neural/generate.py "$RUNNER_TEMP/sources.jsonl" "$OUT" --models "scripts/train/neural/$MODELS" --per-model "$PER_MODEL" --dry-run
+      - name: Generate
+        # Stops in time for the next step to save what was made, even when the run is long.
+        timeout-minutes: 330
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python scripts/train/neural/generate.py "$RUNNER_TEMP/sources.jsonl" "$OUT" --models "scripts/train/neural/$MODELS" --per-model "$PER_MODEL" --workers "$WORKERS"
+      - name: Save to the data branch
+        if: always()
+        run: |
+          [ -s "$OUT" ] || { echo "nothing to save"; exit 0; }
+          gzip -9 -n -c "$OUT" > "$RUNNER_TEMP/out.gz"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          else
+            git checkout -B "$BRANCH"
+          fi
+          cp "$RUNNER_TEMP/out.gz" "$OUT.gz"
+          git add "$OUT.gz"
+          git diff --cached --quiet && { echo "no new rows"; exit 0; }
+          git commit -m "AI training text: $(gunzip -c "$OUT.gz" | wc -l) rows (per_model $PER_MODEL, $MODELS)"
+          git push origin "$BRANCH"

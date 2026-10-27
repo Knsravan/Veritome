@@ -1,0 +1,13 @@
+[
+  {"name": "gpt-6.1-terra", "model": "openai/gpt-6.1-terra", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 1.00, "price_out": 5.00, "est_out": 900},
+  {"name": "gpt-6-luna", "model": "openai/gpt-6-luna", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.10, "price_out": 0.50, "est_out": 900},
+  {"name": "gpt-oss-120b", "model": "openai/gpt-oss-120b", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.15, "price_out": 0.60, "est_out": 900},
+  {"name": "gemini-3.8-flash", "model": "google/gemini-3.8-flash", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.83, "price_out": 4.12, "est_out": 900},
+  {"name": "claude-sonnet-5.5", "model": "anthropic/claude-sonnet-5.5", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 2.00, "price_out": 10.00, "est_out": 900},
+  {"name": "grok-4.3", "model": "x-ai/grok-4.3", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 1.25, "price_out": 2.50, "est_out": 900},
+  {"name": "deepseek-v4.1-flash", "model": "deepseek/deepseek-v4.1-flash", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.14, "price_out": 0.42, "est_out": 900},
+  {"name": "llama-4-maverick", "model": "meta-llama/llama-4-maverick", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.19, "price_out": 0.65, "est_out": 330},
+  {"name": "qwen3.8-flash", "model": "qwen/qwen3.8-flash", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.15, "price_out": 0.47, "est_out": 900},
+  {"name": "mistral-small-2603", "model": "mistralai/mistral-small-2603", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.15, "price_out": 0.60, "est_out": 900},
+  {"name": "glm-5.3-flash", "model": "z-ai/glm-5.3-flash", "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY", "price_in": 0.15, "price_out": 0.50, "est_out": 900, "holdout": true}
+]
