@@ -135,19 +135,21 @@ def clean(text):
 
 
 def plan(rows, models, per_model, mix, seed):
-    """Which paragraph each model gets and what it is asked to do. Each paragraph goes to one model only."""
-    rnd = random.Random(seed)
+    """
+    Which paragraph each model gets and what it is asked to do. Each paragraph goes to one model only. Paragraphs are
+    dealt to the models in turn and every task is drawn from the paragraph's own id, so a smaller --per-model run (a
+    pilot) is exactly the start of a larger one, and a later run continues it without giving a paragraph to two models.
+    """
     pool = rows[:]
-    rnd.shuffle(pool)
+    random.Random(seed).shuffle(pool)
     kinds = list(mix)
-    jobs, i = [], 0
-    for m in models:
-        for _ in range(min(per_model, len(pool) - i)):
-            r = pool[i]; i += 1
-            kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
-            inst = rnd.choice(TASKS[kind][1])
-            lang = rnd.choice(LANGS) if kind == "translate" else None
-            jobs.append({"model": m, "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
+    jobs = []
+    for i, r in enumerate(pool[: per_model * len(models)]):
+        rnd = random.Random(f"{seed}:{r['id']}")
+        kind = rnd.choices(kinds, weights=[mix[k] for k in kinds])[0]
+        inst = rnd.choice(TASKS[kind][1])
+        lang = rnd.choice(LANGS) if kind == "translate" else None
+        jobs.append({"model": models[i % len(models)], "row": r, "kind": kind, "instruction": inst.replace("{lang}", lang or ""), "lang": lang})
     return jobs
 
 
@@ -202,6 +204,7 @@ def main():
         if m.get("key_env") and not os.environ.get(m["key_env"]):
             sys.exit(f"{m['name']}: set {m['key_env']} first")
     lock = threading.Lock(); kept = failed = 0; spent = {"prompt_tokens": 0, "completion_tokens": 0}
+    per = {m["name"]: {"requests": 0, "kept": 0, "prompt_tokens": 0, "completion_tokens": 0} for m in models}
     with open(a.output, "a") as f, ThreadPoolExecutor(a.workers) as pool:
         futures = [(j, pool.submit(run, j)) for j in jobs]
         for n, (j, fut) in enumerate(futures, 1):
@@ -210,7 +213,8 @@ def main():
             except Exception as e:  # one failed request must not stop a long run
                 failed += 1; print(f"{j['model']['name']} {j['row']['id']}: {type(e).__name__} {e}", file=sys.stderr); continue
             with lock:
-                for k in spent: spent[k] += usage[k]
+                p = per[j["model"]["name"]]; p["requests"] += 1; p["kept"] += bool(text)
+                for k in spent: spent[k] += usage[k]; p[k] += usage[k]
                 if not text: failed += 1; continue
                 r = j["row"]
                 f.write(json.dumps({"label": "ai", "category": TASKS[j["kind"]][0], "kind": j["kind"], "model": j["model"]["name"],
@@ -219,6 +223,15 @@ def main():
                 f.flush(); kept += 1
             if n % 50 == 0: print(f"{n}/{len(futures)} kept {kept} failed {failed} tokens {spent}", flush=True)
     print(f"done: kept {kept}, failed or unusable {failed}, tokens {spent}")
+    # What this run actually cost, from the reported token counts and the listed prices.
+    total = 0.0
+    for m in models:
+        p = per[m["name"]]
+        if not p["requests"]: continue
+        cost = (p["prompt_tokens"] * m.get("price_in", 0) + p["completion_tokens"] * m.get("price_out", 0)) / 1e6; total += cost
+        print(f"  {m['name']:22s} {p['kept']}/{p['requests']} kept  {p['completion_tokens'] // max(1, p['requests'])} output tokens per request  ${cost:.3f}"
+              f"  (${cost / max(1, p['kept']) * 1000:.2f} per 1,000 kept)")
+    print(f"  total ${total:.2f}")
 
 
 if __name__ == "__main__":

@@ -30,7 +30,9 @@ scripts for it are ready:
   paragraphs (written, polished, translated, paraphrased, "humanised") across any OpenAI-compatible models, prints the
   cost, and without `--dry-run` makes them. It replaces the manual batch steps 2-3 below. `models.openrouter.json`
   lists eleven models from ten companies behind one `OPENROUTER_API_KEY` (about US$14 for 480 paragraphs each by the
-  dry-run estimate; GLM is held out for testing). Claude models can also go through
+  dry-run estimate; GLM is held out for testing). With the key stored as the `OPENROUTER_API_KEY` repository
+  secret, the **Generate AI training text** workflow (Actions tab, run by hand) does this on GitHub and pushes the
+  rows to the `data/ai-generation` branch; start with `per_model` 5 for a pilot that reports the real cost per model. Claude models can also go through
   Anthropic's SDK (`pip install anthropic`); `models.claude.json` lists five current and earlier ones, read the key
   from `VERITOME_ANTHROPIC_KEY` (not `ANTHROPIC_API_KEY`, which coding agents and other tools may use for their own
   access), and cost about US$44 for 1,000 paragraphs each by the dry-run estimate (about $21 without Opus).
