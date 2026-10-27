@@ -83,13 +83,16 @@ def anthropic_client(key):
             # This process may run where ANTHROPIC_BASE_URL or ANTHROPIC_AUTH_TOKEN belong to something else (a coding
             # agent's own session, say); the SDK would read them, so they are dropped here and the address is explicit.
             for k in ("ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_PROFILE"): os.environ.pop(k, None)
-            _clients[key] = anthropic.Anthropic(api_key=key, base_url="https://api.anthropic.com", max_retries=6)
+            # API keys (sk-ant-api...) go in x-api-key; some SDK versions send them as a bearer token, which the API
+            # refuses ("Invalid bearer token"), so the header is set here and Authorization left out.
+            _clients[key] = anthropic.Anthropic(api_key=key, base_url="https://api.anthropic.com", max_retries=6,
+                                                default_headers={"x-api-key": key, "Authorization": anthropic.Omit()})
         return _clients[key]
 
 
 def chat_anthropic(m, user):
     """One Claude request: (paragraph text, usage, model that wrote it). A refusal returns no text."""
-    client = anthropic_client(os.environ[m["key_env"]])
+    client = anthropic_client(os.environ[m["key_env"]].strip())
     # No temperature: current Claude models reject sampling parameters. Thinking stays at the model's default, as in
     # Claude's own apps; 16,000 tokens leaves room for it so a paragraph is never cut off.
     params = {"model": m["model"], "max_tokens": 16000, "system": SYSTEM, "messages": [{"role": "user", "content": user}]}
@@ -122,7 +125,7 @@ def chat(m, user, retries=6):
     """One chat request: (text, usage, model that wrote it)."""
     pace(m)
     if m.get("provider") == "anthropic": return chat_anthropic(m, user)
-    key = os.environ.get(m.get("key_env", ""), "")
+    key = os.environ.get(m.get("key_env", ""), "").strip()  # a pasted key often carries a stray newline
     body = {"model": m["model"], "max_tokens": m.get("max_tokens", 8000),
             "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], **m.get("extra", {})}
     if "temperature" in m: body["temperature"] = m["temperature"]
