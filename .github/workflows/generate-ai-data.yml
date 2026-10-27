@@ -1,7 +1,9 @@
 name: Generate AI training text
 
 # Makes AI-written and AI-edited versions of the collected human paragraphs (scripts/train/data) through the models in
-# a models file, with the OPENROUTER_API_KEY repository secret, and pushes the result to the data/ai-generation branch
+# a models file, with the OPENROUTER_API_KEY, GEMINI_API_KEY or ANTHROPIC_API_KEY repository secret (whichever the
+# models file uses; Gemini's free tier costs nothing and is used up for the day after a few hundred requests, so run
+# models.gemini.json once a day until it is done), and pushes the result to the data/ai-generation branch
 # (never to main). Run it by hand from the Actions tab. Start with a small pilot (per_model 5) to see the real cost per
 # model; a larger run continues the same output without repeating anything, and progress is kept if a run stops.
 
@@ -9,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       per_model:
-        description: "Paragraphs per model (5 for a pilot, 480 for the full run)"
+        description: "Paragraphs per model (5 for a pilot, 480 for the full run; a run stops a model whose quota is used up)"
         required: true
         default: "5"
       models:
@@ -59,6 +61,17 @@ jobs:
           fi
           touch "$OUT"; echo "rows so far: $(wc -l < "$OUT")"
           zcat scripts/train/data/human-esl.jsonl.gz scripts/train/data/human-wiki.jsonl.gz > "$RUNNER_TEMP/sources.jsonl"
+      - name: Install the Claude SDK
+        if: contains(inputs.models, 'claude')
+        run: pip install --quiet anthropic
+      - name: Gemini models this key can use
+        if: contains(inputs.models, 'gemini')
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          curl -sf -H "x-goog-api-key: $GEMINI_API_KEY" "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200" \
+            | python -c "import json,sys; [print(m['name'].split('/')[-1]) for m in json.load(sys.stdin).get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]" \
+            || echo "could not list the models (is the GEMINI_API_KEY secret set?)"
       - name: Cost estimate
         run: python scripts/train/neural/generate.py "$RUNNER_TEMP/sources.jsonl" "$OUT" --models "scripts/train/neural/$MODELS" --per-model "$PER_MODEL" --dry-run
       - name: Generate
@@ -66,6 +79,9 @@ jobs:
         timeout-minutes: 330
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # generate.py reads the Claude key from this name (ANTHROPIC_API_KEY can belong to other tools where it runs).
+          VERITOME_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/train/neural/generate.py "$RUNNER_TEMP/sources.jsonl" "$OUT" --models "scripts/train/neural/$MODELS" --per-model "$PER_MODEL" --workers "$WORKERS"
       - name: Save to the data branch
         if: always()

@@ -62,6 +62,12 @@ output and is the main uncertainty, so a first small batch measures the real cos
 polishing is labelled AI-polished but kept out of the "likely AI" training class if it changes less than about a
 tenth of the words (as `apt.py` does for APT-Eval), so fixing grammar alone is not called AI writing.
 
+**Without a budget** (27 October 2026: a pilot of the OpenRouter set cost about $0.05 and then stopped, the account
+having no credit; projected cost of the full set about $18): `models.gemini.json` uses Google's free Gemini API tier
+(Gemini 3.8 Flash and the open Gemma 4 models), paced under its per-minute limit; a run stops when the day's quota is
+used up and the next day's run continues, so the data builds up over several days at no cost. Claude Haiku 5.5 costs
+about $0.50 per 1,000 paragraphs and is added if the Claude account has credit.
+
 `models.claude.json` does the same with a Claude key alone (five Claude models, about $44), but covers one family
 only.
 

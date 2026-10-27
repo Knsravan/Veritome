@@ -1,0 +1,5 @@
+[
+  {"name": "gemini-3.8-flash", "model": "gemini-3.8-flash", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "rpm": 8, "price_in": 0, "price_out": 0},
+  {"name": "gemma-4-31b-it", "model": "gemma-4-31b-it", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "rpm": 8, "price_in": 0, "price_out": 0},
+  {"name": "gemma-4-26b-a4b-it", "model": "gemma-4-26b-a4b-it", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "rpm": 8, "price_in": 0, "price_out": 0}
+]
