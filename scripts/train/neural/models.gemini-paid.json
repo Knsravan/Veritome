@@ -1,0 +1,5 @@
+[
+  {"name": "google-gemini-3.8-flash", "model": "gemini-3.8-flash", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "max": 1200, "rpm": 60, "extra": {"reasoning_effort": "low"}, "price_in": 0.83, "price_out": 4.12, "est_out": 600},
+  {"name": "google-gemma-4-31b-it", "model": "gemma-4-31b-it", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "max": 800, "rpm": 15, "price_in": 0, "price_out": 0, "est_out": 330},
+  {"name": "google-gemma-4-26b-a4b-it", "model": "gemma-4-26b-a4b-it", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "key_env": "GEMINI_API_KEY", "max": 600, "rpm": 15, "price_in": 0, "price_out": 0, "est_out": 330}
+]

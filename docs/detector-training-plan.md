@@ -72,6 +72,14 @@ of three per model (about $0.06) measures the real cost first. This covers the G
 the 30 paragraphs the OpenRouter pilot made (OpenAI, DeepSeek, Llama, Qwen, GLM); the older training sets (MAGE,
 RAID, HAP-E) keep other families represented. `models.gemini.json` is a no-cost alternative on Gemini's free tier.
 
+**Done so far (27 October 2026), on the `data/ai-generation` branch: 2,562 AI paragraphs.** The Claude part of
+`models.claude-gemini.json` ran in full for **US$8.40**: Claude Haiku 5.5 1,168, Sonnet 5.5 583, Sonnet 4.6 391 and
+Haiku 4.5 393 kept (98% of requests), plus 30 from the OpenRouter pilot. 15 replies were removed because they were
+not paragraphs (13 Claude Haiku 5.5 refusals of "make it undetectable" requests, 2 with commentary); `generate.py`
+now rejects such replies itself. The Gemini part waits for the Google billing account to be settled and then runs
+from `models.gemini-paid.json` (its own model names, so it only takes paragraphs no other model has used; about
+2,600 more). `models.claude-gemini.json` should not be run again: its Claude part is complete.
+
 `models.claude.json` does the same with a Claude key alone (five Claude models, about $44), but covers one family
 only.
 

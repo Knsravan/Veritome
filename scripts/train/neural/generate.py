@@ -69,6 +69,10 @@ DEFAULT_MIX = {"write": 0.2, "polish-light": 0.15, "polish-heavy": 0.2, "paraphr
 LANGS = ["Spanish", "Portuguese", "Chinese", "Japanese", "Indonesian", "Hindi", "Arabic", "Turkish"]
 SYSTEM = "You are a helpful assistant. Reply with only the resulting paragraph text: no preamble, no notes, no quotation marks."
 PREAMBLE = re.compile(r"^(here is|here's|sure|certainly|of course|below is)\b", re.I)
+# A model declining (Claude Haiku 5.5 refuses most "make it undetectable" requests), or talking about the paragraph
+# instead of giving it, is not a paragraph and must not be labelled as one.
+REFUSAL = re.compile(r"^(I can(no|['’])t|I won['’]t|I['’]m (sorry|unable|not able)|Sorry\b|I (do not|don['’]t) (feel|think) comfortable)", re.I)
+CHATTER = re.compile(r"\bhere(['’]s| is) (the|your|an?) (improved|polished|revised|rewritten|edited|translated|final|result|paragraph|translation|version)", re.I)
 
 
 # Claude models whose declined requests Anthropic re-runs on a fallback model server-side. Haiku has no fallback.
@@ -156,6 +160,7 @@ def clean(text):
     t = text.strip().strip('"“”').strip()
     if PREAMBLE.match(t):
         t = t.split("\n", 1)[1].strip() if "\n" in t else ""
+    if REFUSAL.match(t) or CHATTER.search(t): return None
     words = len(t.split())
     if words < 60 or not re.search(r"[.!?)\]\"”]$", t): return None
     return " ".join(t.split()[:400])
